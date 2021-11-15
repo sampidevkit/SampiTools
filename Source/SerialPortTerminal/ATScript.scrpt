@@ -1,0 +1,15 @@
+% Command
+$200
+AT\r
+$250
+AT+CPIN?\r
+$500
+AT+CSQ\r
+$500
+AT+CSQ\r
+$500
+AT+CSQ\r
+$500
+AT+CSQ\r
+$500
+AT+CSQ\r
