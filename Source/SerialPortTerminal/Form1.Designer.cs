@@ -78,20 +78,55 @@
             this.bt_DfuScan = new System.Windows.Forms.Button();
             this.bt_DfuStart = new System.Windows.Forms.Button();
             this.bt_DfuStop = new System.Windows.Forms.Button();
+            this.tabCalc = new System.Windows.Forms.TabPage();
+            this.tb_DecA = new System.Windows.Forms.TextBox();
             this.picConnected = new System.Windows.Forms.PictureBox();
             this.picHomePage = new System.Windows.Forms.PictureBox();
             this.picDisconnected = new System.Windows.Forms.PictureBox();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.openFileDialog2 = new System.Windows.Forms.OpenFileDialog();
+            this.label12 = new System.Windows.Forms.Label();
+            this.label13 = new System.Windows.Forms.Label();
+            this.label14 = new System.Windows.Forms.Label();
+            this.label15 = new System.Windows.Forms.Label();
+            this.label16 = new System.Windows.Forms.Label();
+            this.tb_DecB = new System.Windows.Forms.TextBox();
+            this.tb_HexB = new System.Windows.Forms.TextBox();
+            this.tb_HexA = new System.Windows.Forms.TextBox();
+            this.tb_BinB = new System.Windows.Forms.TextBox();
+            this.tb_BinA = new System.Windows.Forms.TextBox();
+            this.bt_Add = new System.Windows.Forms.Button();
+            this.bt_Sub = new System.Windows.Forms.Button();
+            this.bt_Mul = new System.Windows.Forms.Button();
+            this.bt_Div = new System.Windows.Forms.Button();
+            this.bt_Xor = new System.Windows.Forms.Button();
+            this.bt_Or = new System.Windows.Forms.Button();
+            this.bt_And = new System.Windows.Forms.Button();
+            this.bt_Mod = new System.Windows.Forms.Button();
+            this.bt_Sign = new System.Windows.Forms.Button();
+            this.bt_Float = new System.Windows.Forms.Button();
+            this.bt_NotB = new System.Windows.Forms.Button();
+            this.bt_NotA = new System.Windows.Forms.Button();
+            this.tabShortcut = new System.Windows.Forms.TabPage();
+            this.bt_TaskMngr = new System.Windows.Forms.Button();
+            this.bt_DeviceMngr = new System.Windows.Forms.Button();
+            this.label17 = new System.Windows.Forms.Label();
+            this.label18 = new System.Windows.Forms.Label();
+            this.label19 = new System.Windows.Forms.Label();
+            this.label20 = new System.Windows.Forms.Label();
+            this.button1 = new System.Windows.Forms.Button();
+            this.button2 = new System.Windows.Forms.Button();
             this.tabControl1.SuspendLayout();
             this.tabForward.SuspendLayout();
             this.tabInternalPort.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nud_Interval)).BeginInit();
             this.tabDfu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nud_FrameDelay)).BeginInit();
+            this.tabCalc.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picConnected)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picHomePage)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picDisconnected)).BeginInit();
+            this.tabShortcut.SuspendLayout();
             this.SuspendLayout();
             // 
             // serialCdc
@@ -121,13 +156,19 @@
             this.imageList1.Images.SetKeyName(6, "SAMPI Logo.ico");
             this.imageList1.Images.SetKeyName(7, "Oxygen-Icons.org-Oxygen-Mimetypes-text-x-hex.ico");
             this.imageList1.Images.SetKeyName(8, "Oxygen-Icons.org-Oxygen-Mimetypes-text-x-script.ico");
+            this.imageList1.Images.SetKeyName(9, "Chrisbanks2-Cold-Fusion-Hd-Task-manager.ico");
+            this.imageList1.Images.SetKeyName(10, "Custom-Icon-Design-Pretty-Office-5-Refresh.ico");
+            this.imageList1.Images.SetKeyName(11, "Saki-NuoveXT-2-Devices-drive-removable-usb.ico");
+            this.imageList1.Images.SetKeyName(12, "Seanau-Email-Clear.ico");
+            this.imageList1.Images.SetKeyName(13, "Visualpharm-Must-Have-Next.ico");
+            this.imageList1.Images.SetKeyName(14, "Untitled-Diagram.ico");
             // 
             // lb_Status
             // 
             this.lb_Status.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lb_Status.AutoSize = true;
             this.lb_Status.ForeColor = System.Drawing.Color.Blue;
-            this.lb_Status.Location = new System.Drawing.Point(44, 413);
+            this.lb_Status.Location = new System.Drawing.Point(44, 573);
             this.lb_Status.Name = "lb_Status";
             this.lb_Status.Size = new System.Drawing.Size(78, 13);
             this.lb_Status.TabIndex = 6;
@@ -219,7 +260,7 @@
             this.cb_Baud.Name = "cb_Baud";
             this.cb_Baud.Size = new System.Drawing.Size(201, 23);
             this.cb_Baud.TabIndex = 4;
-            this.cb_Baud.Text = "115200";
+            this.cb_Baud.Text = "9600";
             // 
             // cb_Pid
             // 
@@ -230,6 +271,7 @@
             "VCP",
             "CP2102N",
             "FT232RL",
+            "TELIT",
             "SAMPI"});
             this.cb_Pid.Location = new System.Drawing.Point(48, 7);
             this.cb_Pid.Name = "cb_Pid";
@@ -255,11 +297,11 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.rtb_Log.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
             this.rtb_Log.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.rtb_Log.Location = new System.Drawing.Point(9, 101);
+            this.rtb_Log.Location = new System.Drawing.Point(9, 140);
             this.rtb_Log.MaxLength = 65536;
             this.rtb_Log.Name = "rtb_Log";
             this.rtb_Log.ReadOnly = true;
-            this.rtb_Log.Size = new System.Drawing.Size(566, 299);
+            this.rtb_Log.Size = new System.Drawing.Size(603, 420);
             this.rtb_Log.TabIndex = 10;
             this.rtb_Log.Text = "";
             this.rtb_Log.TextChanged += new System.EventHandler(this.rtb_Log_TextChanged);
@@ -269,7 +311,7 @@
             // 
             this.lkl_Homepage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.lkl_Homepage.AutoSize = true;
-            this.lkl_Homepage.Location = new System.Drawing.Point(497, 413);
+            this.lkl_Homepage.Location = new System.Drawing.Point(534, 573);
             this.lkl_Homepage.Name = "lkl_Homepage";
             this.lkl_Homepage.Size = new System.Drawing.Size(78, 13);
             this.lkl_Homepage.TabIndex = 11;
@@ -317,10 +359,12 @@
             this.tabControl1.Controls.Add(this.tabForward);
             this.tabControl1.Controls.Add(this.tabInternalPort);
             this.tabControl1.Controls.Add(this.tabDfu);
+            this.tabControl1.Controls.Add(this.tabCalc);
+            this.tabControl1.Controls.Add(this.tabShortcut);
             this.tabControl1.Location = new System.Drawing.Point(9, 8);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(566, 91);
+            this.tabControl1.Size = new System.Drawing.Size(603, 126);
             this.tabControl1.TabIndex = 18;
             // 
             // tabForward
@@ -339,7 +383,7 @@
             this.tabForward.Location = new System.Drawing.Point(4, 22);
             this.tabForward.Name = "tabForward";
             this.tabForward.Padding = new System.Windows.Forms.Padding(3);
-            this.tabForward.Size = new System.Drawing.Size(558, 65);
+            this.tabForward.Size = new System.Drawing.Size(595, 65);
             this.tabForward.TabIndex = 0;
             this.tabForward.Text = "Forward";
             this.tabForward.UseVisualStyleBackColor = true;
@@ -351,7 +395,7 @@
             this.bt_FwdStart.ForeColor = System.Drawing.Color.Red;
             this.bt_FwdStart.ImageIndex = 0;
             this.bt_FwdStart.ImageList = this.imageList1;
-            this.bt_FwdStart.Location = new System.Drawing.Point(500, 7);
+            this.bt_FwdStart.Location = new System.Drawing.Point(537, 7);
             this.bt_FwdStart.Name = "bt_FwdStart";
             this.bt_FwdStart.Size = new System.Drawing.Size(52, 52);
             this.bt_FwdStart.TabIndex = 5;
@@ -365,7 +409,7 @@
             this.bt_FwdStop.ForeColor = System.Drawing.Color.Red;
             this.bt_FwdStop.ImageIndex = 1;
             this.bt_FwdStop.ImageList = this.imageList1;
-            this.bt_FwdStop.Location = new System.Drawing.Point(500, 7);
+            this.bt_FwdStop.Location = new System.Drawing.Point(537, 7);
             this.bt_FwdStop.Name = "bt_FwdStop";
             this.bt_FwdStop.Size = new System.Drawing.Size(52, 52);
             this.bt_FwdStop.TabIndex = 12;
@@ -380,7 +424,7 @@
             this.bt_FwdScan.ForeColor = System.Drawing.Color.Red;
             this.bt_FwdScan.ImageIndex = 3;
             this.bt_FwdScan.ImageList = this.imageList1;
-            this.bt_FwdScan.Location = new System.Drawing.Point(442, 6);
+            this.bt_FwdScan.Location = new System.Drawing.Point(479, 6);
             this.bt_FwdScan.Name = "bt_FwdScan";
             this.bt_FwdScan.Size = new System.Drawing.Size(52, 52);
             this.bt_FwdScan.TabIndex = 13;
@@ -405,7 +449,7 @@
             this.tabInternalPort.Location = new System.Drawing.Point(4, 22);
             this.tabInternalPort.Name = "tabInternalPort";
             this.tabInternalPort.Padding = new System.Windows.Forms.Padding(3);
-            this.tabInternalPort.Size = new System.Drawing.Size(558, 65);
+            this.tabInternalPort.Size = new System.Drawing.Size(595, 100);
             this.tabInternalPort.TabIndex = 2;
             this.tabInternalPort.Text = "Internal Port";
             // 
@@ -581,7 +625,7 @@
             this.tabDfu.Location = new System.Drawing.Point(4, 22);
             this.tabDfu.Name = "tabDfu";
             this.tabDfu.Padding = new System.Windows.Forms.Padding(3);
-            this.tabDfu.Size = new System.Drawing.Size(558, 65);
+            this.tabDfu.Size = new System.Drawing.Size(595, 100);
             this.tabDfu.TabIndex = 1;
             this.tabDfu.Text = "DFU";
             // 
@@ -597,7 +641,7 @@
             this.nud_FrameDelay.Size = new System.Drawing.Size(81, 20);
             this.nud_FrameDelay.TabIndex = 19;
             this.nud_FrameDelay.Value = new decimal(new int[] {
-            1,
+            10,
             0,
             0,
             0});
@@ -643,7 +687,7 @@
             this.cb_DfuBaud.Name = "cb_DfuBaud";
             this.cb_DfuBaud.Size = new System.Drawing.Size(71, 23);
             this.cb_DfuBaud.TabIndex = 22;
-            this.cb_DfuBaud.Text = "115200";
+            this.cb_DfuBaud.Text = "9600";
             // 
             // cb_DfuPort
             // 
@@ -722,11 +766,55 @@
             this.bt_DfuStop.Visible = false;
             this.bt_DfuStop.Click += new System.EventHandler(this.bt_DfuStop_Click);
             // 
+            // tabCalc
+            // 
+            this.tabCalc.Controls.Add(this.bt_Sign);
+            this.tabCalc.Controls.Add(this.bt_Float);
+            this.tabCalc.Controls.Add(this.bt_NotB);
+            this.tabCalc.Controls.Add(this.bt_NotA);
+            this.tabCalc.Controls.Add(this.bt_Xor);
+            this.tabCalc.Controls.Add(this.bt_Or);
+            this.tabCalc.Controls.Add(this.bt_And);
+            this.tabCalc.Controls.Add(this.bt_Mod);
+            this.tabCalc.Controls.Add(this.bt_Div);
+            this.tabCalc.Controls.Add(this.bt_Mul);
+            this.tabCalc.Controls.Add(this.bt_Sub);
+            this.tabCalc.Controls.Add(this.bt_Add);
+            this.tabCalc.Controls.Add(this.tb_BinB);
+            this.tabCalc.Controls.Add(this.tb_BinA);
+            this.tabCalc.Controls.Add(this.tb_HexB);
+            this.tabCalc.Controls.Add(this.tb_HexA);
+            this.tabCalc.Controls.Add(this.label16);
+            this.tabCalc.Controls.Add(this.tb_DecB);
+            this.tabCalc.Controls.Add(this.label15);
+            this.tabCalc.Controls.Add(this.label14);
+            this.tabCalc.Controls.Add(this.label13);
+            this.tabCalc.Controls.Add(this.label12);
+            this.tabCalc.Controls.Add(this.tb_DecA);
+            this.tabCalc.Location = new System.Drawing.Point(4, 22);
+            this.tabCalc.Name = "tabCalc";
+            this.tabCalc.Padding = new System.Windows.Forms.Padding(3);
+            this.tabCalc.Size = new System.Drawing.Size(595, 100);
+            this.tabCalc.TabIndex = 3;
+            this.tabCalc.Text = "Calculator";
+            this.tabCalc.UseVisualStyleBackColor = true;
+            // 
+            // tb_DecA
+            // 
+            this.tb_DecA.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.tb_DecA.ForeColor = System.Drawing.Color.DarkBlue;
+            this.tb_DecA.Location = new System.Drawing.Point(42, 19);
+            this.tb_DecA.Name = "tb_DecA";
+            this.tb_DecA.Size = new System.Drawing.Size(167, 22);
+            this.tb_DecA.TabIndex = 0;
+            this.tb_DecA.Text = "0";
+            this.tb_DecA.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
             // picConnected
             // 
             this.picConnected.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.picConnected.Image = global::SerialPortTerminal.Properties.Resources.plug_connect_icon;
-            this.picConnected.Location = new System.Drawing.Point(9, 406);
+            this.picConnected.Location = new System.Drawing.Point(9, 566);
             this.picConnected.Name = "picConnected";
             this.picConnected.Size = new System.Drawing.Size(29, 26);
             this.picConnected.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
@@ -738,7 +826,7 @@
             // 
             this.picHomePage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.picHomePage.Image = global::SerialPortTerminal.Properties.Resources.home_icon;
-            this.picHomePage.Location = new System.Drawing.Point(462, 406);
+            this.picHomePage.Location = new System.Drawing.Point(499, 566);
             this.picHomePage.Name = "picHomePage";
             this.picHomePage.Size = new System.Drawing.Size(29, 26);
             this.picHomePage.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
@@ -750,7 +838,7 @@
             // 
             this.picDisconnected.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.picDisconnected.Image = global::SerialPortTerminal.Properties.Resources.plug_disconnect_prohibition_icon;
-            this.picDisconnected.Location = new System.Drawing.Point(9, 406);
+            this.picDisconnected.Location = new System.Drawing.Point(9, 566);
             this.picDisconnected.Name = "picDisconnected";
             this.picDisconnected.Size = new System.Drawing.Size(29, 26);
             this.picDisconnected.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
@@ -767,12 +855,332 @@
             this.openFileDialog2.FileName = "openFileDialog2";
             this.openFileDialog2.Filter = "Script files (*.scrpt)|*.scrpt";
             // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(6, 21);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(30, 13);
+            this.label12.TabIndex = 1;
+            this.label12.Text = "Dec:";
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(7, 47);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(29, 13);
+            this.label13.TabIndex = 2;
+            this.label13.Text = "Hex:";
+            // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.Location = new System.Drawing.Point(6, 73);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(25, 13);
+            this.label14.TabIndex = 3;
+            this.label14.Text = "Bin:";
+            // 
+            // label15
+            // 
+            this.label15.AutoSize = true;
+            this.label15.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label15.Location = new System.Drawing.Point(118, 3);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(15, 13);
+            this.label15.TabIndex = 4;
+            this.label15.Text = "A";
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label16.Location = new System.Drawing.Point(291, 3);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(15, 13);
+            this.label16.TabIndex = 6;
+            this.label16.Text = "B";
+            // 
+            // tb_DecB
+            // 
+            this.tb_DecB.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.tb_DecB.ForeColor = System.Drawing.Color.OrangeRed;
+            this.tb_DecB.Location = new System.Drawing.Point(215, 19);
+            this.tb_DecB.Name = "tb_DecB";
+            this.tb_DecB.Size = new System.Drawing.Size(167, 22);
+            this.tb_DecB.TabIndex = 5;
+            this.tb_DecB.Text = "0";
+            this.tb_DecB.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // tb_HexB
+            // 
+            this.tb_HexB.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.tb_HexB.ForeColor = System.Drawing.Color.OrangeRed;
+            this.tb_HexB.Location = new System.Drawing.Point(215, 45);
+            this.tb_HexB.Name = "tb_HexB";
+            this.tb_HexB.Size = new System.Drawing.Size(167, 22);
+            this.tb_HexB.TabIndex = 8;
+            this.tb_HexB.Text = "0";
+            this.tb_HexB.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // tb_HexA
+            // 
+            this.tb_HexA.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.tb_HexA.ForeColor = System.Drawing.Color.DarkBlue;
+            this.tb_HexA.Location = new System.Drawing.Point(42, 45);
+            this.tb_HexA.Name = "tb_HexA";
+            this.tb_HexA.Size = new System.Drawing.Size(167, 22);
+            this.tb_HexA.TabIndex = 7;
+            this.tb_HexA.Text = "0";
+            this.tb_HexA.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // tb_BinB
+            // 
+            this.tb_BinB.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.tb_BinB.ForeColor = System.Drawing.Color.OrangeRed;
+            this.tb_BinB.Location = new System.Drawing.Point(215, 71);
+            this.tb_BinB.Name = "tb_BinB";
+            this.tb_BinB.Size = new System.Drawing.Size(167, 22);
+            this.tb_BinB.TabIndex = 10;
+            this.tb_BinB.Text = "0";
+            this.tb_BinB.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // tb_BinA
+            // 
+            this.tb_BinA.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.tb_BinA.ForeColor = System.Drawing.Color.DarkBlue;
+            this.tb_BinA.Location = new System.Drawing.Point(42, 71);
+            this.tb_BinA.Name = "tb_BinA";
+            this.tb_BinA.Size = new System.Drawing.Size(167, 22);
+            this.tb_BinA.TabIndex = 9;
+            this.tb_BinA.Text = "0";
+            this.tb_BinA.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // bt_Add
+            // 
+            this.bt_Add.Location = new System.Drawing.Point(391, 17);
+            this.bt_Add.Name = "bt_Add";
+            this.bt_Add.Size = new System.Drawing.Size(45, 23);
+            this.bt_Add.TabIndex = 11;
+            this.bt_Add.Text = "A+B";
+            this.bt_Add.UseVisualStyleBackColor = true;
+            // 
+            // bt_Sub
+            // 
+            this.bt_Sub.Location = new System.Drawing.Point(442, 17);
+            this.bt_Sub.Name = "bt_Sub";
+            this.bt_Sub.Size = new System.Drawing.Size(45, 23);
+            this.bt_Sub.TabIndex = 12;
+            this.bt_Sub.Text = "A-B";
+            this.bt_Sub.UseVisualStyleBackColor = true;
+            // 
+            // bt_Mul
+            // 
+            this.bt_Mul.Location = new System.Drawing.Point(493, 17);
+            this.bt_Mul.Name = "bt_Mul";
+            this.bt_Mul.Size = new System.Drawing.Size(45, 23);
+            this.bt_Mul.TabIndex = 12;
+            this.bt_Mul.Text = "A*B";
+            this.bt_Mul.UseVisualStyleBackColor = true;
+            // 
+            // bt_Div
+            // 
+            this.bt_Div.Location = new System.Drawing.Point(544, 17);
+            this.bt_Div.Name = "bt_Div";
+            this.bt_Div.Size = new System.Drawing.Size(45, 23);
+            this.bt_Div.TabIndex = 12;
+            this.bt_Div.Text = "A/B";
+            this.bt_Div.UseVisualStyleBackColor = true;
+            // 
+            // bt_Xor
+            // 
+            this.bt_Xor.Location = new System.Drawing.Point(544, 43);
+            this.bt_Xor.Name = "bt_Xor";
+            this.bt_Xor.Size = new System.Drawing.Size(45, 23);
+            this.bt_Xor.TabIndex = 14;
+            this.bt_Xor.Text = "A^B";
+            this.bt_Xor.UseVisualStyleBackColor = true;
+            // 
+            // bt_Or
+            // 
+            this.bt_Or.Location = new System.Drawing.Point(493, 43);
+            this.bt_Or.Name = "bt_Or";
+            this.bt_Or.Size = new System.Drawing.Size(45, 23);
+            this.bt_Or.TabIndex = 15;
+            this.bt_Or.Text = "A|B";
+            this.bt_Or.UseVisualStyleBackColor = true;
+            // 
+            // bt_And
+            // 
+            this.bt_And.Location = new System.Drawing.Point(442, 43);
+            this.bt_And.Name = "bt_And";
+            this.bt_And.Size = new System.Drawing.Size(45, 23);
+            this.bt_And.TabIndex = 16;
+            this.bt_And.Text = "A&&B";
+            this.bt_And.UseVisualStyleBackColor = true;
+            // 
+            // bt_Mod
+            // 
+            this.bt_Mod.Location = new System.Drawing.Point(391, 43);
+            this.bt_Mod.Name = "bt_Mod";
+            this.bt_Mod.Size = new System.Drawing.Size(45, 23);
+            this.bt_Mod.TabIndex = 13;
+            this.bt_Mod.Text = "A%B";
+            this.bt_Mod.UseVisualStyleBackColor = true;
+            // 
+            // bt_Sign
+            // 
+            this.bt_Sign.Location = new System.Drawing.Point(544, 69);
+            this.bt_Sign.Name = "bt_Sign";
+            this.bt_Sign.Size = new System.Drawing.Size(45, 23);
+            this.bt_Sign.TabIndex = 18;
+            this.bt_Sign.Text = "SIGN";
+            this.bt_Sign.UseVisualStyleBackColor = true;
+            // 
+            // bt_Float
+            // 
+            this.bt_Float.Location = new System.Drawing.Point(493, 69);
+            this.bt_Float.Name = "bt_Float";
+            this.bt_Float.Size = new System.Drawing.Size(45, 23);
+            this.bt_Float.TabIndex = 19;
+            this.bt_Float.Text = "FLT";
+            this.bt_Float.UseVisualStyleBackColor = true;
+            // 
+            // bt_NotB
+            // 
+            this.bt_NotB.Location = new System.Drawing.Point(442, 69);
+            this.bt_NotB.Name = "bt_NotB";
+            this.bt_NotB.Size = new System.Drawing.Size(45, 23);
+            this.bt_NotB.TabIndex = 20;
+            this.bt_NotB.Text = "~B";
+            this.bt_NotB.UseVisualStyleBackColor = true;
+            // 
+            // bt_NotA
+            // 
+            this.bt_NotA.Location = new System.Drawing.Point(391, 69);
+            this.bt_NotA.Name = "bt_NotA";
+            this.bt_NotA.Size = new System.Drawing.Size(45, 23);
+            this.bt_NotA.TabIndex = 17;
+            this.bt_NotA.Text = "~A";
+            this.bt_NotA.UseVisualStyleBackColor = true;
+            // 
+            // tabShortcut
+            // 
+            this.tabShortcut.Controls.Add(this.button2);
+            this.tabShortcut.Controls.Add(this.button1);
+            this.tabShortcut.Controls.Add(this.label20);
+            this.tabShortcut.Controls.Add(this.label19);
+            this.tabShortcut.Controls.Add(this.label18);
+            this.tabShortcut.Controls.Add(this.label17);
+            this.tabShortcut.Controls.Add(this.bt_DeviceMngr);
+            this.tabShortcut.Controls.Add(this.bt_TaskMngr);
+            this.tabShortcut.Location = new System.Drawing.Point(4, 22);
+            this.tabShortcut.Name = "tabShortcut";
+            this.tabShortcut.Padding = new System.Windows.Forms.Padding(3);
+            this.tabShortcut.Size = new System.Drawing.Size(595, 100);
+            this.tabShortcut.TabIndex = 4;
+            this.tabShortcut.Text = "Shortcut";
+            this.tabShortcut.UseVisualStyleBackColor = true;
+            // 
+            // bt_TaskMngr
+            // 
+            this.bt_TaskMngr.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_TaskMngr.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_TaskMngr.ForeColor = System.Drawing.Color.Red;
+            this.bt_TaskMngr.ImageIndex = 9;
+            this.bt_TaskMngr.ImageList = this.imageList1;
+            this.bt_TaskMngr.Location = new System.Drawing.Point(18, 6);
+            this.bt_TaskMngr.Name = "bt_TaskMngr";
+            this.bt_TaskMngr.Size = new System.Drawing.Size(52, 52);
+            this.bt_TaskMngr.TabIndex = 17;
+            this.bt_TaskMngr.UseVisualStyleBackColor = true;
+            this.bt_TaskMngr.Click += new System.EventHandler(this.bt_TaskMngr_Click);
+            // 
+            // bt_DeviceMngr
+            // 
+            this.bt_DeviceMngr.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_DeviceMngr.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_DeviceMngr.ForeColor = System.Drawing.Color.Red;
+            this.bt_DeviceMngr.ImageIndex = 11;
+            this.bt_DeviceMngr.ImageList = this.imageList1;
+            this.bt_DeviceMngr.Location = new System.Drawing.Point(105, 6);
+            this.bt_DeviceMngr.Name = "bt_DeviceMngr";
+            this.bt_DeviceMngr.Size = new System.Drawing.Size(52, 52);
+            this.bt_DeviceMngr.TabIndex = 18;
+            this.bt_DeviceMngr.UseVisualStyleBackColor = true;
+            this.bt_DeviceMngr.Click += new System.EventHandler(this.bt_DeviceMngr_Click);
+            // 
+            // label17
+            // 
+            this.label17.AutoSize = true;
+            this.label17.Location = new System.Drawing.Point(6, 61);
+            this.label17.Name = "label17";
+            this.label17.Size = new System.Drawing.Size(76, 13);
+            this.label17.TabIndex = 19;
+            this.label17.Text = "Task Manager";
+            // 
+            // label18
+            // 
+            this.label18.AutoSize = true;
+            this.label18.Location = new System.Drawing.Point(88, 61);
+            this.label18.Name = "label18";
+            this.label18.Size = new System.Drawing.Size(86, 13);
+            this.label18.TabIndex = 20;
+            this.label18.Text = "Device Manager";
+            // 
+            // label19
+            // 
+            this.label19.AutoSize = true;
+            this.label19.Location = new System.Drawing.Point(183, 61);
+            this.label19.Name = "label19";
+            this.label19.Size = new System.Drawing.Size(64, 13);
+            this.label19.TabIndex = 21;
+            this.label19.Text = "Clean Temp";
+            // 
+            // label20
+            // 
+            this.label20.AutoSize = true;
+            this.label20.Location = new System.Drawing.Point(261, 61);
+            this.label20.Name = "label20";
+            this.label20.Size = new System.Drawing.Size(74, 13);
+            this.label20.TabIndex = 22;
+            this.label20.Text = "Reset MPLAB";
+            // 
+            // button1
+            // 
+            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.button1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.button1.ForeColor = System.Drawing.Color.Red;
+            this.button1.ImageIndex = 12;
+            this.button1.ImageList = this.imageList1;
+            this.button1.Location = new System.Drawing.Point(189, 6);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(52, 52);
+            this.button1.TabIndex = 23;
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
+            // button2
+            // 
+            this.button2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.button2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.button2.ForeColor = System.Drawing.Color.Red;
+            this.button2.ImageIndex = 14;
+            this.button2.ImageList = this.imageList1;
+            this.button2.Location = new System.Drawing.Point(272, 6);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(52, 52);
+            this.button2.TabIndex = 24;
+            this.button2.UseVisualStyleBackColor = true;
+            this.button2.Click += new System.EventHandler(this.button2_Click);
+            // 
             // FormSPT
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.ClientSize = new System.Drawing.Size(587, 441);
+            this.ClientSize = new System.Drawing.Size(624, 601);
             this.Controls.Add(this.picConnected);
             this.Controls.Add(this.picHomePage);
             this.Controls.Add(this.picDisconnected);
@@ -795,9 +1203,13 @@
             this.tabDfu.ResumeLayout(false);
             this.tabDfu.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nud_FrameDelay)).EndInit();
+            this.tabCalc.ResumeLayout(false);
+            this.tabCalc.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picConnected)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.picHomePage)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.picDisconnected)).EndInit();
+            this.tabShortcut.ResumeLayout(false);
+            this.tabShortcut.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -857,6 +1269,39 @@
         private System.Windows.Forms.Button bt_Script;
         private System.Windows.Forms.OpenFileDialog openFileDialog2;
         private System.Windows.Forms.CheckBox ckb_Script;
+        private System.Windows.Forms.TabPage tabCalc;
+        private System.Windows.Forms.TextBox tb_DecA;
+        private System.Windows.Forms.TextBox tb_BinB;
+        private System.Windows.Forms.TextBox tb_BinA;
+        private System.Windows.Forms.TextBox tb_HexB;
+        private System.Windows.Forms.TextBox tb_HexA;
+        private System.Windows.Forms.Label label16;
+        private System.Windows.Forms.TextBox tb_DecB;
+        private System.Windows.Forms.Label label15;
+        private System.Windows.Forms.Label label14;
+        private System.Windows.Forms.Label label13;
+        private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.Button bt_Sign;
+        private System.Windows.Forms.Button bt_Float;
+        private System.Windows.Forms.Button bt_NotB;
+        private System.Windows.Forms.Button bt_NotA;
+        private System.Windows.Forms.Button bt_Xor;
+        private System.Windows.Forms.Button bt_Or;
+        private System.Windows.Forms.Button bt_And;
+        private System.Windows.Forms.Button bt_Mod;
+        private System.Windows.Forms.Button bt_Div;
+        private System.Windows.Forms.Button bt_Mul;
+        private System.Windows.Forms.Button bt_Sub;
+        private System.Windows.Forms.Button bt_Add;
+        private System.Windows.Forms.TabPage tabShortcut;
+        private System.Windows.Forms.Button bt_TaskMngr;
+        private System.Windows.Forms.Label label20;
+        private System.Windows.Forms.Label label19;
+        private System.Windows.Forms.Label label18;
+        private System.Windows.Forms.Label label17;
+        private System.Windows.Forms.Button bt_DeviceMngr;
+        private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.Button button1;
     }
 }
 

@@ -37,6 +37,7 @@ namespace Form1
         private static string Pid = "PID_000A";
         private volatile bool DebugWait = false;
         private volatile bool InternalPort = true;
+        private volatile bool AppBusy = false;
         // Common
         UTF8Encoding ENC = new System.Text.UTF8Encoding();
         #endregion
@@ -1116,8 +1117,25 @@ namespace Form1
         {
             if (bt_FwdScan.Enabled == false) 
             {
-                if (MessageBox.Show("\"Stop\" first!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning) == DialogResult.OK)
-                    e.Cancel = true;
+                App_Forward_Deinit();
+                Enable_Uart_Components();
+
+                bt_FwdStart.Visible = true;
+                bt_FwdStop.Visible = false;
+                bt_DfuStart.Enabled = true;
+
+                Thread.Sleep(1000);
+            }
+            else if (bt_DfuStop.Visible == true) 
+            {
+                App_Dfu_Deinit();
+                Enable_Uart_Components();
+
+                bt_DfuStart.Visible = true;
+                bt_DfuStop.Visible = false;
+                bt_FwdStart.Enabled = true;
+
+                Thread.Sleep(1000);
             }
         }
 
@@ -1131,6 +1149,9 @@ namespace Form1
         {
             byte[] temp;
             int byte2read;
+            bool sttBk = AppBusy;
+
+            AppBusy = true;
 
             try
             {
@@ -1148,12 +1169,18 @@ namespace Form1
                 while (DebugWait) ;
                 DebugLog("\n\n[serialPort1_DataReceived]\n" + ex.ToString(), Color.Red);
             }
+
+            AppBusy = sttBk;
         }
 
         private void serialPort2_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             byte[] temp;
             int byte2read;
+
+            bool sttBk = AppBusy;
+
+            AppBusy = true;
 
             try
             {
@@ -1167,6 +1194,8 @@ namespace Form1
                 while (DebugWait) ;
                 DebugLog("\n\n[serialPort2_DataReceived]\n" + ex.ToString(), Color.Red);
             }
+
+            AppBusy = sttBk;
         }
 
         private void Form1_SizeChanged(object sender, EventArgs e)
@@ -1200,18 +1229,17 @@ namespace Form1
 
         private void cb_Pid_TextChanged(object sender, EventArgs e)
         {
-            //if (cb_Pid.Text == "USB CDC")
-            //    Pid = "PID_000A";
-            //else 
             if (cb_Pid.Text == "VCP")
                 Pid = "VID_04D8&PID_0057";
             else if (cb_Pid.Text == "CP2102N")
                 Pid = "VID_10C4&PID_EA60";
             else if (cb_Pid.Text == "FT232RL")
                 Pid = "VID_0403+PID_6001";
+            else if (cb_Pid.Text == "TELIT")
+                Pid = "VID_1BC7+PID_1100";
             else if (cb_Pid.Text == "SAMPI")
                 Pid = "VID_0C00&PID_0123";
-            else
+            else // USB CDC
                 Pid = "PID_000A";
 
             Get_Port1();
@@ -1491,5 +1519,25 @@ namespace Form1
         }
 
         #endregion
+
+        private void bt_TaskMngr_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process.Start("taskmgr.exe");
+        }
+
+        private void bt_DeviceMngr_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process.Start("diskmgmt.msc");
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }
