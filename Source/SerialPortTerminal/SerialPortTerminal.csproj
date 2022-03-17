@@ -129,6 +129,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="text-x-log-icon.png" />
     <None Include="plug-disconnect-prohibition-icon.png" />
     <None Include="home-icon.png" />
     <None Include="plug-connect-icon.png" />

@@ -440,17 +440,20 @@ namespace Form1
             {
                 cb_Port1.Items.Clear();
                 ports = SerialPort.GetPortNames();
-                ManagementObjectSearcher deviceList = new ManagementObjectSearcher("root\\WMI", "SELECT * FROM MSSerial_PortName");
-
+                //ManagementObjectSearcher deviceList = new ManagementObjectSearcher("root\\WMI", "SELECT * FROM MSSerial_PortName");// old
+                ManagementObjectSearcher deviceList = new ManagementObjectSearcher("root\\WMI", "SELECT * FROM MSWmi_PnPInstanceNames");// new
+                
                 if (deviceList != null)
                 {
                     foreach (ManagementObject device in deviceList.Get())
                     {
+                        DebugLog("\n" + device.ToString(), Color.Black);
                         //DebugLog("\n" + device["PortName"].ToString(), Color.Green);
 
                         if (device["InstanceName"].ToString().Contains(Pid))
                         {
-                            deviceid = device["PortName"].ToString();
+                            deviceid = device["PortName"].ToString();// old
+                            //deviceid = device["PnPInstanceNames"].ToString();// new
 
                             if (portlist == null)
                             {
@@ -1235,8 +1238,10 @@ namespace Form1
                 Pid = "VID_10C4&PID_EA60";
             else if (cb_Pid.Text == "FT232RL")
                 Pid = "VID_0403+PID_6001";
-            else if (cb_Pid.Text == "TELIT")
-                Pid = "VID_1BC7+PID_1100";
+            else if (cb_Pid.Text == "xE866")
+                Pid = "VID_1BC7&PID_0021";
+            else if (cb_Pid.Text == "ME910G1")
+                Pid = "VID_1BC7&PID_110A";
             else if (cb_Pid.Text == "SAMPI")
                 Pid = "VID_0C00&PID_0123";
             else // USB CDC
@@ -1352,6 +1357,16 @@ namespace Form1
             //Get_Port1();
             Scan_UsbPort();
             Get_Port2();
+        }
+
+        private void lb_OpenLog_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process.Start(Directory.GetCurrentDirectory()); 
+        }
+
+        private void pic_OpenLog_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process.Start(Directory.GetCurrentDirectory());
         }
 
         private void lkl_Homepage_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -1520,6 +1535,99 @@ namespace Form1
 
         #endregion
 
+        #region Calculator
+        private void tb_DecA_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tb_HexA_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tb_BinA_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tb_DecB_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tb_HexB_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tb_BinB_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_Add_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_Sub_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_Mul_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_Div_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_Mod_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_And_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_Or_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_Xor_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_NotA_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_NotB_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_Float_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void bt_Sign_Click(object sender, EventArgs e)
+        {
+
+        }
+        #endregion
+
+        #region Shortcuts
         private void bt_TaskMngr_Click(object sender, EventArgs e)
         {
             System.Diagnostics.Process.Start("taskmgr.exe");
@@ -1527,17 +1635,23 @@ namespace Form1
 
         private void bt_DeviceMngr_Click(object sender, EventArgs e)
         {
+            System.Diagnostics.Process.Start("devmgmt.msc");
+        }
+
+        private void bt_DiskMngr_Click(object sender, EventArgs e)
+        {
             System.Diagnostics.Process.Start("diskmgmt.msc");
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void bt_CleanTemp_Click(object sender, EventArgs e)
         {
 
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private void bt_ResetMPLAB_Click(object sender, EventArgs e)
         {
 
         }
+        #endregion
     }
 }
