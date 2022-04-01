@@ -44,12 +44,85 @@ namespace Form1
 
         #region User's Functions
 
+        private string Parse_COMPort(string str)
+        {
+            // ...(COM10)
+            int i, j, k;
+            string s = null;
+            char[] arr = str.ToCharArray();
+
+            for (i = 0; i < (arr.Length - 4); i++)
+            {
+                if ((arr[i] == 'C') && (arr[i + 1] == 'O') && (arr[i + 2] == 'M'))
+                {
+                    i += 3;
+                    break;
+                }
+            }
+
+            for (j = i, k = 0; j < arr.Length; j++)
+            {
+                if (arr[j] == ')')
+                {
+                    if (j > i)
+                        s = "COM" + k.ToString();
+
+                    break;
+                }
+
+                if ((arr[j] >= '0') && (arr[j] <= '9'))
+                {
+                    k *= 10;
+                    k += (int)(arr[j] - '0');
+                }
+
+            }
+
+            return s;
+        }
+
+        private void ReplaceCharArray(ref char[] ChrArr, char oldChar, char newChar)
+        {
+            int i, j;
+            int len = ChrArr.Length;
+
+            for (i = 0; i < len; i++)
+            {
+                if (ChrArr[i] == oldChar)
+                {
+                    if (newChar != (char)0x00) 
+                        ChrArr[i] = newChar;
+                    else
+                    {
+                        for (j = i; j < (len - 1); j++)
+                            ChrArr[j] = ChrArr[j + 1];
+
+                        ChrArr[j] = (char)0x00;
+                        len--;
+                    }
+                }
+            }
+
+            char[] newChrArr=new char[len];
+
+            for (i = 0; i < len; i++)
+                newChrArr[i] = ChrArr[i];
+
+            ChrArr = null;
+            ChrArr = newChrArr;
+        }
+
         private void ClearLog()
         {
-            string logpath = "Log " + DateTime.Now.ToLongDateString() + ".txt";
-            logpath.Replace('/', '_');
-            logpath.Replace('\\', '_');
-            logpath.Replace(':', '_');
+            string logpath = "Log " + DateTime.Now.ToLongDateString() + DateTime.Now.ToLongTimeString();
+            char[] logpathchr = logpath.ToCharArray();
+
+            ReplaceCharArray(ref logpathchr, '/', (char)0x00);
+            ReplaceCharArray(ref logpathchr, '\\', (char)0x00);
+            ReplaceCharArray(ref logpathchr, ':', (char)0x00);
+            ReplaceCharArray(ref logpathchr, '.', (char)0x00);
+            logpath = new string(logpathchr) + ".txt";
+            //DebugLog(logpath, Color.Green);
             StreamWriter sw = File.CreateText(logpath);
             sw.WriteLine(rtb_Log.Text);
             sw.Close();
@@ -440,20 +513,17 @@ namespace Form1
             {
                 cb_Port1.Items.Clear();
                 ports = SerialPort.GetPortNames();
-                //ManagementObjectSearcher deviceList = new ManagementObjectSearcher("root\\WMI", "SELECT * FROM MSSerial_PortName");// old
-                ManagementObjectSearcher deviceList = new ManagementObjectSearcher("root\\WMI", "SELECT * FROM MSWmi_PnPInstanceNames");// new
-                
+                ManagementObjectSearcher deviceList = new ManagementObjectSearcher("SELECT * FROM Win32_PnPEntity WHERE Caption like '%(COM%'");// new
+
                 if (deviceList != null)
                 {
                     foreach (ManagementObject device in deviceList.Get())
                     {
-                        DebugLog("\n" + device.ToString(), Color.Black);
-                        //DebugLog("\n" + device["PortName"].ToString(), Color.Green);
+                        //DebugLog("\n" + device.ToString(), Color.Black);
 
-                        if (device["InstanceName"].ToString().Contains(Pid))
+                        if (device["DeviceID"].ToString().Contains(Pid))
                         {
-                            deviceid = device["PortName"].ToString();// old
-                            //deviceid = device["PnPInstanceNames"].ToString();// new
+                            deviceid = Parse_COMPort(device["Caption"].ToString()); // new
 
                             if (portlist == null)
                             {
@@ -1262,7 +1332,7 @@ namespace Form1
             // scroll it automatically
             rtb_Log.ScrollToCaret();
 
-            if(rtb_Log.Text.Length>=65000)
+            if(rtb_Log.Text.Length>= 2147483647)
                 ClearLog();
         }
 

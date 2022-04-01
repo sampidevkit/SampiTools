@@ -50,6 +50,9 @@
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabForward = new System.Windows.Forms.TabPage();
+            this.bt_FwdStart = new System.Windows.Forms.Button();
+            this.bt_FwdStop = new System.Windows.Forms.Button();
+            this.bt_FwdScan = new System.Windows.Forms.Button();
             this.tabInternalPort = new System.Windows.Forms.TabPage();
             this.ckb_Script = new System.Windows.Forms.CheckBox();
             this.nud_Interval = new System.Windows.Forms.NumericUpDown();
@@ -60,6 +63,9 @@
             this.tbx_CmdData = new System.Windows.Forms.TextBox();
             this.tbx_CmdStop = new System.Windows.Forms.TextBox();
             this.tbx_CmdStart = new System.Windows.Forms.TextBox();
+            this.bt_Script = new System.Windows.Forms.Button();
+            this.bt_Send = new System.Windows.Forms.Button();
+            this.bt_StopSend = new System.Windows.Forms.Button();
             this.tabDfu = new System.Windows.Forms.TabPage();
             this.nud_FrameDelay = new System.Windows.Forms.NumericUpDown();
             this.label8 = new System.Windows.Forms.Label();
@@ -68,6 +74,10 @@
             this.cb_DfuPort = new System.Windows.Forms.ComboBox();
             this.label7 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
+            this.bt_Browse = new System.Windows.Forms.Button();
+            this.bt_DfuScan = new System.Windows.Forms.Button();
+            this.bt_DfuStart = new System.Windows.Forms.Button();
+            this.bt_DfuStop = new System.Windows.Forms.Button();
             this.tabCalc = new System.Windows.Forms.TabPage();
             this.bt_Sign = new System.Windows.Forms.Button();
             this.bt_Float = new System.Windows.Forms.Button();
@@ -93,32 +103,22 @@
             this.label12 = new System.Windows.Forms.Label();
             this.tb_DecA = new System.Windows.Forms.TextBox();
             this.tabShortcut = new System.Windows.Forms.TabPage();
+            this.label21 = new System.Windows.Forms.Label();
             this.label20 = new System.Windows.Forms.Label();
             this.label19 = new System.Windows.Forms.Label();
             this.label18 = new System.Windows.Forms.Label();
             this.label17 = new System.Windows.Forms.Label();
-            this.timer1 = new System.Windows.Forms.Timer(this.components);
-            this.openFileDialog2 = new System.Windows.Forms.OpenFileDialog();
-            this.label21 = new System.Windows.Forms.Label();
-            this.pic_OpenLog = new System.Windows.Forms.PictureBox();
-            this.picConnected = new System.Windows.Forms.PictureBox();
-            this.picHomePage = new System.Windows.Forms.PictureBox();
-            this.picDisconnected = new System.Windows.Forms.PictureBox();
-            this.bt_FwdStart = new System.Windows.Forms.Button();
-            this.bt_FwdStop = new System.Windows.Forms.Button();
-            this.bt_FwdScan = new System.Windows.Forms.Button();
-            this.bt_Script = new System.Windows.Forms.Button();
-            this.bt_Send = new System.Windows.Forms.Button();
-            this.bt_StopSend = new System.Windows.Forms.Button();
-            this.bt_Browse = new System.Windows.Forms.Button();
-            this.bt_DfuScan = new System.Windows.Forms.Button();
-            this.bt_DfuStart = new System.Windows.Forms.Button();
-            this.bt_DfuStop = new System.Windows.Forms.Button();
             this.bt_DiskMngr = new System.Windows.Forms.Button();
             this.bt_ResetMPLAB = new System.Windows.Forms.Button();
             this.bt_CleanTemp = new System.Windows.Forms.Button();
             this.bt_DeviceMngr = new System.Windows.Forms.Button();
             this.bt_TaskMngr = new System.Windows.Forms.Button();
+            this.timer1 = new System.Windows.Forms.Timer(this.components);
+            this.openFileDialog2 = new System.Windows.Forms.OpenFileDialog();
+            this.pic_OpenLog = new System.Windows.Forms.PictureBox();
+            this.picConnected = new System.Windows.Forms.PictureBox();
+            this.picHomePage = new System.Windows.Forms.PictureBox();
+            this.picDisconnected = new System.Windows.Forms.PictureBox();
             this.lb_OpenLog = new System.Windows.Forms.Label();
             this.tabControl1.SuspendLayout();
             this.tabForward.SuspendLayout();
@@ -305,9 +305,9 @@
             this.rtb_Log.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
             this.rtb_Log.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.rtb_Log.Location = new System.Drawing.Point(9, 140);
-            this.rtb_Log.MaxLength = 65536;
             this.rtb_Log.Name = "rtb_Log";
             this.rtb_Log.ReadOnly = true;
+            this.rtb_Log.RightToLeft = System.Windows.Forms.RightToLeft.No;
             this.rtb_Log.Size = new System.Drawing.Size(603, 420);
             this.rtb_Log.TabIndex = 10;
             this.rtb_Log.Text = "";
@@ -382,6 +382,49 @@
             this.tabForward.TabIndex = 0;
             this.tabForward.Text = "Forward";
             this.tabForward.UseVisualStyleBackColor = true;
+            // 
+            // bt_FwdStart
+            // 
+            this.bt_FwdStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_FwdStart.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_FwdStart.ForeColor = System.Drawing.Color.Red;
+            this.bt_FwdStart.ImageIndex = 0;
+            this.bt_FwdStart.ImageList = this.imageList1;
+            this.bt_FwdStart.Location = new System.Drawing.Point(537, 7);
+            this.bt_FwdStart.Name = "bt_FwdStart";
+            this.bt_FwdStart.Size = new System.Drawing.Size(52, 52);
+            this.bt_FwdStart.TabIndex = 5;
+            this.bt_FwdStart.UseVisualStyleBackColor = true;
+            this.bt_FwdStart.Click += new System.EventHandler(this.bt_FwdStart_Click);
+            // 
+            // bt_FwdStop
+            // 
+            this.bt_FwdStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_FwdStop.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_FwdStop.ForeColor = System.Drawing.Color.Red;
+            this.bt_FwdStop.ImageIndex = 1;
+            this.bt_FwdStop.ImageList = this.imageList1;
+            this.bt_FwdStop.Location = new System.Drawing.Point(537, 7);
+            this.bt_FwdStop.Name = "bt_FwdStop";
+            this.bt_FwdStop.Size = new System.Drawing.Size(52, 52);
+            this.bt_FwdStop.TabIndex = 12;
+            this.bt_FwdStop.UseVisualStyleBackColor = true;
+            this.bt_FwdStop.Visible = false;
+            this.bt_FwdStop.Click += new System.EventHandler(this.bt_FwdStop_Click);
+            // 
+            // bt_FwdScan
+            // 
+            this.bt_FwdScan.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_FwdScan.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_FwdScan.ForeColor = System.Drawing.Color.Red;
+            this.bt_FwdScan.ImageIndex = 3;
+            this.bt_FwdScan.ImageList = this.imageList1;
+            this.bt_FwdScan.Location = new System.Drawing.Point(479, 6);
+            this.bt_FwdScan.Name = "bt_FwdScan";
+            this.bt_FwdScan.Size = new System.Drawing.Size(52, 52);
+            this.bt_FwdScan.TabIndex = 13;
+            this.bt_FwdScan.UseVisualStyleBackColor = true;
+            this.bt_FwdScan.Click += new System.EventHandler(this.bt_FwdScan_Click);
             // 
             // tabInternalPort
             // 
@@ -514,6 +557,51 @@
             this.tbx_CmdStart.Size = new System.Drawing.Size(68, 25);
             this.tbx_CmdStart.TabIndex = 0;
             // 
+            // bt_Script
+            // 
+            this.bt_Script.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_Script.Enabled = false;
+            this.bt_Script.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_Script.ForeColor = System.Drawing.Color.Red;
+            this.bt_Script.ImageIndex = 8;
+            this.bt_Script.ImageList = this.imageList1;
+            this.bt_Script.Location = new System.Drawing.Point(442, 7);
+            this.bt_Script.Name = "bt_Script";
+            this.bt_Script.Size = new System.Drawing.Size(52, 52);
+            this.bt_Script.TabIndex = 26;
+            this.bt_Script.UseVisualStyleBackColor = true;
+            this.bt_Script.Click += new System.EventHandler(this.bt_Script_Click);
+            // 
+            // bt_Send
+            // 
+            this.bt_Send.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_Send.Enabled = false;
+            this.bt_Send.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_Send.ForeColor = System.Drawing.Color.Red;
+            this.bt_Send.ImageIndex = 5;
+            this.bt_Send.ImageList = this.imageList1;
+            this.bt_Send.Location = new System.Drawing.Point(500, 7);
+            this.bt_Send.Name = "bt_Send";
+            this.bt_Send.Size = new System.Drawing.Size(52, 52);
+            this.bt_Send.TabIndex = 6;
+            this.bt_Send.UseVisualStyleBackColor = true;
+            this.bt_Send.Click += new System.EventHandler(this.bt_Send_Click);
+            // 
+            // bt_StopSend
+            // 
+            this.bt_StopSend.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_StopSend.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_StopSend.ForeColor = System.Drawing.Color.Red;
+            this.bt_StopSend.ImageIndex = 1;
+            this.bt_StopSend.ImageList = this.imageList1;
+            this.bt_StopSend.Location = new System.Drawing.Point(500, 7);
+            this.bt_StopSend.Name = "bt_StopSend";
+            this.bt_StopSend.Size = new System.Drawing.Size(52, 52);
+            this.bt_StopSend.TabIndex = 25;
+            this.bt_StopSend.UseVisualStyleBackColor = true;
+            this.bt_StopSend.Visible = false;
+            this.bt_StopSend.Click += new System.EventHandler(this.bt_StopSend_Click);
+            // 
             // tabDfu
             // 
             this.tabDfu.BackColor = System.Drawing.SystemColors.Window;
@@ -628,6 +716,62 @@
             this.label5.Size = new System.Drawing.Size(30, 15);
             this.label5.TabIndex = 18;
             this.label5.Text = "File:";
+            // 
+            // bt_Browse
+            // 
+            this.bt_Browse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_Browse.ImageIndex = 7;
+            this.bt_Browse.ImageList = this.imageList1;
+            this.bt_Browse.Location = new System.Drawing.Point(384, 6);
+            this.bt_Browse.Name = "bt_Browse";
+            this.bt_Browse.Size = new System.Drawing.Size(52, 52);
+            this.bt_Browse.TabIndex = 17;
+            this.bt_Browse.UseVisualStyleBackColor = true;
+            this.bt_Browse.Click += new System.EventHandler(this.bt_Browse_Click);
+            // 
+            // bt_DfuScan
+            // 
+            this.bt_DfuScan.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_DfuScan.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_DfuScan.ForeColor = System.Drawing.Color.Red;
+            this.bt_DfuScan.ImageIndex = 3;
+            this.bt_DfuScan.ImageList = this.imageList1;
+            this.bt_DfuScan.Location = new System.Drawing.Point(442, 6);
+            this.bt_DfuScan.Name = "bt_DfuScan";
+            this.bt_DfuScan.Size = new System.Drawing.Size(52, 52);
+            this.bt_DfuScan.TabIndex = 16;
+            this.bt_DfuScan.UseVisualStyleBackColor = true;
+            this.bt_DfuScan.Click += new System.EventHandler(this.bt_DfuScan_Click);
+            // 
+            // bt_DfuStart
+            // 
+            this.bt_DfuStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_DfuStart.Enabled = false;
+            this.bt_DfuStart.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_DfuStart.ForeColor = System.Drawing.Color.Red;
+            this.bt_DfuStart.ImageIndex = 4;
+            this.bt_DfuStart.ImageList = this.imageList1;
+            this.bt_DfuStart.Location = new System.Drawing.Point(500, 6);
+            this.bt_DfuStart.Name = "bt_DfuStart";
+            this.bt_DfuStart.Size = new System.Drawing.Size(52, 52);
+            this.bt_DfuStart.TabIndex = 14;
+            this.bt_DfuStart.UseVisualStyleBackColor = true;
+            this.bt_DfuStart.Click += new System.EventHandler(this.bt_DfuStart_Click);
+            // 
+            // bt_DfuStop
+            // 
+            this.bt_DfuStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_DfuStop.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_DfuStop.ForeColor = System.Drawing.Color.Red;
+            this.bt_DfuStop.ImageIndex = 1;
+            this.bt_DfuStop.ImageList = this.imageList1;
+            this.bt_DfuStop.Location = new System.Drawing.Point(500, 6);
+            this.bt_DfuStop.Name = "bt_DfuStop";
+            this.bt_DfuStop.Size = new System.Drawing.Size(52, 52);
+            this.bt_DfuStop.TabIndex = 15;
+            this.bt_DfuStop.UseVisualStyleBackColor = true;
+            this.bt_DfuStop.Visible = false;
+            this.bt_DfuStop.Click += new System.EventHandler(this.bt_DfuStop_Click);
             // 
             // tabCalc
             // 
@@ -939,6 +1083,16 @@
             this.tabShortcut.Text = "Shortcut";
             this.tabShortcut.UseVisualStyleBackColor = true;
             // 
+            // label21
+            // 
+            this.label21.AutoSize = true;
+            this.label21.Location = new System.Drawing.Point(122, 61);
+            this.label21.Name = "label21";
+            this.label21.Size = new System.Drawing.Size(49, 26);
+            this.label21.TabIndex = 26;
+            this.label21.Text = "Disk \r\nManager";
+            this.label21.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
             // label20
             // 
             this.label20.AutoSize = true;
@@ -978,217 +1132,6 @@
             this.label17.TabIndex = 19;
             this.label17.Text = "Task\r\nManager";
             this.label17.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // timer1
-            // 
-            this.timer1.Interval = 1000;
-            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
-            // 
-            // openFileDialog2
-            // 
-            this.openFileDialog2.FileName = "openFileDialog2";
-            this.openFileDialog2.Filter = "Script files (*.scrpt)|*.scrpt";
-            // 
-            // label21
-            // 
-            this.label21.AutoSize = true;
-            this.label21.Location = new System.Drawing.Point(122, 61);
-            this.label21.Name = "label21";
-            this.label21.Size = new System.Drawing.Size(49, 26);
-            this.label21.TabIndex = 26;
-            this.label21.Text = "Disk \r\nManager";
-            this.label21.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // pic_OpenLog
-            // 
-            this.pic_OpenLog.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.pic_OpenLog.Image = global::SerialPortTerminal.Properties.Resources.text_x_log_icon;
-            this.pic_OpenLog.Location = new System.Drawing.Point(404, 566);
-            this.pic_OpenLog.Name = "pic_OpenLog";
-            this.pic_OpenLog.Size = new System.Drawing.Size(29, 26);
-            this.pic_OpenLog.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
-            this.pic_OpenLog.TabIndex = 22;
-            this.pic_OpenLog.TabStop = false;
-            this.pic_OpenLog.Click += new System.EventHandler(this.pic_OpenLog_Click);
-            // 
-            // picConnected
-            // 
-            this.picConnected.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.picConnected.Image = global::SerialPortTerminal.Properties.Resources.plug_connect_icon;
-            this.picConnected.Location = new System.Drawing.Point(9, 566);
-            this.picConnected.Name = "picConnected";
-            this.picConnected.Size = new System.Drawing.Size(29, 26);
-            this.picConnected.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
-            this.picConnected.TabIndex = 21;
-            this.picConnected.TabStop = false;
-            this.picConnected.Visible = false;
-            // 
-            // picHomePage
-            // 
-            this.picHomePage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.picHomePage.Image = global::SerialPortTerminal.Properties.Resources.home_icon;
-            this.picHomePage.Location = new System.Drawing.Point(499, 566);
-            this.picHomePage.Name = "picHomePage";
-            this.picHomePage.Size = new System.Drawing.Size(29, 26);
-            this.picHomePage.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
-            this.picHomePage.TabIndex = 20;
-            this.picHomePage.TabStop = false;
-            this.picHomePage.Click += new System.EventHandler(this.picHomePage_Click);
-            // 
-            // picDisconnected
-            // 
-            this.picDisconnected.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.picDisconnected.Image = global::SerialPortTerminal.Properties.Resources.plug_disconnect_prohibition_icon;
-            this.picDisconnected.Location = new System.Drawing.Point(9, 566);
-            this.picDisconnected.Name = "picDisconnected";
-            this.picDisconnected.Size = new System.Drawing.Size(29, 26);
-            this.picDisconnected.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
-            this.picDisconnected.TabIndex = 19;
-            this.picDisconnected.TabStop = false;
-            // 
-            // bt_FwdStart
-            // 
-            this.bt_FwdStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_FwdStart.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_FwdStart.ForeColor = System.Drawing.Color.Red;
-            this.bt_FwdStart.ImageIndex = 0;
-            this.bt_FwdStart.ImageList = this.imageList1;
-            this.bt_FwdStart.Location = new System.Drawing.Point(537, 7);
-            this.bt_FwdStart.Name = "bt_FwdStart";
-            this.bt_FwdStart.Size = new System.Drawing.Size(52, 52);
-            this.bt_FwdStart.TabIndex = 5;
-            this.bt_FwdStart.UseVisualStyleBackColor = true;
-            this.bt_FwdStart.Click += new System.EventHandler(this.bt_FwdStart_Click);
-            // 
-            // bt_FwdStop
-            // 
-            this.bt_FwdStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_FwdStop.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_FwdStop.ForeColor = System.Drawing.Color.Red;
-            this.bt_FwdStop.ImageIndex = 1;
-            this.bt_FwdStop.ImageList = this.imageList1;
-            this.bt_FwdStop.Location = new System.Drawing.Point(537, 7);
-            this.bt_FwdStop.Name = "bt_FwdStop";
-            this.bt_FwdStop.Size = new System.Drawing.Size(52, 52);
-            this.bt_FwdStop.TabIndex = 12;
-            this.bt_FwdStop.UseVisualStyleBackColor = true;
-            this.bt_FwdStop.Visible = false;
-            this.bt_FwdStop.Click += new System.EventHandler(this.bt_FwdStop_Click);
-            // 
-            // bt_FwdScan
-            // 
-            this.bt_FwdScan.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_FwdScan.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_FwdScan.ForeColor = System.Drawing.Color.Red;
-            this.bt_FwdScan.ImageIndex = 3;
-            this.bt_FwdScan.ImageList = this.imageList1;
-            this.bt_FwdScan.Location = new System.Drawing.Point(479, 6);
-            this.bt_FwdScan.Name = "bt_FwdScan";
-            this.bt_FwdScan.Size = new System.Drawing.Size(52, 52);
-            this.bt_FwdScan.TabIndex = 13;
-            this.bt_FwdScan.UseVisualStyleBackColor = true;
-            this.bt_FwdScan.Click += new System.EventHandler(this.bt_FwdScan_Click);
-            // 
-            // bt_Script
-            // 
-            this.bt_Script.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_Script.Enabled = false;
-            this.bt_Script.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_Script.ForeColor = System.Drawing.Color.Red;
-            this.bt_Script.ImageIndex = 8;
-            this.bt_Script.ImageList = this.imageList1;
-            this.bt_Script.Location = new System.Drawing.Point(442, 7);
-            this.bt_Script.Name = "bt_Script";
-            this.bt_Script.Size = new System.Drawing.Size(52, 52);
-            this.bt_Script.TabIndex = 26;
-            this.bt_Script.UseVisualStyleBackColor = true;
-            this.bt_Script.Click += new System.EventHandler(this.bt_Script_Click);
-            // 
-            // bt_Send
-            // 
-            this.bt_Send.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_Send.Enabled = false;
-            this.bt_Send.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_Send.ForeColor = System.Drawing.Color.Red;
-            this.bt_Send.ImageIndex = 5;
-            this.bt_Send.ImageList = this.imageList1;
-            this.bt_Send.Location = new System.Drawing.Point(500, 7);
-            this.bt_Send.Name = "bt_Send";
-            this.bt_Send.Size = new System.Drawing.Size(52, 52);
-            this.bt_Send.TabIndex = 6;
-            this.bt_Send.UseVisualStyleBackColor = true;
-            this.bt_Send.Click += new System.EventHandler(this.bt_Send_Click);
-            // 
-            // bt_StopSend
-            // 
-            this.bt_StopSend.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_StopSend.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_StopSend.ForeColor = System.Drawing.Color.Red;
-            this.bt_StopSend.ImageIndex = 1;
-            this.bt_StopSend.ImageList = this.imageList1;
-            this.bt_StopSend.Location = new System.Drawing.Point(500, 7);
-            this.bt_StopSend.Name = "bt_StopSend";
-            this.bt_StopSend.Size = new System.Drawing.Size(52, 52);
-            this.bt_StopSend.TabIndex = 25;
-            this.bt_StopSend.UseVisualStyleBackColor = true;
-            this.bt_StopSend.Visible = false;
-            this.bt_StopSend.Click += new System.EventHandler(this.bt_StopSend_Click);
-            // 
-            // bt_Browse
-            // 
-            this.bt_Browse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_Browse.ImageIndex = 7;
-            this.bt_Browse.ImageList = this.imageList1;
-            this.bt_Browse.Location = new System.Drawing.Point(384, 6);
-            this.bt_Browse.Name = "bt_Browse";
-            this.bt_Browse.Size = new System.Drawing.Size(52, 52);
-            this.bt_Browse.TabIndex = 17;
-            this.bt_Browse.UseVisualStyleBackColor = true;
-            this.bt_Browse.Click += new System.EventHandler(this.bt_Browse_Click);
-            // 
-            // bt_DfuScan
-            // 
-            this.bt_DfuScan.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_DfuScan.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_DfuScan.ForeColor = System.Drawing.Color.Red;
-            this.bt_DfuScan.ImageIndex = 3;
-            this.bt_DfuScan.ImageList = this.imageList1;
-            this.bt_DfuScan.Location = new System.Drawing.Point(442, 6);
-            this.bt_DfuScan.Name = "bt_DfuScan";
-            this.bt_DfuScan.Size = new System.Drawing.Size(52, 52);
-            this.bt_DfuScan.TabIndex = 16;
-            this.bt_DfuScan.UseVisualStyleBackColor = true;
-            this.bt_DfuScan.Click += new System.EventHandler(this.bt_DfuScan_Click);
-            // 
-            // bt_DfuStart
-            // 
-            this.bt_DfuStart.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_DfuStart.Enabled = false;
-            this.bt_DfuStart.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_DfuStart.ForeColor = System.Drawing.Color.Red;
-            this.bt_DfuStart.ImageIndex = 4;
-            this.bt_DfuStart.ImageList = this.imageList1;
-            this.bt_DfuStart.Location = new System.Drawing.Point(500, 6);
-            this.bt_DfuStart.Name = "bt_DfuStart";
-            this.bt_DfuStart.Size = new System.Drawing.Size(52, 52);
-            this.bt_DfuStart.TabIndex = 14;
-            this.bt_DfuStart.UseVisualStyleBackColor = true;
-            this.bt_DfuStart.Click += new System.EventHandler(this.bt_DfuStart_Click);
-            // 
-            // bt_DfuStop
-            // 
-            this.bt_DfuStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_DfuStop.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_DfuStop.ForeColor = System.Drawing.Color.Red;
-            this.bt_DfuStop.ImageIndex = 1;
-            this.bt_DfuStop.ImageList = this.imageList1;
-            this.bt_DfuStop.Location = new System.Drawing.Point(500, 6);
-            this.bt_DfuStop.Name = "bt_DfuStop";
-            this.bt_DfuStop.Size = new System.Drawing.Size(52, 52);
-            this.bt_DfuStop.TabIndex = 15;
-            this.bt_DfuStop.UseVisualStyleBackColor = true;
-            this.bt_DfuStop.Visible = false;
-            this.bt_DfuStop.Click += new System.EventHandler(this.bt_DfuStop_Click);
             // 
             // bt_DiskMngr
             // 
@@ -1256,6 +1199,63 @@
             this.bt_TaskMngr.TabIndex = 17;
             this.bt_TaskMngr.UseVisualStyleBackColor = true;
             this.bt_TaskMngr.Click += new System.EventHandler(this.bt_TaskMngr_Click);
+            // 
+            // timer1
+            // 
+            this.timer1.Interval = 1000;
+            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
+            // 
+            // openFileDialog2
+            // 
+            this.openFileDialog2.FileName = "openFileDialog2";
+            this.openFileDialog2.Filter = "Script files (*.scrpt)|*.scrpt";
+            // 
+            // pic_OpenLog
+            // 
+            this.pic_OpenLog.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.pic_OpenLog.Image = global::SerialPortTerminal.Properties.Resources.text_x_log_icon;
+            this.pic_OpenLog.Location = new System.Drawing.Point(404, 566);
+            this.pic_OpenLog.Name = "pic_OpenLog";
+            this.pic_OpenLog.Size = new System.Drawing.Size(29, 26);
+            this.pic_OpenLog.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
+            this.pic_OpenLog.TabIndex = 22;
+            this.pic_OpenLog.TabStop = false;
+            this.pic_OpenLog.Click += new System.EventHandler(this.pic_OpenLog_Click);
+            // 
+            // picConnected
+            // 
+            this.picConnected.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.picConnected.Image = global::SerialPortTerminal.Properties.Resources.plug_connect_icon;
+            this.picConnected.Location = new System.Drawing.Point(9, 566);
+            this.picConnected.Name = "picConnected";
+            this.picConnected.Size = new System.Drawing.Size(29, 26);
+            this.picConnected.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
+            this.picConnected.TabIndex = 21;
+            this.picConnected.TabStop = false;
+            this.picConnected.Visible = false;
+            // 
+            // picHomePage
+            // 
+            this.picHomePage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.picHomePage.Image = global::SerialPortTerminal.Properties.Resources.home_icon;
+            this.picHomePage.Location = new System.Drawing.Point(499, 566);
+            this.picHomePage.Name = "picHomePage";
+            this.picHomePage.Size = new System.Drawing.Size(29, 26);
+            this.picHomePage.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
+            this.picHomePage.TabIndex = 20;
+            this.picHomePage.TabStop = false;
+            this.picHomePage.Click += new System.EventHandler(this.picHomePage_Click);
+            // 
+            // picDisconnected
+            // 
+            this.picDisconnected.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.picDisconnected.Image = global::SerialPortTerminal.Properties.Resources.plug_disconnect_prohibition_icon;
+            this.picDisconnected.Location = new System.Drawing.Point(9, 566);
+            this.picDisconnected.Name = "picDisconnected";
+            this.picDisconnected.Size = new System.Drawing.Size(29, 26);
+            this.picDisconnected.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
+            this.picDisconnected.TabIndex = 19;
+            this.picDisconnected.TabStop = false;
             // 
             // lb_OpenLog
             // 
