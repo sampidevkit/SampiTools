@@ -44,6 +44,51 @@ namespace Form1
 
         #region User's Functions
 
+        private bool IsBin(string s)
+        {
+            char[] arr = s.ToCharArray();
+
+            foreach (char c in arr)
+            {
+                if ((c != '0') && (c != '1'))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool IsDec(string s)
+        {
+            char[] arr = s.ToCharArray();
+
+            foreach(char c in arr)
+            {
+                if ((c > '9') || (c < '0'))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool IsHex(string s)
+        {
+            char[] arr = s.ToCharArray();
+
+            foreach (char c in arr)
+            {
+                if ((c > '9') || (c < '0'))
+                {
+                    if ((c < 'A') || (c > 'F'))
+                    {
+                        if ((c < 'a') || (c > 'f'))
+                            return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
         private string Parse_COMPort(string str)
         {
             // ...(COM10)
@@ -110,6 +155,14 @@ namespace Form1
 
             ChrArr = null;
             ChrArr = newChrArr;
+        }
+
+        private void RemoveStr(ref string Str, char oldChar, char newChar)
+        {
+            char[] Arr = Str.ToCharArray();
+
+            ReplaceCharArray(ref Arr, oldChar, newChar);
+            Str = new string(Arr);
         }
 
         private void ClearLog()
@@ -1606,9 +1659,289 @@ namespace Form1
         #endregion
 
         #region Calculator
+        private UInt64 NumA = 0, NumB = 0;
+        private bool tbNumALock = false;
+        private bool tbNumBLock = false;
+
+        private bool BinParse(string s, ref UInt64 val)
+        {
+            RemoveStr(ref s, ' ', (char)0x00);
+            RemoveStr(ref s, '.', (char)0x00);
+
+            if (!IsBin(s))
+            {
+                MessageBox.Show("Error", "Incorrect binary format");
+                return false;
+            }
+
+            if (s.Length > 64)
+            {
+                MessageBox.Show("Error", "Maximum length of binary number is 64");
+                return false;
+            }
+
+            char[] arr = s.ToCharArray();
+            val = 0;
+
+            foreach(char c in arr)
+            {
+                val <<= 1;
+
+                if (c == '1')
+                    val |= 1;
+            }
+
+            return true;
+        }
+
+        private bool DecParse(string s, ref UInt64 val)
+        {
+            RemoveStr(ref s, ' ', (char)0x00);
+            RemoveStr(ref s, '.', (char)0x00);
+
+            if (!IsDec(s))
+            {
+                MessageBox.Show("Error", "Incorrect decimal format");
+                return false;
+            }
+
+            if (s.Length > 20)
+            {
+                MessageBox.Show("Error", "Maximum length of decimal number is 20");
+                return false;
+            }
+
+            try
+            {
+                val = UInt64.Parse(s);
+            }
+            catch
+            {
+
+            }
+
+            return true;
+        }
+
+        private bool HexParse(string s, ref UInt64 val)
+        {
+            RemoveStr(ref s, ' ', (char)0x00);
+            RemoveStr(ref s, '.', (char)0x00);
+
+            if (!IsHex(s))
+            {
+                MessageBox.Show("Error", "Incorrect hexadecimal format");
+                return false;
+            }
+
+            if (s.Length > 16)
+            {
+                MessageBox.Show("Error", "Maximum length of hexadecimal number is 16");
+                return false;
+            }
+
+            char[] arr = s.ToCharArray();
+            val = 0;
+
+            foreach (char c in arr)
+            {
+                val <<= 4;
+
+                if (c <= '9')
+                    val |= ((UInt32)(c - '0'));
+                else if (c >= 'A')
+                    val |= ((UInt32)(c - 'A') + 10);
+                else
+                    val |= ((UInt32)(c - 'a') + 10);
+            }
+
+            return true;
+        }
+
+        private string DisplayBin(UInt64 val)
+        {
+            string s = null;
+            int i, j, k;
+            //DebugLog("\nval=" + val.ToString(), Color.Red);
+
+            for (i = 0, j = -1; i < 64; i++) 
+            {
+                if ((val & 0x8000000000000000) > 0)
+                {
+                    s += "1";
+
+                    if (j == (-1))
+                    {
+                        j = 64 - i;
+
+                        if ((j % 8) > 0)
+                            j = ((j / 8) + 1) * 8;
+
+                        //DebugLog("\nJ=" + j.ToString(), Color.Red);
+                    }
+                }
+                else
+                    s += "0";
+
+                val <<= 1;
+            }
+
+            if (j == (-1))
+            {
+                s = "0";
+                return s;
+            }    
+
+            char[] sArr = s.ToCharArray();
+
+            if (j > 8)
+                k = (j - 8) / 8;
+            else
+                k = 0;
+
+            char[] arr = new char[i + k];
+
+            for (i = 0, k = 0; i < j; i++, k++)
+            {
+                if ((i > 0) && ((i % 8) == 0))
+                    arr[k++] = '.';
+
+                arr[k] = sArr[64 - j + i];
+                
+            }
+
+            s = new string(arr);
+
+            return s;
+        }
+
+        private string DisplayDec(UInt64 val)
+        {
+            string s = null;
+            int i, j, k;
+
+            for (i = 0, j = -1; i < 64; i++)
+            {
+                if ((val & 0x8000000000000000) > 0)
+                {
+                    s += "1";
+
+                    if (j == (-1))
+                    {
+                        j = 64 - i;
+
+                        if ((j % 8) > 0)
+                            j = ((j / 8) + 1) * 8;
+
+                        //DebugLog("\nJ=" + j.ToString(), Color.Red);
+                    }
+                }
+                else
+                    s += "0";
+
+                val <<= 1;
+            }
+
+            if (j == (-1))
+            {
+                s = "0";
+                return s;
+            }
+
+            char[] sArr = s.ToCharArray();
+
+            if (j > 8)
+                k = (j - 8) / 8;
+            else
+                k = 0;
+
+            char[] arr = new char[i + k];
+
+            for (i = 0, k = 0; i < j; i++, k++)
+            {
+                if ((i > 0) && ((i % 8) == 0))
+                    arr[k++] = '.';
+
+                arr[k] = sArr[64 - j + i];
+
+            }
+
+            s = new string(arr);
+
+            return s;
+        }
+
+        private string DisplayHex(UInt64 val)
+        {
+            string s = null;
+            int i, j, k;
+            //DebugLog("\nval=" + val.ToString(), Color.Red);
+
+            for (i = 0, j = -1; i < 64; i++)
+            {
+                if ((val & 0x8000000000000000) > 0)
+                {
+                    s += "1";
+
+                    if (j == (-1))
+                    {
+                        j = 64 - i;
+
+                        if ((j % 8) > 0)
+                            j = ((j / 8) + 1) * 8;
+
+                        //DebugLog("\nJ=" + j.ToString(), Color.Red);
+                    }
+                }
+                else
+                    s += "0";
+
+                val <<= 1;
+            }
+
+            if (j == (-1))
+            {
+                s = "0";
+                return s;
+            }
+
+            char[] sArr = s.ToCharArray();
+
+            if (j > 8)
+                k = (j - 8) / 8;
+            else
+                k = 0;
+
+            char[] arr = new char[i + k];
+
+            for (i = 0, k = 0; i < j; i++, k++)
+            {
+                if ((i > 0) && ((i % 8) == 0))
+                    arr[k++] = '.';
+
+                arr[k] = sArr[64 - j + i];
+
+            }
+
+            s = new string(arr);
+
+            return s;
+        }
+
         private void tb_DecA_TextChanged(object sender, EventArgs e)
         {
+            if (tbNumALock == false)
+            {
+                tbNumALock = true;
 
+                if (DecParse(tb_DecA.Text, ref NumA))
+                {
+                    tb_BinA.Text = DisplayBin(NumA);
+                    tb_HexA.Text = DisplayHex(NumA);
+                }
+
+                tbNumALock = false;
+            }
         }
 
         private void tb_HexA_TextChanged(object sender, EventArgs e)

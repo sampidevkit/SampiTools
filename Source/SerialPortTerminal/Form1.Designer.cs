@@ -808,7 +808,6 @@
             // 
             // bt_Sign
             // 
-            this.bt_Sign.Enabled = false;
             this.bt_Sign.Location = new System.Drawing.Point(544, 69);
             this.bt_Sign.Name = "bt_Sign";
             this.bt_Sign.Size = new System.Drawing.Size(45, 23);
@@ -819,7 +818,6 @@
             // 
             // bt_Float
             // 
-            this.bt_Float.Enabled = false;
             this.bt_Float.Location = new System.Drawing.Point(493, 69);
             this.bt_Float.Name = "bt_Float";
             this.bt_Float.Size = new System.Drawing.Size(45, 23);
@@ -830,7 +828,6 @@
             // 
             // bt_NotB
             // 
-            this.bt_NotB.Enabled = false;
             this.bt_NotB.Location = new System.Drawing.Point(442, 69);
             this.bt_NotB.Name = "bt_NotB";
             this.bt_NotB.Size = new System.Drawing.Size(45, 23);
@@ -841,7 +838,6 @@
             // 
             // bt_NotA
             // 
-            this.bt_NotA.Enabled = false;
             this.bt_NotA.Location = new System.Drawing.Point(391, 69);
             this.bt_NotA.Name = "bt_NotA";
             this.bt_NotA.Size = new System.Drawing.Size(45, 23);
@@ -852,7 +848,6 @@
             // 
             // bt_Xor
             // 
-            this.bt_Xor.Enabled = false;
             this.bt_Xor.Location = new System.Drawing.Point(544, 43);
             this.bt_Xor.Name = "bt_Xor";
             this.bt_Xor.Size = new System.Drawing.Size(45, 23);
@@ -863,7 +858,6 @@
             // 
             // bt_Or
             // 
-            this.bt_Or.Enabled = false;
             this.bt_Or.Location = new System.Drawing.Point(493, 43);
             this.bt_Or.Name = "bt_Or";
             this.bt_Or.Size = new System.Drawing.Size(45, 23);
@@ -874,7 +868,6 @@
             // 
             // bt_And
             // 
-            this.bt_And.Enabled = false;
             this.bt_And.Location = new System.Drawing.Point(442, 43);
             this.bt_And.Name = "bt_And";
             this.bt_And.Size = new System.Drawing.Size(45, 23);
@@ -885,7 +878,6 @@
             // 
             // bt_Mod
             // 
-            this.bt_Mod.Enabled = false;
             this.bt_Mod.Location = new System.Drawing.Point(391, 43);
             this.bt_Mod.Name = "bt_Mod";
             this.bt_Mod.Size = new System.Drawing.Size(45, 23);
@@ -896,7 +888,6 @@
             // 
             // bt_Div
             // 
-            this.bt_Div.Enabled = false;
             this.bt_Div.Location = new System.Drawing.Point(544, 17);
             this.bt_Div.Name = "bt_Div";
             this.bt_Div.Size = new System.Drawing.Size(45, 23);
@@ -907,7 +898,6 @@
             // 
             // bt_Mul
             // 
-            this.bt_Mul.Enabled = false;
             this.bt_Mul.Location = new System.Drawing.Point(493, 17);
             this.bt_Mul.Name = "bt_Mul";
             this.bt_Mul.Size = new System.Drawing.Size(45, 23);
@@ -918,7 +908,6 @@
             // 
             // bt_Sub
             // 
-            this.bt_Sub.Enabled = false;
             this.bt_Sub.Location = new System.Drawing.Point(442, 17);
             this.bt_Sub.Name = "bt_Sub";
             this.bt_Sub.Size = new System.Drawing.Size(45, 23);
@@ -929,7 +918,6 @@
             // 
             // bt_Add
             // 
-            this.bt_Add.Enabled = false;
             this.bt_Add.Location = new System.Drawing.Point(391, 17);
             this.bt_Add.Name = "bt_Add";
             this.bt_Add.Size = new System.Drawing.Size(45, 23);
@@ -940,7 +928,6 @@
             // 
             // tb_BinB
             // 
-            this.tb_BinB.Enabled = false;
             this.tb_BinB.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_BinB.ForeColor = System.Drawing.Color.OrangeRed;
             this.tb_BinB.Location = new System.Drawing.Point(215, 71);
@@ -953,7 +940,6 @@
             // 
             // tb_BinA
             // 
-            this.tb_BinA.Enabled = false;
             this.tb_BinA.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_BinA.ForeColor = System.Drawing.Color.DarkBlue;
             this.tb_BinA.Location = new System.Drawing.Point(42, 71);
@@ -966,7 +952,6 @@
             // 
             // tb_HexB
             // 
-            this.tb_HexB.Enabled = false;
             this.tb_HexB.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_HexB.ForeColor = System.Drawing.Color.OrangeRed;
             this.tb_HexB.Location = new System.Drawing.Point(215, 45);
@@ -979,7 +964,6 @@
             // 
             // tb_HexA
             // 
-            this.tb_HexA.Enabled = false;
             this.tb_HexA.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_HexA.ForeColor = System.Drawing.Color.DarkBlue;
             this.tb_HexA.Location = new System.Drawing.Point(42, 45);
@@ -1002,7 +986,6 @@
             // 
             // tb_DecB
             // 
-            this.tb_DecB.Enabled = false;
             this.tb_DecB.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_DecB.ForeColor = System.Drawing.Color.OrangeRed;
             this.tb_DecB.Location = new System.Drawing.Point(215, 19);
@@ -1052,7 +1035,6 @@
             // 
             // tb_DecA
             // 
-            this.tb_DecA.Enabled = false;
             this.tb_DecA.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_DecA.ForeColor = System.Drawing.Color.DarkBlue;
             this.tb_DecA.Location = new System.Drawing.Point(42, 19);
