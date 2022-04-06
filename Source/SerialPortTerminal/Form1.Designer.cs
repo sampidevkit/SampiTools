@@ -80,9 +80,7 @@
             this.bt_DfuStop = new System.Windows.Forms.Button();
             this.tabCalc = new System.Windows.Forms.TabPage();
             this.bt_Sign = new System.Windows.Forms.Button();
-            this.bt_Float = new System.Windows.Forms.Button();
-            this.bt_NotB = new System.Windows.Forms.Button();
-            this.bt_NotA = new System.Windows.Forms.Button();
+            this.bt_Not = new System.Windows.Forms.Button();
             this.bt_Xor = new System.Windows.Forms.Button();
             this.bt_Or = new System.Windows.Forms.Button();
             this.bt_And = new System.Windows.Forms.Button();
@@ -95,9 +93,7 @@
             this.tb_BinA = new System.Windows.Forms.TextBox();
             this.tb_HexB = new System.Windows.Forms.TextBox();
             this.tb_HexA = new System.Windows.Forms.TextBox();
-            this.label16 = new System.Windows.Forms.Label();
             this.tb_DecB = new System.Windows.Forms.TextBox();
-            this.label15 = new System.Windows.Forms.Label();
             this.label14 = new System.Windows.Forms.Label();
             this.label13 = new System.Windows.Forms.Label();
             this.label12 = new System.Windows.Forms.Label();
@@ -120,6 +116,11 @@
             this.picHomePage = new System.Windows.Forms.PictureBox();
             this.picDisconnected = new System.Windows.Forms.PictureBox();
             this.lb_OpenLog = new System.Windows.Forms.Label();
+            this.label22 = new System.Windows.Forms.Label();
+            this.bt_ShiftRight = new System.Windows.Forms.Button();
+            this.bt_ShiftLeft = new System.Windows.Forms.Button();
+            this.label15 = new System.Windows.Forms.Label();
+            this.label16 = new System.Windows.Forms.Label();
             this.tabControl1.SuspendLayout();
             this.tabForward.SuspendLayout();
             this.tabInternalPort.SuspendLayout();
@@ -304,11 +305,11 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.rtb_Log.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
             this.rtb_Log.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.rtb_Log.Location = new System.Drawing.Point(9, 140);
+            this.rtb_Log.Location = new System.Drawing.Point(9, 109);
             this.rtb_Log.Name = "rtb_Log";
             this.rtb_Log.ReadOnly = true;
             this.rtb_Log.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.rtb_Log.Size = new System.Drawing.Size(603, 420);
+            this.rtb_Log.Size = new System.Drawing.Size(603, 451);
             this.rtb_Log.TabIndex = 10;
             this.rtb_Log.Text = "";
             this.rtb_Log.TextChanged += new System.EventHandler(this.rtb_Log_TextChanged);
@@ -359,8 +360,10 @@
             this.tabControl1.Location = new System.Drawing.Point(9, 8);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(603, 126);
+            this.tabControl1.Size = new System.Drawing.Size(603, 95);
+            this.tabControl1.SizeMode = System.Windows.Forms.TabSizeMode.Fixed;
             this.tabControl1.TabIndex = 18;
+            this.tabControl1.SelectedIndexChanged += new System.EventHandler(this.tabControl1_SelectedIndexChanged);
             // 
             // tabForward
             // 
@@ -378,7 +381,7 @@
             this.tabForward.Location = new System.Drawing.Point(4, 22);
             this.tabForward.Name = "tabForward";
             this.tabForward.Padding = new System.Windows.Forms.Padding(3);
-            this.tabForward.Size = new System.Drawing.Size(595, 100);
+            this.tabForward.Size = new System.Drawing.Size(595, 69);
             this.tabForward.TabIndex = 0;
             this.tabForward.Text = "Forward";
             this.tabForward.UseVisualStyleBackColor = true;
@@ -444,7 +447,7 @@
             this.tabInternalPort.Location = new System.Drawing.Point(4, 22);
             this.tabInternalPort.Name = "tabInternalPort";
             this.tabInternalPort.Padding = new System.Windows.Forms.Padding(3);
-            this.tabInternalPort.Size = new System.Drawing.Size(595, 100);
+            this.tabInternalPort.Size = new System.Drawing.Size(595, 252);
             this.tabInternalPort.TabIndex = 2;
             this.tabInternalPort.Text = "Internal Port";
             // 
@@ -620,7 +623,7 @@
             this.tabDfu.Location = new System.Drawing.Point(4, 22);
             this.tabDfu.Name = "tabDfu";
             this.tabDfu.Padding = new System.Windows.Forms.Padding(3);
-            this.tabDfu.Size = new System.Drawing.Size(595, 100);
+            this.tabDfu.Size = new System.Drawing.Size(595, 252);
             this.tabDfu.TabIndex = 1;
             this.tabDfu.Text = "DFU";
             // 
@@ -775,10 +778,13 @@
             // 
             // tabCalc
             // 
+            this.tabCalc.Controls.Add(this.label16);
+            this.tabCalc.Controls.Add(this.label15);
+            this.tabCalc.Controls.Add(this.bt_ShiftLeft);
+            this.tabCalc.Controls.Add(this.bt_ShiftRight);
+            this.tabCalc.Controls.Add(this.label22);
             this.tabCalc.Controls.Add(this.bt_Sign);
-            this.tabCalc.Controls.Add(this.bt_Float);
-            this.tabCalc.Controls.Add(this.bt_NotB);
-            this.tabCalc.Controls.Add(this.bt_NotA);
+            this.tabCalc.Controls.Add(this.bt_Not);
             this.tabCalc.Controls.Add(this.bt_Xor);
             this.tabCalc.Controls.Add(this.bt_Or);
             this.tabCalc.Controls.Add(this.bt_And);
@@ -791,9 +797,7 @@
             this.tabCalc.Controls.Add(this.tb_BinA);
             this.tabCalc.Controls.Add(this.tb_HexB);
             this.tabCalc.Controls.Add(this.tb_HexA);
-            this.tabCalc.Controls.Add(this.label16);
             this.tabCalc.Controls.Add(this.tb_DecB);
-            this.tabCalc.Controls.Add(this.label15);
             this.tabCalc.Controls.Add(this.label14);
             this.tabCalc.Controls.Add(this.label13);
             this.tabCalc.Controls.Add(this.label12);
@@ -801,54 +805,34 @@
             this.tabCalc.Location = new System.Drawing.Point(4, 22);
             this.tabCalc.Name = "tabCalc";
             this.tabCalc.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCalc.Size = new System.Drawing.Size(595, 100);
+            this.tabCalc.Size = new System.Drawing.Size(595, 230);
             this.tabCalc.TabIndex = 3;
             this.tabCalc.Text = "Calculator";
             this.tabCalc.UseVisualStyleBackColor = true;
             // 
             // bt_Sign
             // 
-            this.bt_Sign.Location = new System.Drawing.Point(544, 69);
+            this.bt_Sign.Location = new System.Drawing.Point(511, 173);
             this.bt_Sign.Name = "bt_Sign";
             this.bt_Sign.Size = new System.Drawing.Size(45, 23);
-            this.bt_Sign.TabIndex = 18;
+            this.bt_Sign.TabIndex = 19;
             this.bt_Sign.Text = "SIGN";
             this.bt_Sign.UseVisualStyleBackColor = true;
-            this.bt_Sign.Click += new System.EventHandler(this.bt_Sign_Click);
+            this.bt_Sign.Click += new System.EventHandler(this.bt_Float_Click);
             // 
-            // bt_Float
+            // bt_Not
             // 
-            this.bt_Float.Location = new System.Drawing.Point(493, 69);
-            this.bt_Float.Name = "bt_Float";
-            this.bt_Float.Size = new System.Drawing.Size(45, 23);
-            this.bt_Float.TabIndex = 19;
-            this.bt_Float.Text = "FLT";
-            this.bt_Float.UseVisualStyleBackColor = true;
-            this.bt_Float.Click += new System.EventHandler(this.bt_Float_Click);
-            // 
-            // bt_NotB
-            // 
-            this.bt_NotB.Location = new System.Drawing.Point(442, 69);
-            this.bt_NotB.Name = "bt_NotB";
-            this.bt_NotB.Size = new System.Drawing.Size(45, 23);
-            this.bt_NotB.TabIndex = 20;
-            this.bt_NotB.Text = "~B";
-            this.bt_NotB.UseVisualStyleBackColor = true;
-            this.bt_NotB.Click += new System.EventHandler(this.bt_NotB_Click);
-            // 
-            // bt_NotA
-            // 
-            this.bt_NotA.Location = new System.Drawing.Point(391, 69);
-            this.bt_NotA.Name = "bt_NotA";
-            this.bt_NotA.Size = new System.Drawing.Size(45, 23);
-            this.bt_NotA.TabIndex = 17;
-            this.bt_NotA.Text = "~A";
-            this.bt_NotA.UseVisualStyleBackColor = true;
-            this.bt_NotA.Click += new System.EventHandler(this.bt_NotA_Click);
+            this.bt_Not.Location = new System.Drawing.Point(460, 173);
+            this.bt_Not.Name = "bt_Not";
+            this.bt_Not.Size = new System.Drawing.Size(45, 23);
+            this.bt_Not.TabIndex = 17;
+            this.bt_Not.Text = "NOT";
+            this.bt_Not.UseVisualStyleBackColor = true;
+            this.bt_Not.Click += new System.EventHandler(this.bt_NotA_Click);
             // 
             // bt_Xor
             // 
-            this.bt_Xor.Location = new System.Drawing.Point(544, 43);
+            this.bt_Xor.Location = new System.Drawing.Point(409, 173);
             this.bt_Xor.Name = "bt_Xor";
             this.bt_Xor.Size = new System.Drawing.Size(45, 23);
             this.bt_Xor.TabIndex = 14;
@@ -858,7 +842,7 @@
             // 
             // bt_Or
             // 
-            this.bt_Or.Location = new System.Drawing.Point(493, 43);
+            this.bt_Or.Location = new System.Drawing.Point(358, 173);
             this.bt_Or.Name = "bt_Or";
             this.bt_Or.Size = new System.Drawing.Size(45, 23);
             this.bt_Or.TabIndex = 15;
@@ -868,7 +852,7 @@
             // 
             // bt_And
             // 
-            this.bt_And.Location = new System.Drawing.Point(442, 43);
+            this.bt_And.Location = new System.Drawing.Point(307, 173);
             this.bt_And.Name = "bt_And";
             this.bt_And.Size = new System.Drawing.Size(45, 23);
             this.bt_And.TabIndex = 16;
@@ -878,7 +862,7 @@
             // 
             // bt_Mod
             // 
-            this.bt_Mod.Location = new System.Drawing.Point(391, 43);
+            this.bt_Mod.Location = new System.Drawing.Point(256, 173);
             this.bt_Mod.Name = "bt_Mod";
             this.bt_Mod.Size = new System.Drawing.Size(45, 23);
             this.bt_Mod.TabIndex = 13;
@@ -888,7 +872,7 @@
             // 
             // bt_Div
             // 
-            this.bt_Div.Location = new System.Drawing.Point(544, 17);
+            this.bt_Div.Location = new System.Drawing.Point(205, 173);
             this.bt_Div.Name = "bt_Div";
             this.bt_Div.Size = new System.Drawing.Size(45, 23);
             this.bt_Div.TabIndex = 12;
@@ -898,7 +882,7 @@
             // 
             // bt_Mul
             // 
-            this.bt_Mul.Location = new System.Drawing.Point(493, 17);
+            this.bt_Mul.Location = new System.Drawing.Point(154, 173);
             this.bt_Mul.Name = "bt_Mul";
             this.bt_Mul.Size = new System.Drawing.Size(45, 23);
             this.bt_Mul.TabIndex = 12;
@@ -908,7 +892,7 @@
             // 
             // bt_Sub
             // 
-            this.bt_Sub.Location = new System.Drawing.Point(442, 17);
+            this.bt_Sub.Location = new System.Drawing.Point(103, 173);
             this.bt_Sub.Name = "bt_Sub";
             this.bt_Sub.Size = new System.Drawing.Size(45, 23);
             this.bt_Sub.TabIndex = 12;
@@ -918,7 +902,7 @@
             // 
             // bt_Add
             // 
-            this.bt_Add.Location = new System.Drawing.Point(391, 17);
+            this.bt_Add.Location = new System.Drawing.Point(52, 173);
             this.bt_Add.Name = "bt_Add";
             this.bt_Add.Size = new System.Drawing.Size(45, 23);
             this.bt_Add.TabIndex = 11;
@@ -928,121 +912,110 @@
             // 
             // tb_BinB
             // 
+            this.tb_BinB.BackColor = System.Drawing.Color.PaleGoldenrod;
             this.tb_BinB.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_BinB.ForeColor = System.Drawing.Color.OrangeRed;
-            this.tb_BinB.Location = new System.Drawing.Point(215, 71);
+            this.tb_BinB.Location = new System.Drawing.Point(52, 145);
             this.tb_BinB.Name = "tb_BinB";
-            this.tb_BinB.Size = new System.Drawing.Size(167, 22);
+            this.tb_BinB.Size = new System.Drawing.Size(537, 22);
             this.tb_BinB.TabIndex = 10;
             this.tb_BinB.Text = "0";
-            this.tb_BinB.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.tb_BinB.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.tb_BinB.TextChanged += new System.EventHandler(this.tb_BinB_TextChanged);
             // 
             // tb_BinA
             // 
+            this.tb_BinA.BackColor = System.Drawing.Color.LightGreen;
             this.tb_BinA.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_BinA.ForeColor = System.Drawing.Color.DarkBlue;
-            this.tb_BinA.Location = new System.Drawing.Point(42, 71);
+            this.tb_BinA.Location = new System.Drawing.Point(52, 117);
             this.tb_BinA.Name = "tb_BinA";
-            this.tb_BinA.Size = new System.Drawing.Size(167, 22);
+            this.tb_BinA.Size = new System.Drawing.Size(537, 22);
             this.tb_BinA.TabIndex = 9;
             this.tb_BinA.Text = "0";
-            this.tb_BinA.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.tb_BinA.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.tb_BinA.TextChanged += new System.EventHandler(this.tb_BinA_TextChanged);
             // 
             // tb_HexB
             // 
+            this.tb_HexB.BackColor = System.Drawing.Color.PaleGoldenrod;
             this.tb_HexB.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_HexB.ForeColor = System.Drawing.Color.OrangeRed;
-            this.tb_HexB.Location = new System.Drawing.Point(215, 45);
+            this.tb_HexB.Location = new System.Drawing.Point(52, 89);
             this.tb_HexB.Name = "tb_HexB";
-            this.tb_HexB.Size = new System.Drawing.Size(167, 22);
+            this.tb_HexB.Size = new System.Drawing.Size(537, 22);
             this.tb_HexB.TabIndex = 8;
             this.tb_HexB.Text = "0";
-            this.tb_HexB.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.tb_HexB.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.tb_HexB.TextChanged += new System.EventHandler(this.tb_HexB_TextChanged);
             // 
             // tb_HexA
             // 
+            this.tb_HexA.BackColor = System.Drawing.Color.LightGreen;
             this.tb_HexA.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_HexA.ForeColor = System.Drawing.Color.DarkBlue;
-            this.tb_HexA.Location = new System.Drawing.Point(42, 45);
+            this.tb_HexA.Location = new System.Drawing.Point(52, 61);
             this.tb_HexA.Name = "tb_HexA";
-            this.tb_HexA.Size = new System.Drawing.Size(167, 22);
+            this.tb_HexA.Size = new System.Drawing.Size(537, 22);
             this.tb_HexA.TabIndex = 7;
             this.tb_HexA.Text = "0";
-            this.tb_HexA.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.tb_HexA.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.tb_HexA.TextChanged += new System.EventHandler(this.tb_HexA_TextChanged);
-            // 
-            // label16
-            // 
-            this.label16.AutoSize = true;
-            this.label16.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label16.Location = new System.Drawing.Point(291, 3);
-            this.label16.Name = "label16";
-            this.label16.Size = new System.Drawing.Size(15, 13);
-            this.label16.TabIndex = 6;
-            this.label16.Text = "B";
             // 
             // tb_DecB
             // 
+            this.tb_DecB.BackColor = System.Drawing.Color.PaleGoldenrod;
             this.tb_DecB.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_DecB.ForeColor = System.Drawing.Color.OrangeRed;
-            this.tb_DecB.Location = new System.Drawing.Point(215, 19);
+            this.tb_DecB.Location = new System.Drawing.Point(52, 33);
             this.tb_DecB.Name = "tb_DecB";
-            this.tb_DecB.Size = new System.Drawing.Size(167, 22);
+            this.tb_DecB.Size = new System.Drawing.Size(537, 22);
             this.tb_DecB.TabIndex = 5;
             this.tb_DecB.Text = "0";
-            this.tb_DecB.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.tb_DecB.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.tb_DecB.TextChanged += new System.EventHandler(this.tb_DecB_TextChanged);
-            // 
-            // label15
-            // 
-            this.label15.AutoSize = true;
-            this.label15.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label15.Location = new System.Drawing.Point(118, 3);
-            this.label15.Name = "label15";
-            this.label15.Size = new System.Drawing.Size(15, 13);
-            this.label15.TabIndex = 4;
-            this.label15.Text = "A";
             // 
             // label14
             // 
             this.label14.AutoSize = true;
-            this.label14.Location = new System.Drawing.Point(6, 73);
+            this.label14.ForeColor = System.Drawing.Color.DarkBlue;
+            this.label14.Location = new System.Drawing.Point(11, 120);
             this.label14.Name = "label14";
-            this.label14.Size = new System.Drawing.Size(25, 13);
+            this.label14.Size = new System.Drawing.Size(35, 13);
             this.label14.TabIndex = 3;
-            this.label14.Text = "Bin:";
+            this.label14.Text = "Bin A:";
             // 
             // label13
             // 
             this.label13.AutoSize = true;
-            this.label13.Location = new System.Drawing.Point(7, 47);
+            this.label13.ForeColor = System.Drawing.Color.OrangeRed;
+            this.label13.Location = new System.Drawing.Point(7, 92);
             this.label13.Name = "label13";
-            this.label13.Size = new System.Drawing.Size(29, 13);
+            this.label13.Size = new System.Drawing.Size(39, 13);
             this.label13.TabIndex = 2;
-            this.label13.Text = "Hex:";
+            this.label13.Text = "Hex B:";
             // 
             // label12
             // 
             this.label12.AutoSize = true;
-            this.label12.Location = new System.Drawing.Point(6, 21);
+            this.label12.ForeColor = System.Drawing.Color.DarkBlue;
+            this.label12.Location = new System.Drawing.Point(6, 9);
             this.label12.Name = "label12";
-            this.label12.Size = new System.Drawing.Size(30, 13);
+            this.label12.Size = new System.Drawing.Size(40, 13);
             this.label12.TabIndex = 1;
-            this.label12.Text = "Dec:";
+            this.label12.Text = "Dec A:";
             // 
             // tb_DecA
             // 
+            this.tb_DecA.BackColor = System.Drawing.Color.LightGreen;
             this.tb_DecA.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_DecA.ForeColor = System.Drawing.Color.DarkBlue;
-            this.tb_DecA.Location = new System.Drawing.Point(42, 19);
+            this.tb_DecA.Location = new System.Drawing.Point(52, 6);
             this.tb_DecA.Name = "tb_DecA";
-            this.tb_DecA.Size = new System.Drawing.Size(167, 22);
+            this.tb_DecA.Size = new System.Drawing.Size(537, 22);
             this.tb_DecA.TabIndex = 0;
             this.tb_DecA.Text = "0";
-            this.tb_DecA.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.tb_DecA.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.tb_DecA.TextChanged += new System.EventHandler(this.tb_DecA_TextChanged);
             // 
             // tabShortcut
@@ -1060,7 +1033,7 @@
             this.tabShortcut.Location = new System.Drawing.Point(4, 22);
             this.tabShortcut.Name = "tabShortcut";
             this.tabShortcut.Padding = new System.Windows.Forms.Padding(3);
-            this.tabShortcut.Size = new System.Drawing.Size(595, 100);
+            this.tabShortcut.Size = new System.Drawing.Size(595, 69);
             this.tabShortcut.TabIndex = 4;
             this.tabShortcut.Text = "Shortcut";
             this.tabShortcut.UseVisualStyleBackColor = true;
@@ -1252,6 +1225,54 @@
             this.lb_OpenLog.Text = "Open Log";
             this.lb_OpenLog.Click += new System.EventHandler(this.lb_OpenLog_Click);
             // 
+            // label22
+            // 
+            this.label22.AutoSize = true;
+            this.label22.ForeColor = System.Drawing.Color.OrangeRed;
+            this.label22.Location = new System.Drawing.Point(11, 148);
+            this.label22.Name = "label22";
+            this.label22.Size = new System.Drawing.Size(35, 13);
+            this.label22.TabIndex = 21;
+            this.label22.Text = "Bin B:";
+            // 
+            // bt_ShiftRight
+            // 
+            this.bt_ShiftRight.Location = new System.Drawing.Point(52, 202);
+            this.bt_ShiftRight.Name = "bt_ShiftRight";
+            this.bt_ShiftRight.Size = new System.Drawing.Size(45, 23);
+            this.bt_ShiftRight.TabIndex = 22;
+            this.bt_ShiftRight.Text = "A>>B";
+            this.bt_ShiftRight.UseVisualStyleBackColor = true;
+            // 
+            // bt_ShiftLeft
+            // 
+            this.bt_ShiftLeft.Location = new System.Drawing.Point(103, 202);
+            this.bt_ShiftLeft.Name = "bt_ShiftLeft";
+            this.bt_ShiftLeft.Size = new System.Drawing.Size(45, 23);
+            this.bt_ShiftLeft.TabIndex = 23;
+            this.bt_ShiftLeft.Text = "A<<B";
+            this.bt_ShiftLeft.UseVisualStyleBackColor = true;
+            // 
+            // label15
+            // 
+            this.label15.AutoSize = true;
+            this.label15.ForeColor = System.Drawing.Color.DarkBlue;
+            this.label15.Location = new System.Drawing.Point(7, 64);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(39, 13);
+            this.label15.TabIndex = 24;
+            this.label15.Text = "Hex A:";
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.ForeColor = System.Drawing.Color.OrangeRed;
+            this.label16.Location = new System.Drawing.Point(6, 36);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(40, 13);
+            this.label16.TabIndex = 25;
+            this.label16.Text = "Dec B:";
+            // 
             // FormSPT
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1355,16 +1376,12 @@
         private System.Windows.Forms.TextBox tb_BinA;
         private System.Windows.Forms.TextBox tb_HexB;
         private System.Windows.Forms.TextBox tb_HexA;
-        private System.Windows.Forms.Label label16;
         private System.Windows.Forms.TextBox tb_DecB;
-        private System.Windows.Forms.Label label15;
         private System.Windows.Forms.Label label14;
         private System.Windows.Forms.Label label13;
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.Button bt_Sign;
-        private System.Windows.Forms.Button bt_Float;
-        private System.Windows.Forms.Button bt_NotB;
-        private System.Windows.Forms.Button bt_NotA;
+        private System.Windows.Forms.Button bt_Not;
         private System.Windows.Forms.Button bt_Xor;
         private System.Windows.Forms.Button bt_Or;
         private System.Windows.Forms.Button bt_And;
@@ -1386,6 +1403,11 @@
         private System.Windows.Forms.Button bt_DiskMngr;
         private System.Windows.Forms.PictureBox pic_OpenLog;
         private System.Windows.Forms.Label lb_OpenLog;
+        private System.Windows.Forms.Button bt_ShiftLeft;
+        private System.Windows.Forms.Button bt_ShiftRight;
+        private System.Windows.Forms.Label label22;
+        private System.Windows.Forms.Label label16;
+        private System.Windows.Forms.Label label15;
     }
 }
 

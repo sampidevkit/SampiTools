@@ -1656,6 +1656,32 @@ namespace Form1
             }
         }
 
+        private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (tabControl1.SelectedIndex)
+            {
+                case 0:
+                case 1:
+                case 2:
+                    rtb_Log.Size = new System.Drawing.Size(603, 451);
+                    rtb_Log.Location = new System.Drawing.Point(9, 109);
+                    tabControl1.Size = new System.Drawing.Size(603, 95);
+                    break;
+
+                case 3:
+                    rtb_Log.Size = new System.Drawing.Size(603, 290);
+                    rtb_Log.Location = new System.Drawing.Point(9, 270);
+                    tabControl1.Size = new System.Drawing.Size(603, 256);
+                    break;
+
+                default:
+                    rtb_Log.Size = new System.Drawing.Size(603, 426);
+                    rtb_Log.Location = new System.Drawing.Point(9, 134);
+                    tabControl1.Size = new System.Drawing.Size(603, 120);
+                    break;
+            }
+        }
+
         #endregion
 
         #region Calculator
