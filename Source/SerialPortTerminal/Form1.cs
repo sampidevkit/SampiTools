@@ -180,6 +180,9 @@ namespace Form1
             sw.WriteLine(rtb_Log.Text);
             sw.Close();
             rtb_Log.Clear();
+            lb_Notic.Text = logpath + " has been created";
+            lb_Notic.Visible = true;
+            timer2.Start();
         }
 
         private bool Is_ASCII_Printable_Character(byte b, ref long Line)
@@ -1997,6 +2000,11 @@ namespace Form1
 
         private void bt_Add_Click(object sender, EventArgs e)
         {
+            UInt64 rslt = NumA + NumB;
+
+            DebugLog("\n" + DisplayDec(NumA) + " + " + DisplayDec(NumB) + " = " + DisplayDec(rslt), Color.Blue);
+            DebugLog("\n" + DisplayHex(NumA) + " + " + DisplayHex(NumB) + " = " + DisplayHex(rslt), Color.Blue);
+            DebugLog("\n" + DisplayBin(NumA) + " + " + DisplayBin(NumB) + " = " + DisplayBin(rslt), Color.Blue);
 
         }
 
@@ -2075,6 +2083,60 @@ namespace Form1
         private void bt_CleanTemp_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+            lb_Notic.Visible = false;
+        }
+
+        private void tb_DecA_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            Clipboard.SetText(tb_DecA.Text);
+            lb_Notic.Text = "Dec A text has been copied to clipboard";
+            lb_Notic.Visible = true;
+            timer2.Start();
+            
+        }
+
+        private void tb_DecB_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            Clipboard.SetText(tb_DecB.Text);
+            lb_Notic.Text = "Dec B text has been copied to clipboard";
+            lb_Notic.Visible = true;
+            timer2.Start();
+        }
+
+        private void tb_HexA_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            Clipboard.SetText(tb_HexA.Text);
+            lb_Notic.Text = "Hex A text has been copied to clipboard";
+            lb_Notic.Visible = true;
+            timer2.Start();
+        }
+
+        private void tb_HexB_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            Clipboard.SetText(tb_HexB.Text);
+            lb_Notic.Text = "Hex B text has been copied to clipboard";
+            lb_Notic.Visible = true;
+            timer2.Start();
+        }
+
+        private void tb_BinA_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            Clipboard.SetText(tb_BinA.Text);
+            lb_Notic.Text = "Bin A text has been copied to clipboard";
+            lb_Notic.Visible = true;
+            timer2.Start();
+        }
+
+        private void tb_BinB_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            Clipboard.SetText(tb_BinB.Text);
+            lb_Notic.Text = "Bin B text has been copied to clipboard";
+            lb_Notic.Visible = true;
+            timer2.Start();
         }
 
         private void bt_ResetMPLAB_Click(object sender, EventArgs e)
