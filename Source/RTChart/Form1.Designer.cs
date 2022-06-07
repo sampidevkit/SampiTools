@@ -31,14 +31,15 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.zedGraphControl1 = new ZedGraph.ZedGraphControl();
-            this.bt_Options = new System.Windows.Forms.Button();
-            this.bt_Import = new System.Windows.Forms.Button();
-            this.bt_Plot = new System.Windows.Forms.Button();
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
             this.cbx_Ports = new System.Windows.Forms.ComboBox();
             this.tb_Directory = new System.Windows.Forms.TextBox();
             this.cbx_Baud = new System.Windows.Forms.ComboBox();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
+            this.bt_Plot = new System.Windows.Forms.Button();
+            this.bt_Options = new System.Windows.Forms.Button();
+            this.bt_Import = new System.Windows.Forms.Button();
+            this.userControl11 = new RTChart.UserControl1();
             this.SuspendLayout();
             // 
             // zedGraphControl1
@@ -55,46 +56,6 @@
             this.zedGraphControl1.Size = new System.Drawing.Size(760, 385);
             this.zedGraphControl1.TabIndex = 0;
             this.zedGraphControl1.UseExtendedPrintDialog = true;
-            // 
-            // bt_Options
-            // 
-            this.bt_Options.Image = global::RTChart.Properties.Resources.Options;
-            this.bt_Options.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.bt_Options.Location = new System.Drawing.Point(692, 411);
-            this.bt_Options.Name = "bt_Options";
-            this.bt_Options.Size = new System.Drawing.Size(80, 32);
-            this.bt_Options.TabIndex = 2;
-            this.bt_Options.Text = "Options";
-            this.bt_Options.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.bt_Options.UseVisualStyleBackColor = true;
-            this.bt_Options.Click += new System.EventHandler(this.bt_Options_Click);
-            // 
-            // bt_Import
-            // 
-            this.bt_Import.Image = global::RTChart.Properties.Resources.Import;
-            this.bt_Import.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.bt_Import.Location = new System.Drawing.Point(12, 411);
-            this.bt_Import.Name = "bt_Import";
-            this.bt_Import.Size = new System.Drawing.Size(80, 32);
-            this.bt_Import.TabIndex = 1;
-            this.bt_Import.Text = "Import";
-            this.bt_Import.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.bt_Import.UseVisualStyleBackColor = true;
-            this.bt_Import.Click += new System.EventHandler(this.bt_Import_Click);
-            // 
-            // bt_Plot
-            // 
-            this.bt_Plot.Enabled = false;
-            this.bt_Plot.Image = global::RTChart.Properties.Resources.Off;
-            this.bt_Plot.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.bt_Plot.Location = new System.Drawing.Point(606, 411);
-            this.bt_Plot.Name = "bt_Plot";
-            this.bt_Plot.Size = new System.Drawing.Size(80, 32);
-            this.bt_Plot.TabIndex = 3;
-            this.bt_Plot.Text = "Chart Off";
-            this.bt_Plot.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.bt_Plot.UseVisualStyleBackColor = true;
-            this.bt_Plot.Click += new System.EventHandler(this.bt_Plot_Click);
             // 
             // cbx_Ports
             // 
@@ -139,12 +100,61 @@
             this.openFileDialog1.FileName = "openFileDialog1";
             this.openFileDialog1.Filter = "Configure files (*.rtcfg)|*.rtcfg";
             // 
+            // bt_Plot
+            // 
+            this.bt_Plot.Enabled = false;
+            this.bt_Plot.Image = global::RTChart.Properties.Resources.Off;
+            this.bt_Plot.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.bt_Plot.Location = new System.Drawing.Point(606, 411);
+            this.bt_Plot.Name = "bt_Plot";
+            this.bt_Plot.Size = new System.Drawing.Size(80, 32);
+            this.bt_Plot.TabIndex = 3;
+            this.bt_Plot.Text = "Chart Off";
+            this.bt_Plot.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.bt_Plot.UseVisualStyleBackColor = true;
+            this.bt_Plot.Click += new System.EventHandler(this.bt_Plot_Click);
+            // 
+            // bt_Options
+            // 
+            this.bt_Options.Image = global::RTChart.Properties.Resources.Options;
+            this.bt_Options.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.bt_Options.Location = new System.Drawing.Point(692, 411);
+            this.bt_Options.Name = "bt_Options";
+            this.bt_Options.Size = new System.Drawing.Size(80, 32);
+            this.bt_Options.TabIndex = 2;
+            this.bt_Options.Text = "Options";
+            this.bt_Options.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.bt_Options.UseVisualStyleBackColor = true;
+            this.bt_Options.Click += new System.EventHandler(this.bt_Options_Click);
+            // 
+            // bt_Import
+            // 
+            this.bt_Import.Image = global::RTChart.Properties.Resources.Import;
+            this.bt_Import.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.bt_Import.Location = new System.Drawing.Point(12, 411);
+            this.bt_Import.Name = "bt_Import";
+            this.bt_Import.Size = new System.Drawing.Size(80, 32);
+            this.bt_Import.TabIndex = 1;
+            this.bt_Import.Text = "Import";
+            this.bt_Import.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.bt_Import.UseVisualStyleBackColor = true;
+            this.bt_Import.Click += new System.EventHandler(this.bt_Import_Click);
+            // 
+            // userControl11
+            // 
+            this.userControl11.Location = new System.Drawing.Point(12, 12);
+            this.userControl11.Name = "userControl11";
+            this.userControl11.Size = new System.Drawing.Size(760, 385);
+            this.userControl11.TabIndex = 7;
+            this.userControl11.Visible = false;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(784, 455);
+            this.Controls.Add(this.userControl11);
             this.Controls.Add(this.tb_Directory);
             this.Controls.Add(this.cbx_Baud);
             this.Controls.Add(this.cbx_Ports);
@@ -173,6 +183,7 @@
         private System.Windows.Forms.TextBox tb_Directory;
         private System.Windows.Forms.ComboBox cbx_Baud;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
+        private UserControl1 userControl11;
     }
 }
 

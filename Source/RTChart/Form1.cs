@@ -64,6 +64,7 @@ namespace RTChart
                     serialPort1.Open();
                     bt_Plot.Image = RTChart.Properties.Resources.On;
                     bt_Plot.Text = "Chart On";
+                    bt_Options.Enabled = false;
                     PlotEna = true;
                 }
                 catch(Exception exp)
@@ -80,6 +81,7 @@ namespace RTChart
 
                     bt_Plot.Image = RTChart.Properties.Resources.Off;
                     bt_Plot.Text = "Chart Off";
+                    bt_Options.Enabled = true;
                     PlotEna = false;
                 }
                 catch (Exception exp)
@@ -91,7 +93,19 @@ namespace RTChart
 
         private void bt_Options_Click(object sender, EventArgs e)
         {
-
+            if (bt_Options.Text == "Options")
+            {
+                userControl11.Show();
+                userControl11.BringToFront();
+                bt_Options.Text = "Save";
+                bt_Options.Image = RTChart.Properties.Resources.Save;
+            }
+            else
+            {
+                userControl11.Hide();
+                bt_Options.Text = "Options";
+                bt_Options.Image = RTChart.Properties.Resources.Options;
+            }
         }
 
         private void cbx_Ports_MouseClick(object sender, MouseEventArgs e)
