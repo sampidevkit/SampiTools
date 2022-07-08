@@ -375,17 +375,24 @@ namespace MakeReg
             return new string(ah);
         }
 
-        private void bt_Set_Click(object sender, EventArgs e)
+        private string StringRight(string s, int len)
         {
-            tb_Dec.Text = "4.294.967.295";
+            char[] a = s.ToCharArray();
+            char[] ah = new char[len];
+
+            if (len < a.Length)
+            {
+                for (int i = 0, j = a.Length - len; i < len; i++, j++)
+                    ah[i] = a[j];
+
+                return new string(ah);
+            }
+
+            return null;
         }
 
-        private void bt_Clear_Click(object sender, EventArgs e)
-        {
-            tb_Dec.Text = "0.000.000.000";
-        }
 
-        private void tb_Hex_TextChanged(object sender, EventArgs e)
+        private void tb_Hex_Proc()
         {
             hexBusy = true;
 
@@ -395,13 +402,20 @@ namespace MakeReg
             {
                 UInt64 v = UInt64.Parse(s, System.Globalization.NumberStyles.HexNumber);
 
+                if (rbt_8bit.Checked == true)
+                    v &= 0xFF;
+                else if (rbt_16bit.Checked == true)
+                    v &= 0xFFFF;
+
+                tb_Hex.Text = hexDisplay((UInt32)v);
+
                 if (!decBusy)
                     tb_Dec.Text = decDisplay((UInt32)v);
 
                 if (!binBusy)
                     tb_Bin.Text = binDisplay((UInt32)v);
 
-                if(!bitBusy)
+                if (!bitBusy)
                     bitMapsSet((UInt32)v);
             }
             catch
@@ -412,7 +426,7 @@ namespace MakeReg
             hexBusy = false;
         }
 
-        private void tb_Dec_TextChanged(object sender, EventArgs e)
+        private void tb_Dec_Proc()
         {
             decBusy = true;
 
@@ -421,6 +435,13 @@ namespace MakeReg
             try
             {
                 UInt64 v = UInt64.Parse(s);
+
+                if (rbt_8bit.Checked == true)
+                    v &= 0xFF;
+                else if (rbt_16bit.Checked == true)
+                    v &= 0xFFFF;
+
+                tb_Dec.Text = decDisplay((UInt32)v);
 
                 if (!hexBusy)
                     tb_Hex.Text = hexDisplay((UInt32)v);
@@ -439,7 +460,7 @@ namespace MakeReg
             decBusy = false;
         }
 
-        private void tb_Bin_TextChanged(object sender, EventArgs e)
+        private void tb_Bin_Proc()
         {
             binBusy = true;
 
@@ -448,6 +469,13 @@ namespace MakeReg
             try
             {
                 UInt64 v = Convert.ToUInt64(s, 2);
+
+                if (rbt_8bit.Checked == true)
+                    v &= 0xFF;
+                else if (rbt_16bit.Checked == true)
+                    v &= 0xFFFF;
+
+                tb_Bin.Text = binDisplay((UInt32)v);
 
                 if (!hexBusy)
                     tb_Hex.Text = hexDisplay((UInt32)v);
@@ -458,31 +486,69 @@ namespace MakeReg
                 if (!bitBusy)
                     bitMapsSet((UInt32)v);
             }
-            catch(Exception ex)
+            catch
             {
-                MessageBox.Show("Incorrect input: " + s + "\n" + ex.ToString(), "Error");
+                MessageBox.Show("Incorrect input: " + s, "Error");
             }
 
             binBusy = false;
         }
 
+        private void bt_Set_Click(object sender, EventArgs e)
+        {
+            tb_Dec.Text = "4.294.967.295";
+            tb_Dec_Proc();
+        }
+
+        private void bt_Clear_Click(object sender, EventArgs e)
+        {
+            tb_Dec.Text = "0.000.000.000";
+            tb_Dec_Proc();
+        }
+
         private void tb_Hex_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            Clipboard.SetText("0x" + removeChar(tb_Hex.Text, '.'));
+            string s;
+
+            if (rbt_8bit.Checked == true)
+                s = StringRight(removeChar(tb_Hex.Text, '.'), 2);
+            else if (rbt_16bit.Checked == true)
+                s = StringRight(removeChar(tb_Hex.Text, '.'), 4);
+            else
+                s = removeChar(tb_Hex.Text, '.');
+
+            Clipboard.SetText("0x" + s);
             lb_Stt.Visible = true;
             timer1.Start();
         }
 
         private void tb_Dec_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            Clipboard.SetText(removeChar(tb_Dec.Text, '.'));
+            string s = removeChar(tb_Dec.Text, '.');
+            UInt32 v = UInt32.Parse(s);
+
+            if (rbt_8bit.Checked == true)
+                v &= 0xFF;
+            else if (rbt_16bit.Checked == true)
+                v &= 0xFFFF;
+
+            Clipboard.SetText(v.ToString());
             lb_Stt.Visible = true;
             timer1.Start();
         }
 
         private void tb_Bin_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            Clipboard.SetText("0b" + removeChar(tb_Bin.Text, '.'));
+            string s;
+
+            if (rbt_8bit.Checked == true)
+                s = StringRight(removeChar(tb_Bin.Text, '.'), 8);
+            else if (rbt_16bit.Checked == true)
+                s = StringRight(removeChar(tb_Bin.Text, '.'), 16);
+            else
+                s = removeChar(tb_Bin.Text, '.');
+
+            Clipboard.SetText("0b" + s);
             lb_Stt.Visible = true;
             timer1.Start();
         }
@@ -1203,6 +1269,111 @@ namespace MakeReg
 
             this.Text += " v." + $"{version}";
             this.Update();
+        }
+
+        private void tb_Hex_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+                tb_Hex_Proc();
+        }
+
+        private void tb_Dec_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+                tb_Dec_Proc();
+        }
+
+        private void tb_Bin_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+                tb_Bin_Proc();
+        }
+
+        private void rbt_32bit_CheckedChanged(object sender, EventArgs e)
+        {
+            bt31.Enabled = true;
+            bt30.Enabled = true;
+            bt29.Enabled = true;
+            bt28.Enabled = true;
+            bt27.Enabled = true;
+            bt26.Enabled = true;
+            bt25.Enabled = true;
+            bt24.Enabled = true;
+            bt23.Enabled = true;
+            bt22.Enabled = true;
+            bt21.Enabled = true;
+            bt20.Enabled = true;
+            bt19.Enabled = true;
+            bt18.Enabled = true;
+            bt17.Enabled = true;
+            bt16.Enabled = true;
+            bt15.Enabled = true;
+            bt14.Enabled = true;
+            bt13.Enabled = true;
+            bt12.Enabled = true;
+            bt11.Enabled = true;
+            bt10.Enabled = true;
+            bt9.Enabled = true;
+            bt8.Enabled = true;
+            tb_Dec_Proc();
+        }
+
+        private void rbt_16bit_CheckedChanged(object sender, EventArgs e)
+        {
+            bt31.Enabled = false;
+            bt30.Enabled = false;
+            bt29.Enabled = false;
+            bt28.Enabled = false;
+            bt27.Enabled = false;
+            bt26.Enabled = false;
+            bt25.Enabled = false;
+            bt24.Enabled = false;
+            bt23.Enabled = false;
+            bt22.Enabled = false;
+            bt21.Enabled = false;
+            bt20.Enabled = false;
+            bt19.Enabled = false;
+            bt18.Enabled = false;
+            bt17.Enabled = false;
+            bt16.Enabled = false;
+            bt15.Enabled = true;
+            bt14.Enabled = true;
+            bt13.Enabled = true;
+            bt12.Enabled = true;
+            bt11.Enabled = true;
+            bt10.Enabled = true;
+            bt9.Enabled = true;
+            bt8.Enabled = true;
+            tb_Dec_Proc();
+        }
+
+        private void rbt_8bit_CheckedChanged(object sender, EventArgs e)
+        {
+            bt31.Enabled = false;
+            bt30.Enabled = false;
+            bt29.Enabled = false;
+            bt28.Enabled = false;
+            bt27.Enabled = false;
+            bt26.Enabled = false;
+            bt25.Enabled = false;
+            bt24.Enabled = false;
+            bt23.Enabled = false;
+            bt22.Enabled = false;
+            bt21.Enabled = false;
+            bt20.Enabled = false;
+            bt19.Enabled = false;
+            bt18.Enabled = false;
+            bt17.Enabled = false;
+            bt16.Enabled = false;
+            bt15.Enabled = false;
+            bt14.Enabled = false;
+            bt13.Enabled = false;
+            bt12.Enabled = false;
+            bt11.Enabled = false;
+            bt10.Enabled = false;
+            bt9.Enabled = false;
+            bt8.Enabled = false;
+            tb_Dec_Proc();
         }
     }
 }

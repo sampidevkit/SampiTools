@@ -73,6 +73,9 @@
             this.lb_Stt = new System.Windows.Forms.Label();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.label4 = new System.Windows.Forms.Label();
+            this.rbt_8bit = new System.Windows.Forms.RadioButton();
+            this.rbt_16bit = new System.Windows.Forms.RadioButton();
+            this.rbt_32bit = new System.Windows.Forms.RadioButton();
             this.SuspendLayout();
             // 
             // tb_Dec
@@ -86,7 +89,7 @@
             this.tb_Dec.TabIndex = 0;
             this.tb_Dec.Text = "0.000.000.000";
             this.tb_Dec.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.tb_Dec.TextChanged += new System.EventHandler(this.tb_Dec_TextChanged);
+            this.tb_Dec.KeyDown += new System.Windows.Forms.KeyEventHandler(this.tb_Dec_KeyDown);
             this.tb_Dec.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.tb_Dec_MouseDoubleClick);
             // 
             // label1
@@ -120,7 +123,7 @@
             this.tb_Hex.TabIndex = 3;
             this.tb_Hex.Text = "00.00.00.00";
             this.tb_Hex.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.tb_Hex.TextChanged += new System.EventHandler(this.tb_Hex_TextChanged);
+            this.tb_Hex.KeyDown += new System.Windows.Forms.KeyEventHandler(this.tb_Hex_KeyDown);
             this.tb_Hex.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.tb_Hex_MouseDoubleClick);
             // 
             // label3
@@ -144,7 +147,7 @@
             this.tb_Bin.TabIndex = 5;
             this.tb_Bin.Text = "00000000.00000000.00000000.00000000";
             this.tb_Bin.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.tb_Bin.TextChanged += new System.EventHandler(this.tb_Bin_TextChanged);
+            this.tb_Bin.KeyDown += new System.Windows.Forms.KeyEventHandler(this.tb_Bin_KeyDown);
             this.tb_Bin.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.tb_Bin_MouseDoubleClick);
             // 
             // bt31
@@ -589,7 +592,7 @@
             // lb_Stt
             // 
             this.lb_Stt.AutoSize = true;
-            this.lb_Stt.Location = new System.Drawing.Point(16, 187);
+            this.lb_Stt.Location = new System.Drawing.Point(12, 194);
             this.lb_Stt.Name = "lb_Stt";
             this.lb_Stt.Size = new System.Drawing.Size(40, 13);
             this.lb_Stt.TabIndex = 41;
@@ -610,14 +613,51 @@
             this.label4.Size = new System.Drawing.Size(57, 13);
             this.label4.TabIndex = 42;
             this.label4.Text = "Bit Field:";
-            this.label4.Visible = false;
+            // 
+            // rbt_8bit
+            // 
+            this.rbt_8bit.AutoSize = true;
+            this.rbt_8bit.Location = new System.Drawing.Point(68, 192);
+            this.rbt_8bit.Name = "rbt_8bit";
+            this.rbt_8bit.Size = new System.Drawing.Size(45, 17);
+            this.rbt_8bit.TabIndex = 43;
+            this.rbt_8bit.Text = "8-bit";
+            this.rbt_8bit.UseVisualStyleBackColor = true;
+            this.rbt_8bit.CheckedChanged += new System.EventHandler(this.rbt_8bit_CheckedChanged);
+            // 
+            // rbt_16bit
+            // 
+            this.rbt_16bit.AutoSize = true;
+            this.rbt_16bit.Location = new System.Drawing.Point(187, 192);
+            this.rbt_16bit.Name = "rbt_16bit";
+            this.rbt_16bit.Size = new System.Drawing.Size(51, 17);
+            this.rbt_16bit.TabIndex = 44;
+            this.rbt_16bit.Text = "16-bit";
+            this.rbt_16bit.UseVisualStyleBackColor = true;
+            this.rbt_16bit.CheckedChanged += new System.EventHandler(this.rbt_16bit_CheckedChanged);
+            // 
+            // rbt_32bit
+            // 
+            this.rbt_32bit.AutoSize = true;
+            this.rbt_32bit.Checked = true;
+            this.rbt_32bit.Location = new System.Drawing.Point(308, 192);
+            this.rbt_32bit.Name = "rbt_32bit";
+            this.rbt_32bit.Size = new System.Drawing.Size(51, 17);
+            this.rbt_32bit.TabIndex = 45;
+            this.rbt_32bit.TabStop = true;
+            this.rbt_32bit.Text = "32-bit";
+            this.rbt_32bit.UseVisualStyleBackColor = true;
+            this.rbt_32bit.CheckedChanged += new System.EventHandler(this.rbt_32bit_CheckedChanged);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.ClientSize = new System.Drawing.Size(374, 208);
+            this.ClientSize = new System.Drawing.Size(374, 221);
+            this.Controls.Add(this.rbt_32bit);
+            this.Controls.Add(this.rbt_16bit);
+            this.Controls.Add(this.rbt_8bit);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.lb_Stt);
             this.Controls.Add(this.bt_Clear);
@@ -715,6 +755,9 @@
         private System.Windows.Forms.Label lb_Stt;
         private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.RadioButton rbt_8bit;
+        private System.Windows.Forms.RadioButton rbt_16bit;
+        private System.Windows.Forms.RadioButton rbt_32bit;
     }
 }
 
