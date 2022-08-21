@@ -1,12 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace PIC32MM_RTOS_Int_Asm_Gen
@@ -29,12 +23,32 @@ namespace PIC32MM_RTOS_Int_Asm_Gen
             }
         }
 
+        private string PrettyName(string s)
+        {
+            int i, j, k;
+            char[] c = s.ToCharArray();
+
+            i = 0;
+
+            while ((c[i] == '_') || (c[i] <= '9'))
+                i++;
+
+            j = c.Length - i;
+
+            char[] cc = new char[j];
+
+            for (k = 0; k < j; k++)
+                cc[k] = c[k + i];
+
+            return new string(cc);
+        }
+
         private string MakeFileName()
         {
             string fileName;
 
             if (ckb_DefaultName.Checked == true)
-                fileName = cbx_Vector.Text + "_Isr.S";
+                fileName = cbx_Vector.Text.ToLower() + "_isr.S";
             else
                 fileName = tb_DefaultName.Text + ".S";
 
@@ -44,7 +58,7 @@ namespace PIC32MM_RTOS_Int_Asm_Gen
         private void bt_New_Click(object sender, EventArgs e)
         {
             string src;
-            StreamWriter sW = new StreamWriter(MakeFileName());
+            StreamWriter sW = new StreamWriter(PrettyName(MakeFileName()));
 
             sW.Write(PIC32MM_RTOS_Int_Asm_Gen.Properties.Resources.header);
             sW.Flush();
@@ -52,7 +66,7 @@ namespace PIC32MM_RTOS_Int_Asm_Gen
             sW.WriteLine(src);
             sW.Flush();
             sW.Close();
-            lb_Status.Text = MakeFileName() + " has been created";
+            lb_Status.Text = PrettyName(MakeFileName()) + " has been created";
             lb_Status.Visible = true;
             timer1.Start();
         }
@@ -118,6 +132,8 @@ namespace PIC32MM_RTOS_Int_Asm_Gen
             StreamWriter sW;
             string fileName = tb_DefaultName.Text + ".S";
 
+            fileName = PrettyName(fileName);
+
             if (File.Exists(fileName) == false)
             {
                 NewFile = true;
@@ -164,7 +180,9 @@ namespace PIC32MM_RTOS_Int_Asm_Gen
             {
                 try
                 {
-                    fileName = cbx_Vector.Text + "_Isr.S";
+                    fileName = cbx_Vector.Text.ToLower() + "_isr.S";
+                    fileName = PrettyName(fileName);
+
                     StreamWriter sW = new StreamWriter(fileName);
 
                     sW.Write(PIC32MM_RTOS_Int_Asm_Gen.Properties.Resources.header);
@@ -185,6 +203,41 @@ namespace PIC32MM_RTOS_Int_Asm_Gen
             lb_Status.Text = "All files have been created";
             lb_Status.Visible = true;
             timer1.Start();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+            this.Text += " v." + $"{version}";
+            this.Update();
+
+            if (File.Exists("vectors.txt"))
+            {
+                string s;
+                StreamReader sR = new StreamReader("vectors.txt");
+
+                s = sR.ReadLine();
+
+                if (s != null)
+                {
+                    cbx_Vector.Items.Clear();
+
+                    while (s != null)
+                    {
+                        cbx_Vector.Items.Add(s);
+                        s = sR.ReadLine();
+                    }
+
+                    cbx_Vector.SelectedIndex = 0;
+                    ckb_DefaultName.Enabled = true;
+                    bt_New.Enabled = true;
+                    bt_Append.Enabled = true;
+                    bt_MakeAll.Enabled = true;
+                }
+
+                sR.Close();
+            }
         }
     }
 }

@@ -136,9 +136,9 @@
             "DMA3"});
             this.cbx_Vector.Location = new System.Drawing.Point(75, 38);
             this.cbx_Vector.Name = "cbx_Vector";
-            this.cbx_Vector.Size = new System.Drawing.Size(149, 21);
+            this.cbx_Vector.Size = new System.Drawing.Size(171, 21);
             this.cbx_Vector.TabIndex = 1;
-            this.cbx_Vector.Text = "CORE_TIMER";
+            this.cbx_Vector.Text = "Vectors.txt not found";
             // 
             // label2
             // 
@@ -155,7 +155,7 @@
             this.tb_DefaultName.Location = new System.Drawing.Point(75, 12);
             this.tb_DefaultName.MaxLength = 128;
             this.tb_DefaultName.Name = "tb_DefaultName";
-            this.tb_DefaultName.Size = new System.Drawing.Size(149, 20);
+            this.tb_DefaultName.Size = new System.Drawing.Size(171, 20);
             this.tb_DefaultName.TabIndex = 3;
             this.tb_DefaultName.Text = "interrupt_handler";
             this.tb_DefaultName.TextChanged += new System.EventHandler(this.tb_DefaultName_TextChanged);
@@ -165,7 +165,8 @@
             this.ckb_DefaultName.AutoSize = true;
             this.ckb_DefaultName.Checked = true;
             this.ckb_DefaultName.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ckb_DefaultName.Location = new System.Drawing.Point(230, 14);
+            this.ckb_DefaultName.Enabled = false;
+            this.ckb_DefaultName.Location = new System.Drawing.Point(252, 14);
             this.ckb_DefaultName.Name = "ckb_DefaultName";
             this.ckb_DefaultName.Size = new System.Drawing.Size(60, 17);
             this.ckb_DefaultName.TabIndex = 4;
@@ -175,6 +176,7 @@
             // 
             // bt_New
             // 
+            this.bt_New.Enabled = false;
             this.bt_New.Location = new System.Drawing.Point(320, 11);
             this.bt_New.Name = "bt_New";
             this.bt_New.Size = new System.Drawing.Size(52, 21);
@@ -185,6 +187,7 @@
             // 
             // bt_Append
             // 
+            this.bt_Append.Enabled = false;
             this.bt_Append.Location = new System.Drawing.Point(320, 38);
             this.bt_Append.Name = "bt_Append";
             this.bt_Append.Size = new System.Drawing.Size(52, 21);
@@ -196,11 +199,12 @@
             // lb_Status
             // 
             this.lb_Status.AutoSize = true;
-            this.lb_Status.Location = new System.Drawing.Point(72, 62);
+            this.lb_Status.ForeColor = System.Drawing.Color.Blue;
+            this.lb_Status.Location = new System.Drawing.Point(12, 60);
             this.lb_Status.Name = "lb_Status";
-            this.lb_Status.Size = new System.Drawing.Size(35, 13);
+            this.lb_Status.Size = new System.Drawing.Size(37, 13);
             this.lb_Status.TabIndex = 9;
-            this.lb_Status.Text = "label3";
+            this.lb_Status.Text = "Status";
             this.lb_Status.Visible = false;
             // 
             // timer1
@@ -210,9 +214,10 @@
             // 
             // bt_MakeAll
             // 
-            this.bt_MakeAll.Location = new System.Drawing.Point(230, 36);
+            this.bt_MakeAll.Enabled = false;
+            this.bt_MakeAll.Location = new System.Drawing.Point(252, 37);
             this.bt_MakeAll.Name = "bt_MakeAll";
-            this.bt_MakeAll.Size = new System.Drawing.Size(84, 23);
+            this.bt_MakeAll.Size = new System.Drawing.Size(62, 23);
             this.bt_MakeAll.TabIndex = 10;
             this.bt_MakeAll.Text = "Make All";
             this.bt_MakeAll.UseVisualStyleBackColor = true;
@@ -237,6 +242,7 @@
             this.MaximizeBox = false;
             this.Name = "Form1";
             this.Text = "PIC32MM RTOS INT ASM GEN";
+            this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 

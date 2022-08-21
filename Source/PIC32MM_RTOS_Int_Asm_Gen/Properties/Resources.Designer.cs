@@ -76,23 +76,23 @@ namespace PIC32MM_RTOS_Int_Asm_Gen.Properties {
         ////* Copy this line to your C source
         ///#ifdef USE_RTOS
         ///;
-        ///void _VECTOR_IsrHandler(void);
+        ///void VECTOR_Handler(void);
         ///#endif
         ///******************************** */
         ///.set nomips16
         ///.set noreorder
-        ///.extern _VECTOR_IsrHandler
+        ///.extern VECTOR_Handler
         ///.extern xISRStackTop
-        ///.global _VECTOR
+        ///.global VECTOR
         ///.set noreorder
         ///.set noat
-        ///.ent _VECTOR
-        ///_VECTOR:
+        ///.ent VECTOR
+        ///VECTOR:
         ///portSAVE_CONTEXT
-        ///jal _VECTOR_IsrHandler
+        ///jal VECTOR_Handler
         ///nop
         ///portRESTORE_CONTEXT
-        ///.end _VECTOR.
+        ///.end VECTOR.
         /// </summary>
         internal static string source {
             get {
