@@ -40,7 +40,9 @@ namespace PIC32MM_RTOS_Int_Asm_Gen
             for (k = 0; k < j; k++)
                 cc[k] = c[k + i];
 
-            return new string(cc);
+            string ss = new string(cc);
+
+            return ss.Replace("_isr_isr.S", "_isr.S");
         }
 
         private string MakeFileName()
