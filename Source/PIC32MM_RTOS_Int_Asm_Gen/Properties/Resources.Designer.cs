@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace SerialPortTerminal.Properties {
+namespace PIC32MM_RTOS_Int_Asm_Gen.Properties {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace SerialPortTerminal.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("SerialPortTerminal.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("PIC32MM_RTOS_Int_Asm_Gen.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -61,52 +61,42 @@ namespace SerialPortTerminal.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        ///   Looks up a localized string similar to #include &lt;p32xxxx.h&gt;
+        ///#include &lt;sys/asm.h&gt;
+        ///#include &quot;ISR_Support.h&quot;.
         /// </summary>
-        internal static System.Drawing.Bitmap home_icon {
+        internal static string header {
             get {
-                object obj = ResourceManager.GetObject("home-icon", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
+                return ResourceManager.GetString("header", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        ///   Looks up a localized string similar to 
+        ////* Copy this line to your C source
+        ///#ifdef USE_RTOS
+        ///;
+        ///void _VECTOR_IsrHandler(void);
+        ///#endif
+        ///******************************** */
+        ///.set nomips16
+        ///.set noreorder
+        ///.extern _VECTOR_IsrHandler
+        ///.extern xISRStackTop
+        ///.global _VECTOR
+        ///.set noreorder
+        ///.set noat
+        ///.ent _VECTOR
+        ///_VECTOR:
+        ///portSAVE_CONTEXT
+        ///jal _VECTOR_IsrHandler
+        ///nop
+        ///portRESTORE_CONTEXT
+        ///.end _VECTOR.
         /// </summary>
-        internal static System.Drawing.Bitmap plug_connect_icon {
+        internal static string source {
             get {
-                object obj = ResourceManager.GetObject("plug-connect-icon", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap plug_disconnect_prohibition_icon {
-            get {
-                object obj = ResourceManager.GetObject("plug-disconnect-prohibition-icon", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap plug_disconnect_prohibition_icon1 {
-            get {
-                object obj = ResourceManager.GetObject("plug-disconnect-prohibition-icon1", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap text_x_log_icon {
-            get {
-                object obj = ResourceManager.GetObject("text-x-log-icon", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
+                return ResourceManager.GetString("source", resourceCulture);
             }
         }
     }

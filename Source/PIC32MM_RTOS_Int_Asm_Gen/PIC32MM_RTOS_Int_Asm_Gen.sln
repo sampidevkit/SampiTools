@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32616.157
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PIC32MM_RTOS_Int_Asm_Gen", "PIC32MM_RTOS_Int_Asm_Gen.csproj", "{367CE019-2776-4952-A183-EC6599AEED2C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{367CE019-2776-4952-A183-EC6599AEED2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{367CE019-2776-4952-A183-EC6599AEED2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{367CE019-2776-4952-A183-EC6599AEED2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{367CE019-2776-4952-A183-EC6599AEED2C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {446A4CC0-E26D-48A2-9A40-053B0DD63607}
+	EndGlobalSection
+EndGlobal

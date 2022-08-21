@@ -117,20 +117,32 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="plug-disconnect-prohibition-icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\plug-disconnect-prohibition-icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="header" xml:space="preserve">
+    <value>#include &lt;p32xxxx.h&gt;
+#include &lt;sys/asm.h&gt;
+#include "ISR_Support.h"</value>
   </data>
-  <data name="plug-connect-icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\plug-connect-icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="plug-disconnect-prohibition-icon1" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\plug-disconnect-prohibition-icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="home-icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\home-icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="text-x-log-icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\text-x-log-icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="source" xml:space="preserve">
+    <value>
+/* Copy this line to your C source
+#ifdef USE_RTOS
+;
+void _VECTOR_IsrHandler(void);
+#endif
+******************************** */
+.set nomips16
+.set noreorder
+.extern _VECTOR_IsrHandler
+.extern xISRStackTop
+.global _VECTOR
+.set noreorder
+.set noat
+.ent _VECTOR
+_VECTOR:
+portSAVE_CONTEXT
+jal _VECTOR_IsrHandler
+nop
+portRESTORE_CONTEXT
+.end _VECTOR</value>
   </data>
 </root>
