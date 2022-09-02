@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace SerialPortTerminal.Properties {
+namespace SystemNetSpeedTest.Properties {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace SerialPortTerminal.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("SerialPortTerminal.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("SystemNetSpeedTest.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -61,52 +61,37 @@ namespace SerialPortTerminal.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        ///   Looks up a localized string similar to ];
+        ///line=a(:,1);
+        ///txSpeed=a(:,2);
+        ///rxSpeed=a(:,3);
+        ///plot(line, txSpeed);
+        ///hold on;
+        ///plot(line, rxSpeed);
+        ///legend(&apos;TX Speed&apos;, &apos;RX Speed&apos;);
+        ///TX_Min=min(txSpeed)
+        ///TX_Max=max(txSpeed)
+        ///TX_Ave=mean(txSpeed)
+        ///RX_Min=min(rxSpeed)
+        ///RX_Max=max(rxSpeed)
+        ///RX_Ave=mean(rxSpeed).
         /// </summary>
-        internal static System.Drawing.Bitmap home_icon {
+        internal static string footer {
             get {
-                object obj = ResourceManager.GetObject("home-icon", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
+                return ResourceManager.GetString("footer", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        ///   Looks up a localized string similar to clc;
+        ///clear all;
+        ///clf;
+        ///close all;
+        ///a=[.
         /// </summary>
-        internal static System.Drawing.Bitmap plug_connect_icon {
+        internal static string header {
             get {
-                object obj = ResourceManager.GetObject("plug-connect-icon", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap plug_disconnect_prohibition_icon {
-            get {
-                object obj = ResourceManager.GetObject("plug-disconnect-prohibition-icon", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap plug_disconnect_prohibition_icon1 {
-            get {
-                object obj = ResourceManager.GetObject("plug-disconnect-prohibition-icon1", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap text_x_log_icon {
-            get {
-                object obj = ResourceManager.GetObject("text-x-log-icon", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
+                return ResourceManager.GetString("header", resourceCulture);
             }
         }
     }
