@@ -92,7 +92,7 @@ namespace PIC32MM_RTOS_Int_Asm_Gen
                 if ((c > 'Z') && (c < 'a') && (c != '_'))
                     return false;
 
-                if ((c > 9) && (c < 'A'))
+                if ((c > '9') && (c < 'A'))
                     return false;
 
                 if (c < '0')
