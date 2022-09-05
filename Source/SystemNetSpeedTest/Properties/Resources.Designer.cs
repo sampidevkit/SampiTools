@@ -62,19 +62,31 @@ namespace SystemNetSpeedTest.Properties {
         
         /// <summary>
         ///   Looks up a localized string similar to ];
+        ///
         ///line=a(:,1);
         ///txSpeed=a(:,2);
         ///rxSpeed=a(:,3);
-        ///plot(line, txSpeed);
-        ///hold on;
-        ///plot(line, rxSpeed);
-        ///legend(&apos;TX Speed&apos;, &apos;RX Speed&apos;);
-        ///TX_Min=min(txSpeed)
-        ///TX_Max=max(txSpeed)
-        ///TX_Ave=mean(txSpeed)
-        ///RX_Min=min(rxSpeed)
-        ///RX_Max=max(rxSpeed)
-        ///RX_Ave=mean(rxSpeed).
+        ///Ts=datetime(startTime,&apos;ConvertFrom&apos;,&apos;posixtime&apos;, &apos;Format&apos;, &apos;yyyy-MM-dd HH:mm:ss&apos;);
+        ///
+        ///for i=2:1:length(a)
+        ///    Ts=[Ts, datetime(startTime+i,&apos;ConvertFrom&apos;,&apos;posixtime&apos;, &apos;Format&apos;, &apos;yyyy-MM-dd HH:mm:ss&apos;)];
+        ///end
+        ///
+        ///TX_Idx=1;
+        ///TX_Sum=txSpeed(1);
+        ///txAve=[txSpeed(1)];
+        ///
+        ///for i=2:1:length(txSpeed)
+        ///    TX_Idx=TX_Idx+1;
+        ///    TX_Sum=TX_Sum+txSpeed(i);
+        ///    txAve=[txAve, TX_Sum/TX_Idx];
+        ///end
+        ///
+        ///RX_Idx=1;
+        ///RX_Sum=rxSpeed(1);
+        ///rxAve=[rxSpeed(1)];
+        ///
+        ///for i=2:1:length(r [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string footer {
             get {
@@ -86,8 +98,7 @@ namespace SystemNetSpeedTest.Properties {
         ///   Looks up a localized string similar to clc;
         ///clear all;
         ///clf;
-        ///close all;
-        ///a=[.
+        ///close all;.
         /// </summary>
         internal static string header {
             get {

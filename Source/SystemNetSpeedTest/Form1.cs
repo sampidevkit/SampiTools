@@ -20,6 +20,19 @@ namespace SystemNetSpeedTest
             InitializeComponent();
         }
 
+        private int GetUnixTimeSeconds(DateTime date)
+        {
+            DateTime point = new DateTime(1970, 1, 1);
+            TimeSpan time = date.Subtract(point);
+
+            return (int)time.TotalSeconds;
+        }
+
+        private int ToUnixTimeSeconds()
+        {
+            return GetUnixTimeSeconds(DateTime.Now);
+        }
+
         private string strRemove(string s)
         {
             int i, j, accept;
@@ -84,16 +97,7 @@ namespace SystemNetSpeedTest
 
                 slog.WriteLine(rtb_Log.Text);
                 slog.Close();
-
-                if (File.Exists("footer.txt"))
-                {
-                    StreamReader sR = new StreamReader("footer.txt");
-
-                    sW.WriteLine(sR.ReadToEnd());
-                    sR.Close();
-                }
-                else
-                    sW.WriteLine(SystemNetSpeedTest.Properties.Resources.footer);
+                sW.WriteLine(SystemNetSpeedTest.Properties.Resources.footer);
 
                 sW.Close();
                 rtb_Log.AppendText("\nLog file " + fileName + ".m has been saved");
@@ -111,19 +115,12 @@ namespace SystemNetSpeedTest
             try
             {
                 sW = new StreamWriter(fileName + ".m");
-
-                if (File.Exists("header.txt"))
-                {
-                    StreamReader sR = new StreamReader("header.txt");
-
-                    sW.WriteLine(sR.ReadToEnd());
-                    sR.Close();
-                }
-                else
-                    sW.WriteLine(SystemNetSpeedTest.Properties.Resources.header);
+                sW.WriteLine(SystemNetSpeedTest.Properties.Resources.header);
+                sW.WriteLine("\nstartTime=" + ToUnixTimeSeconds().ToString() + ";");
+                sW.WriteLine("\na=[");
 
                 rtb_Log.Text = "New log file " + fileName + ".m has been created";
-                line = 5;
+                line = 0;
                 timer1.Start();
             }
             catch(Exception e)

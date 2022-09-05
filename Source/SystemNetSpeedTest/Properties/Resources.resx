@@ -119,25 +119,49 @@
   </resheader>
   <data name="footer" xml:space="preserve">
     <value>];
+
 line=a(:,1);
 txSpeed=a(:,2);
 rxSpeed=a(:,3);
-plot(line, txSpeed);
+Ts=datetime(startTime,'ConvertFrom','posixtime', 'Format', 'yyyy-MM-dd HH:mm:ss');
+
+for i=2:1:length(a)
+    Ts=[Ts, datetime(startTime+i,'ConvertFrom','posixtime', 'Format', 'yyyy-MM-dd HH:mm:ss')];
+end
+
+TX_Idx=1;
+TX_Sum=txSpeed(1);
+txAve=[txSpeed(1)];
+
+for i=2:1:length(txSpeed)
+    TX_Idx=TX_Idx+1;
+    TX_Sum=TX_Sum+txSpeed(i);
+    txAve=[txAve, TX_Sum/TX_Idx];
+end
+
+RX_Idx=1;
+RX_Sum=rxSpeed(1);
+rxAve=[rxSpeed(1)];
+
+for i=2:1:length(rxSpeed)
+    RX_Idx=RX_Idx+1;
+    RX_Sum=RX_Sum+rxSpeed(i);
+    rxAve=[rxAve, RX_Sum/RX_Idx];
+end
+
+plot(Ts, txSpeed);
 hold on;
-plot(line, rxSpeed);
-legend('TX Speed', 'RX Speed');
-TX_Min=min(txSpeed)
-TX_Max=max(txSpeed)
-TX_Ave=mean(txSpeed)
-RX_Min=min(rxSpeed)
-RX_Max=max(rxSpeed)
-RX_Ave=mean(rxSpeed)</value>
+plot(Ts, rxSpeed);
+hold on;
+plot(Ts, txAve);
+hold on;
+plot(Ts, rxAve);
+legend('TX Speed', 'RX Speed', 'TX Average', 'RX Average');</value>
   </data>
   <data name="header" xml:space="preserve">
     <value>clc;
 clear all;
 clf;
-close all;
-a=[</value>
+close all;</value>
   </data>
 </root>
