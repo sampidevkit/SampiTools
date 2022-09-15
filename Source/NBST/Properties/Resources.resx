@@ -123,6 +123,7 @@
 line=a(:,1);
 rsrp=a(:,2);
 rsrq=a(:,3);
+rssi=a(:,4);
 Ts=datetime(startTime,'ConvertFrom','posixtime', 'Format', 'yyyy-MM-dd HH:mm:ss');
 
 for i=2:1:length(a)
@@ -149,14 +150,28 @@ for i=2:1:length(rsrq)
     rqAve=[rqAve, RQ_Sum/RQ_Idx];
 end
 
+SI_Idx=1;
+SI_Sum=rssi(1);
+siAve=[rssi(1)];
+
+for i=2:1:length(rssi)
+    SI_Idx=SI_Idx+1;
+    SI_Sum=SI_Sum+rssi(i);
+    siAve=[siAve, SI_Sum/SI_Idx];
+end
+
 plot(Ts, rsrp);
 hold on;
 plot(Ts, rsrq);
 hold on;
+plot(Ts, rssi);
+hold on;
 plot(Ts, rpAve);
 hold on;
 plot(Ts, rqAve);
-legend('RSRP', 'RSRQ', 'RSRP Average', 'RSRQ Average');</value>
+hold on;
+plot(Ts, siAve);
+legend('RSRP', 'RSRQ', 'RSSI', 'RSRP Average', 'RSRQ Average', 'RSSI Average');</value>
   </data>
   <data name="header" xml:space="preserve">
     <value>clc;

@@ -66,6 +66,7 @@ namespace NBST.Properties {
         ///line=a(:,1);
         ///rsrp=a(:,2);
         ///rsrq=a(:,3);
+        ///rssi=a(:,4);
         ///Ts=datetime(startTime,&apos;ConvertFrom&apos;,&apos;posixtime&apos;, &apos;Format&apos;, &apos;yyyy-MM-dd HH:mm:ss&apos;);
         ///
         ///for i=2:1:length(a)
@@ -87,7 +88,7 @@ namespace NBST.Properties {
         ///rqAve=[rsrq(1)];
         ///
         ///for i=2:1:length(rsrq)
-        ///    RQ_Idx=RQ_Idx+ [rest of string was truncated]&quot;;.
+        ///     [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string footer {
             get {

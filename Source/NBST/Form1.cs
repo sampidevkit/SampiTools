@@ -10,13 +10,24 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.Remoting.Contexts;
+using ZedGraph;
 
 namespace NBST
 {
     public partial class Form1 : Form
     {
+        private PointPairList pointPairList_RSRP = null;
+        private LineItem lineItem_RSRP = null;
+
+        private PointPairList pointPairList_RSRQ = null;
+        private LineItem lineItem_RSRQ = null;
+
+        private PointPairList pointPairList_RSSI = null;
+        private LineItem lineItem_RSSI = null;
+
+        private GraphPane graphPane = null;
         private static Thread Thread_Task = null;
-        private int DoNext = 0;
+        private volatile int DoNext = 0;
         private string ModuleName = null;
         private string ModuleImei = null;
         private StreamWriter sW = null;
@@ -164,18 +175,18 @@ namespace NBST
             return s;
         }
 
-        private void WriteLogFile(int rsrp, int rsrq)
+        private void WriteLogFile(int rsrp, int rsrq, int rssi)
         {
             if (sW != null)
             {
                 line++;
 
-                string s = line.ToString() + " " + rsrp.ToString() + " " + rsrq.ToString();
+                string s = line.ToString() + " " + rsrp.ToString() + " " + rsrq.ToString() + " " + rssi.ToString();
 
                 sW.WriteLine(s);
                 PrintDebug("\n" + line.ToString("D4") + " ");
-                PrintDebug(DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString() + " RSRP=");
-                PrintDebug(rsrp.ToString() + "dBm, " + rsrq.ToString() + " dB");
+                PrintDebug(DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString() + ": ");
+                PrintDebug("RSRP=" + rsrp.ToString() + "dBm, RSRQ=" + rsrq.ToString() + "dB, RSSI=" + rssi.ToString() + "dB");
             }
         }
 
@@ -193,6 +204,7 @@ namespace NBST
                 PrintDebug("\nLog file " + fileName + ".m has been saved");
                 Thread.Sleep(1000);
                 rtb_Log.Clear();
+                sW = null;
             }
         }
 
@@ -447,9 +459,47 @@ namespace NBST
             PrintDebug("\nFound: " + found.ToString() + " AT command port(s)");
         }
 
+        private void Plot(int rsrp, int rsrq, int rssi)
+        {
+
+        }
+
         public Form1()
         {
             InitializeComponent();
+            graphPane = zedGraph1.GraphPane;
+            zedGraph1.GraphPane.CurveList.Clear();
+            zedGraph1.GraphPane.YAxisList.Clear();
+            zedGraph1.GraphPane.Title.Text = "RF Measurement";
+            zedGraph1.GraphPane.XAxis.Title.Text = "Time";
+
+            lineItem_RSRP = graphPane.AddCurve("RSRP, ", pointPairList_RSRP, Color.Red, SymbolType.Circle);
+            zedGraph1.GraphPane.AddYAxis("dBm");
+            zedGraph1.GraphPane.YAxisList[0].Scale.Max = 0;
+            zedGraph1.GraphPane.YAxisList[0].Scale.Min = -150;
+            zedGraph1.GraphPane.YAxisList[0].Scale.FontSpec.FontColor = Color.Red;
+            zedGraph1.GraphPane.YAxisList[0].Title.FontSpec.FontColor = Color.Red;
+            zedGraph1.GraphPane.YAxisList[0].Color = Color.Red;
+
+            lineItem_RSRQ = graphPane.AddCurve("RSRQ, ", pointPairList_RSRQ, Color.Green, SymbolType.Triangle);
+            zedGraph1.GraphPane.AddYAxis("dB");
+            zedGraph1.GraphPane.YAxisList[1].Scale.Max = 0;
+            zedGraph1.GraphPane.YAxisList[1].Scale.Min = -150;
+            zedGraph1.GraphPane.YAxisList[1].Scale.FontSpec.FontColor = Color.Green;
+            zedGraph1.GraphPane.YAxisList[1].Title.FontSpec.FontColor = Color.Green;
+            zedGraph1.GraphPane.YAxisList[1].Color = Color.Green;
+
+            lineItem_RSSI = graphPane.AddCurve("RSSI, ", pointPairList_RSSI, Color.Blue, SymbolType.Square);
+            zedGraph1.GraphPane.AddYAxis("dBm");
+            zedGraph1.GraphPane.YAxisList[2].Scale.Max = 31;
+            zedGraph1.GraphPane.YAxisList[2].Scale.Min = -1;
+            zedGraph1.GraphPane.YAxisList[2].Scale.FontSpec.FontColor = Color.Blue;
+            zedGraph1.GraphPane.YAxisList[2].Title.FontSpec.FontColor = Color.Blue;
+            zedGraph1.GraphPane.YAxisList[2].Color = Color.Blue;
+
+            zedGraph1.GraphPane.XAxis.ResetAutoScale(zedGraph1.GraphPane, CreateGraphics());
+            zedGraph1.GraphPane.YAxis.ResetAutoScale(zedGraph1.GraphPane, CreateGraphics());
+            zedGraph1.Refresh();
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -545,6 +595,108 @@ namespace NBST
                 OpenLogFile();
 
             rtb_Log.Clear();
+        }
+
+        private void bt_Download_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (bt_Download.Text == "Download")
+                {
+                    DoNext = 0;
+                    serialPort1.PortName = cb_Port1.Text;
+                    serialPort1.BaudRate = 115200;
+                    serialPort1.WriteTimeout = 1000;
+                    serialPort1.DtrEnable = true;
+                    serialPort1.Open();
+
+                    bt_RFTest.Enabled = false;
+                    bt_Scan.Enabled = false;
+
+                    Thread_Task = new Thread(() => Download()); // Create new app tasks
+                    Thread_Task.Start();
+
+                    bt_Download.Text = "Stop";
+                }
+                else
+                {
+                    DoNext = 0xFF;
+                    Thread_Task.Interrupt();
+                    Thread_Task.Abort();
+                    Thread_Task.Join();
+                    while (Thread_Task.IsAlive) ;
+
+                    serialPort1.DtrEnable = false;
+                    serialPort1.Close();
+                    serialPort1.Dispose();
+                    bt_RFTest.Enabled = true;
+                    bt_Scan.Enabled = true;
+                    bt_Download.Text = "Download";
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
+        private void Download()
+        {
+            int idx = 0;
+            long tick = 0;
+            bool cont = true;
+            string res = null;
+
+            while(cont)
+            {
+                switch(DoNext)
+                {
+                    case 0:
+                        DoNext++;
+                        tick = Tick_Get();
+                        serialPort1.Write("AT#MONI=0\r");
+                        PrintTxDebug("\nTX: AT#MONI=0");
+                        res = "OK";
+                        break;
+
+                    case 2:
+                        DoNext++;
+                        tick = Tick_Get();
+                        serialPort1.Write("AT#MONI\r");
+                        PrintTxDebug("\nTX: AT#MONI");
+                        res = "OK";
+                        break;
+
+                    case 1:
+                    case 3:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            PrintRxDebug("\nRX: ");
+
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                char c = (char)serialPort1.ReadByte();
+
+                                PrintRxDebug(c.ToString());
+
+                                if (FindString(c, ref idx, res))
+                                    DoNext++;
+                            }
+                        }
+                        else if (Tick_IsOverMs(ref tick, 500))
+                        {
+                            DoNext --;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 0xFF:
+                        cont = false;
+                        break;
+                }
+            }
+
+            Thread_Task.Suspend();
         }
     }
 }
