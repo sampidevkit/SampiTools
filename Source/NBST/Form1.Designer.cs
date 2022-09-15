@@ -47,6 +47,7 @@
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.lb_Percent = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
+            this.cb_ViewMode = new System.Windows.Forms.ComboBox();
             this.tabCtrl1.SuspendLayout();
             this.tabGraph.SuspendLayout();
             this.tabLog.SuspendLayout();
@@ -68,6 +69,7 @@
             // tabGraph
             // 
             this.tabGraph.BackColor = System.Drawing.Color.Transparent;
+            this.tabGraph.Controls.Add(this.cb_ViewMode);
             this.tabGraph.Controls.Add(this.zedGraph1);
             this.tabGraph.Location = new System.Drawing.Point(4, 22);
             this.tabGraph.Name = "tabGraph";
@@ -102,7 +104,7 @@
             this.tabLog.Location = new System.Drawing.Point(4, 22);
             this.tabLog.Name = "tabLog";
             this.tabLog.Padding = new System.Windows.Forms.Padding(3);
-            this.tabLog.Size = new System.Drawing.Size(744, 378);
+            this.tabLog.Size = new System.Drawing.Size(700, 378);
             this.tabLog.TabIndex = 1;
             this.tabLog.Text = "Log";
             // 
@@ -261,6 +263,18 @@
             this.label3.TabIndex = 8;
             this.label3.Text = "Downloaded:";
             // 
+            // cb_ViewMode
+            // 
+            this.cb_ViewMode.FormattingEnabled = true;
+            this.cb_ViewMode.Items.AddRange(new object[] {
+            "Compact",
+            "Scroll"});
+            this.cb_ViewMode.Location = new System.Drawing.Point(12, 345);
+            this.cb_ViewMode.Name = "cb_ViewMode";
+            this.cb_ViewMode.Size = new System.Drawing.Size(81, 21);
+            this.cb_ViewMode.TabIndex = 4;
+            this.cb_ViewMode.Text = "Compact";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -312,6 +326,7 @@
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.Label lb_Percent;
         private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.ComboBox cb_ViewMode;
     }
 }
 

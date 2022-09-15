@@ -11,11 +11,18 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.Remoting.Contexts;
 using ZedGraph;
+using System.Security.Cryptography;
 
 namespace NBST
 {
     public partial class Form1 : Form
     {
+        public enum HeadTail
+        {
+            head,
+            tail
+        }
+
         private PointPairList pointPairList_RSRP = null;
         private LineItem lineItem_RSRP = null;
 
@@ -33,6 +40,7 @@ namespace NBST
         private StreamWriter sW = null;
         private string fileName = null;
         private long line = 0;
+        private long TickStart = 0;
         private string[] UsbPid = new string[3] { 
         /* xE866 */ "VID_1BC7&PID_0021", 
         /* MEx10G1 */ "VID_1BC7&PID_110A",
@@ -298,8 +306,8 @@ namespace NBST
                         case 0:
                             idx = 0;
                             doNext++;
-                            serialPort1.WriteLine("AT\r");
-                            PrintTxDebug("\nTX: AT");
+                            serialPort1.WriteLine("ATE0\r");
+                            PrintTxDebug("\nTX: ATE0");
                             break;
 
                         default:
@@ -319,7 +327,7 @@ namespace NBST
 
                                     PrintRxDebug(c.ToString());
 
-                                    if (FindString(c, ref idx, "OK"))
+                                    if (FindString(c, ref idx, "\r\nOK\r\n"))
                                         found = true;
                                 }
 
@@ -467,6 +475,7 @@ namespace NBST
         public Form1()
         {
             InitializeComponent();
+            TickStart = Tick_Get();
             graphPane = zedGraph1.GraphPane;
             zedGraph1.GraphPane.CurveList.Clear();
             zedGraph1.GraphPane.YAxisList.Clear();
@@ -584,9 +593,449 @@ namespace NBST
             }
         }
 
+        private int Get_Index(char[] buffer, string para, HeadTail head_tail)
+        {
+            int i, j;
+            char[] p=para.ToCharArray();
+
+            for (i = 0, j = 0; i < buffer.Length; i++)
+            {
+                if (buffer[i] == p[j])
+                {
+                    if (++j == p.Length)
+                    {
+                        if (head_tail == HeadTail.head)
+                            i -= j;
+
+                        break;
+                    }
+                }
+                else
+                    j = 0;
+            }
+
+            return i;
+        }
+
+        private char[] DataCatch(char[] buffer, int headIdx, int tailIdx)
+        {
+            char[] chr = new char[tailIdx - headIdx];
+            int i;
+
+            for (i = 0; i < chr.Length; i++)
+                chr[i] = buffer[headIdx + i];
+
+            return chr;
+        }
+
+        private char[] DataCatch(char[] buffer, string str_head, string str_tail)
+        {
+            int head = Get_Index(buffer, str_head, HeadTail.tail);
+            int tail = Get_Index(buffer, str_tail, HeadTail.head);
+
+            return DataCatch(buffer, head, tail);
+        }
+
         private void RFTest()
         {
+            int len = 0;
+            int idx = 0;
+            int csq = 99;
+            int rsrp = -150;
+            int rsrq = -150;
+            long tick = 0;
+            bool cont = true;
+            char[] buffer = new char[1024];
 
+            while (cont)
+            {
+                switch (DoNext)
+                {
+                    case 0:
+                        DoNext++;
+                        len = 0;
+                        tick = Tick_Get();
+                        serialPort1.Write("ATE0\r");
+                        PrintTxDebug("\nTX: ATE0");
+                        break;
+
+                    case 1:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            PrintRxDebug("\nRX: ");
+
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                char c = (char)serialPort1.ReadByte();
+
+                                PrintRxDebug(c.ToString());
+
+                                if (FindString(c, ref idx, "\r\nOK\r\n"))
+                                    DoNext++;
+                            }
+                        }
+                        else if (Tick_IsOverMs(ref tick, 500))
+                        {
+                            DoNext--;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 2:
+                        DoNext++;
+                        len = 0;
+                        tick = Tick_Get();
+                        serialPort1.Write("ATI4\r");
+                        PrintTxDebug("\nTX: ATI4");
+                        break;
+
+                    case 3:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            PrintRxDebug("\nRX: ");
+
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                buffer[len] = (char)serialPort1.ReadByte();
+                                PrintRxDebug(buffer[len].ToString());
+
+                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
+                                {
+                                    DoNext++;
+                                    rtb_Info.Text = "Module: ";
+                                    rtb_Info.AppendText(new string(DataCatch(buffer, "ATI4\r\n", "\r\nOK")));
+                                }
+
+                                if (++len > buffer.Length)
+                                    len = 0;
+                            }
+                        }
+                        else if (Tick_IsOverMs(ref tick, 500))
+                        {
+                            DoNext--;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 4:
+                        DoNext++;
+                        len = 0;
+                        tick = Tick_Get();
+                        serialPort1.Write("AT+CGSN\r");
+                        PrintTxDebug("\nTX: AT+CGSN");
+                        break;
+
+                    case 5:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            PrintRxDebug("\nRX: ");
+
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                buffer[len] = (char)serialPort1.ReadByte();
+                                PrintRxDebug(buffer[len].ToString());
+
+                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
+                                {
+                                    DoNext++;
+                                    rtb_Info.AppendText("\nIMEI: ");
+                                    rtb_Info.AppendText(new string(DataCatch(buffer, "AT+CGSN\r\n", "\r\nOK")));
+                                }
+
+                                if (++len > buffer.Length)
+                                    len = 0;
+                            }
+                        }
+                        else if (Tick_IsOverMs(ref tick, 500))
+                        {
+                            DoNext--;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 6:
+                        DoNext++;
+                        len = 0;
+                        tick = Tick_Get();
+                        serialPort1.Write("AT#CIMI\r");
+                        PrintTxDebug("\nTX: AT#CIMI");
+                        break;
+
+                    case 7:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            PrintRxDebug("\nRX: ");
+
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                buffer[len] = (char)serialPort1.ReadByte();
+                                PrintRxDebug(buffer[len].ToString());
+
+                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
+                                {
+                                    DoNext+=3;
+                                    rtb_Info.AppendText("\nCCID: ");
+                                    rtb_Info.AppendText(new string(DataCatch(buffer, "AT#CIMI\r\n", "\r\nOK")));
+                                }
+
+                                if (++len > buffer.Length)
+                                    len = 0;
+                            }
+                        }
+                        else if (Tick_IsOverMs(ref tick, 500))
+                        {
+                            DoNext++;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 8:
+                        DoNext++;
+                        len = 0;
+                        tick = Tick_Get();
+                        serialPort1.Write("AT#CCID\r");
+                        PrintTxDebug("\nTX: AT#CCID");
+                        break;
+
+                    case 9:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            PrintRxDebug("\nRX: ");
+
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                buffer[len] = (char)serialPort1.ReadByte();
+                                PrintRxDebug(buffer[len].ToString());
+
+                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
+                                {
+                                    DoNext++;
+                                    rtb_Info.AppendText("\nCCID: ");
+                                    rtb_Info.AppendText(new string(DataCatch(buffer, "AT#CCID\r\n", "\r\nOK")));
+                                }
+
+                                if (++len > buffer.Length)
+                                    len = 0;
+                            }
+                        }
+                        else if (Tick_IsOverMs(ref tick, 500))
+                        {
+                            DoNext-=3;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 10:
+                        DoNext++;
+                        len = 0;
+                        tick = Tick_Get();
+                        serialPort1.Write("AT+COPS?\r");
+                        PrintTxDebug("\nTX: AT+COPS?");
+                        break;
+
+                    case 11:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            PrintRxDebug("\nRX: ");
+
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                buffer[len] = (char)serialPort1.ReadByte();
+                                PrintRxDebug(buffer[len].ToString());
+
+                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
+                                {
+                                    DoNext++;
+                                    rtb_Info.AppendText("\nOperator: ");
+                                    rtb_Info.AppendText(new string(DataCatch(buffer, ",\"", "\",")));
+                                }
+
+                                if (++len > buffer.Length)
+                                    len = 0;
+                            }
+                        }
+                        else if (Tick_IsOverMs(ref tick, 500))
+                        {
+                            DoNext--;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 12:
+                        DoNext++;
+                        len = 0;
+                        tick = Tick_Get();
+                        serialPort1.Write("AT#MONI=0\r");
+                        PrintTxDebug("\nTX: AT#MONI=0");
+                        break;
+
+                    case 13:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            PrintRxDebug("\nRX: ");
+
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                char c = (char)serialPort1.ReadByte();
+
+                                PrintRxDebug(c.ToString());
+
+                                if (FindString(c, ref idx, "\r\nOK\r\n"))
+                                    DoNext++;
+                            }
+                        }
+                        else if (Tick_IsOverMs(ref tick, 500))
+                        {
+                            DoNext--;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 14:
+                        DoNext++;
+                        len = 0;
+                        tick = Tick_Get();
+                        serialPort1.Write("AT+CSQ\r");
+                        PrintTxDebug("\nTX: AT+CSQ");
+                        break;
+
+                    case 15:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            PrintRxDebug("\nRX: ");
+
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                buffer[len] = (char)serialPort1.ReadByte();
+                                PrintRxDebug(buffer[len].ToString());
+
+                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
+                                {
+                                    DoNext++;
+                                    csq = int.Parse(new string(DataCatch(buffer, "+CSQ: ", ",")));
+                                }
+
+                                if (++len > buffer.Length)
+                                    len = 0;
+                            }
+                        }
+                        else if (Tick_IsOverMs(ref tick, 500))
+                        {
+                            DoNext--;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 16:
+                        DoNext++;
+                        len = 0;
+                        tick = Tick_Get();
+                        serialPort1.Write("AT#MONI\r");
+                        PrintTxDebug("\nTX: AT#MONI");
+                        break;
+
+                    case 17:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            PrintRxDebug("\nRX: ");
+
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                buffer[len] = (char)serialPort1.ReadByte();
+                                PrintRxDebug(buffer[len].ToString());
+
+                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
+                                {
+                                    DoNext++;
+                                    tick = Tick_Get();
+                                    rsrp = int.Parse(new string(DataCatch(buffer, "RSRP:", " RSRQ:")));
+                                    rsrq = int.Parse(new string(DataCatch(buffer, "RSRQ:", " TAC:")));
+                                    rtb_Info.AppendText("\nTAC: ");
+                                    rtb_Info.AppendText(new string(DataCatch(buffer, "TAC:", " Id:")));
+                                    rtb_Info.AppendText(", Cell ID: ");
+                                    rtb_Info.AppendText(new string(DataCatch(buffer, " Id:", " EARFCN:")));
+                                }
+
+                                if (++len > buffer.Length)
+                                    len = 0;
+                            }
+                        }
+                        else if (Tick_IsOverMs(ref tick, 500))
+                        {
+                            DoNext--;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 0xFF:
+                        cont = false;
+                        break;
+
+                    default:
+                        if (Tick_IsOverMs(ref tick, 1000))
+                        {
+                            DoNext = 14;
+                            WriteLogFile(rsrp, rsrq, csq);
+
+                            if (zedGraph1.GraphPane.CurveList.Count <= 0)
+                                break;
+
+                            LineItem curve1 = zedGraph1.GraphPane.CurveList[0] as LineItem;
+                            LineItem curve2 = zedGraph1.GraphPane.CurveList[1] as LineItem;
+                            LineItem curve3 = zedGraph1.GraphPane.CurveList[2] as LineItem;
+
+                            if (curve1 == null)
+                                break;
+
+                            if (curve2 == null)
+                                break;
+
+                            if (curve3 == null)
+                                break;
+
+                            IPointListEdit list1 = curve1.Points as IPointListEdit;
+                            IPointListEdit list2 = curve2.Points as IPointListEdit;
+                            IPointListEdit list3 = curve3.Points as IPointListEdit;
+
+                            if (list1 == null)
+                                break;
+
+                            if (list2 == null)
+                                break;
+
+                            if (list3 == null)
+                                break;
+
+                            double time = (Environment.TickCount - TickStart) / 1000.0;
+
+                            list1.Add(time, rsrp);
+                            list2.Add(time, rsrq);
+                            list2.Add(time, csq);
+
+                            Scale xScale = zedGraph1.GraphPane.XAxis.Scale;
+
+                            if (time > xScale.Max - xScale.MajorStep)
+                            {
+                                if (cb_ViewMode.Text == "Scroll")
+                                {
+                                    xScale.Max = time + xScale.MajorStep;
+                                    xScale.Min = 0;
+                                }
+                                else
+                                {
+                                    xScale.Max = time + xScale.MajorStep;
+                                    xScale.Min = xScale.Max - 30.0;
+                                }
+                            }
+
+                            zedGraph1.AxisChange();
+                            zedGraph1.Invalidate();
+                        }
+                        break;
+                }
+            }
+
+            Thread_Task.Suspend();
         }
 
         private void rtb_Log_MouseDoubleClick(object sender, MouseEventArgs e)
@@ -646,7 +1095,7 @@ namespace NBST
             long tick = 0;
             bool cont = true;
             string res = null;
-
+            /*
             while(cont)
             {
                 switch(DoNext)
@@ -695,7 +1144,7 @@ namespace NBST
                         break;
                 }
             }
-
+            */
             Thread_Task.Suspend();
         }
     }
