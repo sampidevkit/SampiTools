@@ -12,15 +12,25 @@ using System.Text;
 using System.Runtime.Remoting.Contexts;
 using ZedGraph;
 using System.Security.Cryptography;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
+using System.Runtime.Remoting.Messaging;
 
 namespace NBST
 {
     public partial class Form1 : Form
     {
-        public enum HeadTail
+        private enum HeadTail
         {
             head,
             tail
+        }
+
+        private struct CmdCxt
+        {
+            public char[] buffer;
+            public int len;
+            public int donext;
+            public long tick;
         }
 
         private PointPairList pointPairList_RSRP = null;
@@ -120,7 +130,46 @@ namespace NBST
             return GetUnixTimeSeconds(DateTime.Now);
         }
 
-        private string strRemove(string s)
+        private void ReplaceCharArray(ref char[] ChrArr, char oldChar, char newChar)
+        {
+            int i, j;
+            int len = ChrArr.Length;
+
+            for (i = 0; i < len; i++)
+            {
+                if (ChrArr[i] == oldChar)
+                {
+                    if (newChar != (char)0x00)
+                        ChrArr[i] = newChar;
+                    else
+                    {
+                        for (j = i; j < (len - 1); j++)
+                            ChrArr[j] = ChrArr[j + 1];
+
+                        ChrArr[j] = (char)0x00;
+                        len--;
+                    }
+                }
+            }
+
+            char[] newChrArr = new char[len];
+
+            for (i = 0; i < len; i++)
+                newChrArr[i] = ChrArr[i];
+
+            ChrArr = null;
+            ChrArr = newChrArr;
+        }
+
+        private void RemoveStr(ref string Str, char oldChar, char newChar)
+        {
+            char[] Arr = Str.ToCharArray();
+
+            ReplaceCharArray(ref Arr, oldChar, newChar);
+            Str = new string(Arr);
+        }
+
+        private string RemoveInvalidName(string s)
         {
             int i, j, accept;
             char[] a = s.ToCharArray();
@@ -163,22 +212,40 @@ namespace NBST
 
         private void PrintDebug(string msg)
         {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(PrintDebug), new object[] { msg });
+                return;
+            }
+
             PrintDebug(msg, Color.Black);
         }
 
         private void PrintTxDebug(string msg)
         {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(PrintTxDebug), new object[] { msg });
+                return;
+            }
+
             PrintDebug(msg, Color.Blue);
         }
 
         private void PrintRxDebug(string msg)
         {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(PrintRxDebug), new object[] { msg });
+                return;
+            }
+
             PrintDebug(msg, Color.Red);
         }
 
         private string FileNameGenerate(string prefix)
         {
-            string s = strRemove(prefix + DateTime.Now.ToShortDateString() + DateTime.Now.ToLongTimeString());
+            string s = RemoveInvalidName(prefix + DateTime.Now.ToShortDateString() + DateTime.Now.ToLongTimeString());
 
             return s;
         }
@@ -211,7 +278,7 @@ namespace NBST
                 sW.Close();
                 PrintDebug("\nLog file " + fileName + ".m has been saved");
                 Thread.Sleep(1000);
-                rtb_Log.Clear();
+                //rtb_Log.Clear();
                 sW = null;
             }
         }
@@ -219,7 +286,7 @@ namespace NBST
         private void OpenLogFile()
         {
             CloseLogFile();
-            fileName = FileNameGenerate("NBST_" + ModuleName + "_" + ModuleImei + "_");
+            fileName = FileNameGenerate("NBST_");
 
             try
             {
@@ -280,7 +347,13 @@ namespace NBST
         private bool TestATPort(string portName)
         {
             int loop = 0;
-            int doNext = 0;
+            bool found = false;
+            string resp = null;
+            long tick = Tick_Get();
+
+            CmdCxt cmdCxt = new CmdCxt();
+            cmdCxt.buffer = new char[1024];
+            cmdCxt.donext = 0;
 
             try
             {
@@ -294,66 +367,28 @@ namespace NBST
                 serialPort1.Open();
                 PrintDebug("\nOpen " + portName);
 
-                int idx = 0;
-                bool first = true;
-                bool found = false;
-                long tick = Tick_Get();
-
                 do
                 {
-                    switch (doNext)
+                    resp = SendCmd_GetRes(ref cmdCxt, "ATE0\r");
+
+                    if (resp != null)
                     {
-                        case 0:
-                            idx = 0;
-                            doNext++;
-                            serialPort1.WriteLine("ATE0\r");
-                            PrintTxDebug("\nTX: ATE0");
-                            break;
-
-                        default:
-                            if (serialPort1.BytesToRead > 0)
-                            {
-                                found = false;
-
-                                if (first == true)
-                                {
-                                    first = false;
-                                    PrintRxDebug("\nRX: ");
-                                }
-
-                                for (int i = 0; i < serialPort1.BytesToRead; i++)
-                                {
-                                    char c = (char)serialPort1.ReadByte();
-
-                                    PrintRxDebug(c.ToString());
-
-                                    if (FindString(c, ref idx, "\r\nOK\r\n"))
-                                        found = true;
-                                }
-
-                                if (found == true)
-                                {
-                                    serialPort1.DtrEnable = false;
-                                    serialPort1.Close();
-                                    serialPort1.Dispose();
-
-                                    return true;
-                                }
-                            }
-                            else if (Tick_IsOverMs(ref tick, 500))
-                            {
-                                loop++;
-                                doNext = 0;
-                                PrintDebug("\nRX Timeout");
-                            }
-                            break;
+                        if (resp.Contains("\r\nOK\r\n"))
+                        {
+                            loop = 5;
+                            found = true;
+                        }
+                    }
+                    else if (Tick_IsOverMs(ref tick, 500))
+                    {
+                        loop++;
+                        PrintDebug("\nRX Timeout");
                     }
                 }
                 while (loop < 5);
             }
-            catch (Exception ex)
-            {
-                //PrintDebug(ex.ToString());
+            catch
+            { 
                 PrintDebug("\nTX Timeout");
             }
 
@@ -361,7 +396,7 @@ namespace NBST
             serialPort1.Close();
             serialPort1.Dispose();
 
-            return false;
+            return found;
         }
 
         private void Scan_AT_Port()
@@ -467,11 +502,6 @@ namespace NBST
             PrintDebug("\nFound: " + found.ToString() + " AT command port(s)");
         }
 
-        private void Plot(int rsrp, int rsrq, int rssi)
-        {
-
-        }
-
         public Form1()
         {
             InitializeComponent();
@@ -552,51 +582,40 @@ namespace NBST
 
         private void bt_RFTest_Click(object sender, EventArgs e)
         {
-            try
+            if (bt_RFTest.Text == "RF Test")
             {
-                if (bt_RFTest.Text == "RF Test")
-                {
-                    DoNext = 0;
-                    serialPort1.PortName = cb_Port1.Text;
-                    serialPort1.BaudRate = 115200;
-                    serialPort1.WriteTimeout = 500;
-                    serialPort1.DtrEnable = true;
-                    serialPort1.Open();
-                    OpenLogFile();
-                    bt_Download.Enabled = false;
-                    bt_Scan.Enabled = false;
-
-                    Thread_Task = new Thread(() => RFTest()); // Create new app tasks
-                    Thread_Task.Start();
-
-                    bt_RFTest.Text = "Stop";
-                }
-                else
-                {
-                    Thread_Task.Interrupt();
-                    Thread_Task.Abort();
-                    Thread_Task.Join();
-                    while (Thread_Task.IsAlive) ;
-
-                    CloseLogFile();
-                    serialPort1.DtrEnable = false;
-                    serialPort1.Close();
-                    serialPort1.Dispose();
-                    bt_Download.Enabled = true;
-                    bt_Scan.Enabled = true;
-                    bt_RFTest.Text = "RF Test";
-                }
+                DoNext = 0;
+                serialPort1.PortName = cb_Port1.Text;
+                serialPort1.BaudRate = 115200;
+                serialPort1.WriteTimeout = 500;
+                serialPort1.DtrEnable = true;
+                serialPort1.Open();
+                OpenLogFile();
+                bt_Download.Enabled = false;
+                bt_Scan.Enabled = false;
+                Thread_Task = new Thread(() => RFTest()); // Create new app tasks
+                Thread_Task.Start();
+                bt_RFTest.Text = "Stop";
             }
-            catch(Exception ex)
+            else
             {
+                DoNext = 0xFF;
+                while (Thread_Task.IsAlive) ;
 
+                CloseLogFile();
+                serialPort1.DtrEnable = false;
+                serialPort1.Close();
+                serialPort1.Dispose();
+                bt_Download.Enabled = true;
+                bt_Scan.Enabled = true;
+                bt_RFTest.Text = "RF Test";
             }
         }
 
         private int Get_Index(char[] buffer, string para, HeadTail head_tail)
         {
             int i, j;
-            char[] p=para.ToCharArray();
+            char[] p = para.ToCharArray();
 
             for (i = 0, j = 0; i < buffer.Length; i++)
             {
@@ -607,17 +626,17 @@ namespace NBST
                         if (head_tail == HeadTail.head)
                             i -= j;
 
-                        break;
+                        return i;
                     }
                 }
                 else
                     j = 0;
             }
 
-            return i;
+            return (-1);
         }
 
-        private char[] DataCatch(char[] buffer, int headIdx, int tailIdx)
+        private char[] SubArray(char[] buffer, int headIdx, int tailIdx)
         {
             char[] chr = new char[tailIdx - headIdx];
             int i;
@@ -628,342 +647,261 @@ namespace NBST
             return chr;
         }
 
-        private char[] DataCatch(char[] buffer, string str_head, string str_tail)
+        private char[] SubArray(char[] buffer, string str_head, string str_tail)
         {
             int head = Get_Index(buffer, str_head, HeadTail.tail);
             int tail = Get_Index(buffer, str_tail, HeadTail.head);
 
-            return DataCatch(buffer, head, tail);
+            //PrintDebug("\n--> head " + head.ToString()+ "tail " + tail.ToString());
+
+            return SubArray(buffer, head, tail);
+        }
+
+        private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd)
+        {
+            switch(cmdCxt.donext)
+            {
+                case 0:
+                    cmdCxt.donext++;
+                    cmdCxt.buffer = new char[1024];
+                    cmdCxt.tick = Tick_Get();
+                    serialPort1.Write(cmd + "\r");
+                    PrintTxDebug("\nTX: " + cmd);
+                    break;
+
+                case 1:
+                    if (serialPort1.BytesToRead > 0)
+                    {
+                        cmdCxt.donext++;
+                        cmdCxt.len = 0;
+                        cmdCxt.tick = Tick_Get();
+                        PrintRxDebug("\nRX: ");
+                    }
+                    else if (Tick_IsOverMs(ref cmdCxt.tick, 500))
+                    {
+                        cmdCxt.donext--;
+                        PrintDebug("\nRX Timeout");
+                    }
+                    break;
+
+                default:
+                case 2:
+                    if (serialPort1.BytesToRead > 0)
+                    {
+                        for (int i = 0; i < serialPort1.BytesToRead; i++)
+                        {
+                            char c = (char)serialPort1.ReadByte();
+
+                            cmdCxt.buffer[cmdCxt.len++] = c;
+
+                            if (cmdCxt.len > cmdCxt.buffer.Length)
+                                cmdCxt.len = 0;
+
+                            PrintRxDebug(c.ToString());
+                        }
+
+                        cmdCxt.tick = Tick_Get();
+                    }
+                    else if (Tick_IsOverMs(ref cmdCxt.tick, 500))
+                    {
+                        char[] chr = new char[cmdCxt.len];
+
+                        for (int i = 0; i < cmdCxt.len; i++)
+                            chr[i] = cmdCxt.buffer[i];
+
+                        cmdCxt.buffer = chr;
+                        cmdCxt.donext = 0;
+
+                        return new string(chr);
+                    }
+                    break;
+            }
+
+            return null;
+        }
+
+        private void InfoAppendText(string msg)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(InfoAppendText), new object[] { msg });
+                return;
+            }
+
+            rtb_Info.AppendText(msg);
+        }
+
+        private void InfoWriteText(string msg)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(InfoWriteText), new object[] { msg });
+                return;
+            }
+
+            rtb_Info.AppendText(msg);
+        }
+
+        private string RemoveAT(string atResp)
+        {
+            char[] arr = atResp.ToCharArray();
+            int head = Get_Index(arr, "\r\nOK\r\n", HeadTail.head);
+            PrintDebug("\n--> head " + head.ToString());
+
+            /*
+            if (head >= 0)
+            {
+                arr[head + 2] = '\r';
+                arr[head + 3] = '\n';
+            }
+
+            atResp = new string(arr);
+            RemoveStr(ref atResp, '\r', '\0');
+            RemoveStr(ref atResp, '\n', '\0');
+            */
+
+            return atResp;
         }
 
         private void RFTest()
         {
-            int len = 0;
-            int idx = 0;
             int csq = 99;
             int rsrp = -150;
             int rsrq = -150;
-            long tick = 0;
             bool cont = true;
-            char[] buffer = new char[1024];
+            string resp = null;
+
+            CmdCxt cmdCxt = new CmdCxt();
+
+            cmdCxt.donext = 0;
 
             while (cont)
             {
+                Thread.Sleep(100);
+
                 switch (DoNext)
                 {
                     case 0:
-                        DoNext++;
-                        len = 0;
-                        tick = Tick_Get();
-                        serialPort1.Write("ATE0\r");
-                        PrintTxDebug("\nTX: ATE0");
+                        resp = SendCmd_GetRes(ref cmdCxt, "ATE0\r");
+
+                        if (resp != null)
+                        {
+                            if (resp.Contains("\r\nOK\r\n"))
+                                DoNext++;
+                        }
                         break;
 
                     case 1:
-                        if (serialPort1.BytesToRead > 0)
-                        {
-                            PrintRxDebug("\nRX: ");
+                        resp = SendCmd_GetRes(ref cmdCxt, "ATI4\r");
 
-                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                        if (resp != null)
+                        {
+                            if (resp.Contains("\r\nOK\r\n"))
                             {
-                                char c = (char)serialPort1.ReadByte();
-
-                                PrintRxDebug(c.ToString());
-
-                                if (FindString(c, ref idx, "\r\nOK\r\n"))
-                                    DoNext++;
+                                DoNext++;
+                                InfoWriteText("Module: ");
+                                InfoAppendText(RemoveAT(resp));
+                                //InfoAppendText(new string(SubArray(cmdCxt.buffer, "ATI4\r\n", "\r\nOK")));
                             }
-                        }
-                        else if (Tick_IsOverMs(ref tick, 500))
-                        {
-                            DoNext--;
-                            PrintDebug("\nRX Timeout");
                         }
                         break;
 
                     case 2:
-                        DoNext++;
-                        len = 0;
-                        tick = Tick_Get();
-                        serialPort1.Write("ATI4\r");
-                        PrintTxDebug("\nTX: ATI4");
+                        resp = SendCmd_GetRes(ref cmdCxt, "AT+CGSN\r");
+
+                        if (resp != null)
+                        {
+                            if (resp.Contains("\r\nOK\r\n"))
+                            {
+                                DoNext++;
+                                InfoAppendText("\nIMEI: ");
+                                InfoAppendText(new string(SubArray(cmdCxt.buffer, "AT+CGSN\r\n", "\r\nOK")));
+                            }
+                        }
                         break;
 
                     case 3:
-                        if (serialPort1.BytesToRead > 0)
-                        {
-                            PrintRxDebug("\nRX: ");
+                        resp = SendCmd_GetRes(ref cmdCxt, "AT#CIMI\r");
 
-                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                        if (resp != null)
+                        {
+                            if (resp.Contains("\r\nOK\r\n"))
                             {
-                                buffer[len] = (char)serialPort1.ReadByte();
-                                PrintRxDebug(buffer[len].ToString());
-
-                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
-                                {
-                                    DoNext++;
-                                    rtb_Info.Text = "Module: ";
-                                    rtb_Info.AppendText(new string(DataCatch(buffer, "ATI4\r\n", "\r\nOK")));
-                                }
-
-                                if (++len > buffer.Length)
-                                    len = 0;
+                                DoNext += 2;
+                                InfoAppendText("\nCCID: ");
+                                InfoAppendText(new string(SubArray(cmdCxt.buffer, "AT#CIMI\r\n", "\r\nOK")));
                             }
-                        }
-                        else if (Tick_IsOverMs(ref tick, 500))
-                        {
-                            DoNext--;
-                            PrintDebug("\nRX Timeout");
+                            else if (resp.Contains("\r\nERROR\r\n"))
+                                DoNext++;
                         }
                         break;
 
                     case 4:
-                        DoNext++;
-                        len = 0;
-                        tick = Tick_Get();
-                        serialPort1.Write("AT+CGSN\r");
-                        PrintTxDebug("\nTX: AT+CGSN");
+                        resp = SendCmd_GetRes(ref cmdCxt, "AT#CCID\r");
+
+                        if (resp != null)
+                        {
+                            if (resp.Contains("\r\nOK\r\n"))
+                            {
+                                DoNext++;
+                                InfoAppendText("\nCCID: ");
+                                InfoAppendText(new string(SubArray(cmdCxt.buffer, "AT#CCID\r\n", "\r\nOK")));
+                            }
+                        }
                         break;
 
                     case 5:
-                        if (serialPort1.BytesToRead > 0)
-                        {
-                            PrintRxDebug("\nRX: ");
+                        resp = SendCmd_GetRes(ref cmdCxt, "AT+COPS?\r");
 
-                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                        if (resp != null)
+                        {
+                            if (resp.Contains("\r\nOK\r\n"))
                             {
-                                buffer[len] = (char)serialPort1.ReadByte();
-                                PrintRxDebug(buffer[len].ToString());
-
-                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
-                                {
-                                    DoNext++;
-                                    rtb_Info.AppendText("\nIMEI: ");
-                                    rtb_Info.AppendText(new string(DataCatch(buffer, "AT+CGSN\r\n", "\r\nOK")));
-                                }
-
-                                if (++len > buffer.Length)
-                                    len = 0;
+                                DoNext++;
+                                InfoAppendText("\nOperator: ");
+                                InfoAppendText(new string(SubArray(cmdCxt.buffer, ",\"", "\",")));
                             }
-                        }
-                        else if (Tick_IsOverMs(ref tick, 500))
-                        {
-                            DoNext--;
-                            PrintDebug("\nRX Timeout");
                         }
                         break;
 
                     case 6:
-                        DoNext++;
-                        len = 0;
-                        tick = Tick_Get();
-                        serialPort1.Write("AT#CIMI\r");
-                        PrintTxDebug("\nTX: AT#CIMI");
+                        resp = SendCmd_GetRes(ref cmdCxt, "AT#MONI=0\r");
+
+                        if (resp != null)
+                        {
+                            if (resp.Contains("\r\nOK\r\n"))
+                                DoNext++;
+                        }
                         break;
 
                     case 7:
-                        if (serialPort1.BytesToRead > 0)
-                        {
-                            PrintRxDebug("\nRX: ");
+                        resp = SendCmd_GetRes(ref cmdCxt, "AT+CSQ\r");
 
-                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                        if (resp != null)
+                        {
+                            if (resp.Contains("\r\nOK\r\n"))
                             {
-                                buffer[len] = (char)serialPort1.ReadByte();
-                                PrintRxDebug(buffer[len].ToString());
-
-                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
-                                {
-                                    DoNext+=3;
-                                    rtb_Info.AppendText("\nCCID: ");
-                                    rtb_Info.AppendText(new string(DataCatch(buffer, "AT#CIMI\r\n", "\r\nOK")));
-                                }
-
-                                if (++len > buffer.Length)
-                                    len = 0;
+                                DoNext++;
+                                csq = int.Parse(new string(SubArray(cmdCxt.buffer, "+CSQ: ", ",")));
                             }
-                        }
-                        else if (Tick_IsOverMs(ref tick, 500))
-                        {
-                            DoNext++;
-                            PrintDebug("\nRX Timeout");
                         }
                         break;
 
                     case 8:
-                        DoNext++;
-                        len = 0;
-                        tick = Tick_Get();
-                        serialPort1.Write("AT#CCID\r");
-                        PrintTxDebug("\nTX: AT#CCID");
-                        break;
+                        resp = SendCmd_GetRes(ref cmdCxt, "AT#MONI\r");
 
-                    case 9:
-                        if (serialPort1.BytesToRead > 0)
+                        if (resp != null)
                         {
-                            PrintRxDebug("\nRX: ");
-
-                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            if (resp.Contains("\r\nOK\r\n"))
                             {
-                                buffer[len] = (char)serialPort1.ReadByte();
-                                PrintRxDebug(buffer[len].ToString());
-
-                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
-                                {
-                                    DoNext++;
-                                    rtb_Info.AppendText("\nCCID: ");
-                                    rtb_Info.AppendText(new string(DataCatch(buffer, "AT#CCID\r\n", "\r\nOK")));
-                                }
-
-                                if (++len > buffer.Length)
-                                    len = 0;
+                                DoNext++;
+                                rsrp = int.Parse(new string(SubArray(cmdCxt.buffer, "RSRP:", " RSRQ:")));
+                                rsrq = int.Parse(new string(SubArray(cmdCxt.buffer, "RSRQ:", " TAC:")));
+                                InfoAppendText("\nTAC: ");
+                                InfoAppendText(new string(SubArray(cmdCxt.buffer, "TAC:", " Id:")));
+                                InfoAppendText(", Cell ID: ");
+                                InfoAppendText(new string(SubArray(cmdCxt.buffer, " Id:", " EARFCN:")));
                             }
-                        }
-                        else if (Tick_IsOverMs(ref tick, 500))
-                        {
-                            DoNext-=3;
-                            PrintDebug("\nRX Timeout");
-                        }
-                        break;
-
-                    case 10:
-                        DoNext++;
-                        len = 0;
-                        tick = Tick_Get();
-                        serialPort1.Write("AT+COPS?\r");
-                        PrintTxDebug("\nTX: AT+COPS?");
-                        break;
-
-                    case 11:
-                        if (serialPort1.BytesToRead > 0)
-                        {
-                            PrintRxDebug("\nRX: ");
-
-                            for (int i = 0; i < serialPort1.BytesToRead; i++)
-                            {
-                                buffer[len] = (char)serialPort1.ReadByte();
-                                PrintRxDebug(buffer[len].ToString());
-
-                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
-                                {
-                                    DoNext++;
-                                    rtb_Info.AppendText("\nOperator: ");
-                                    rtb_Info.AppendText(new string(DataCatch(buffer, ",\"", "\",")));
-                                }
-
-                                if (++len > buffer.Length)
-                                    len = 0;
-                            }
-                        }
-                        else if (Tick_IsOverMs(ref tick, 500))
-                        {
-                            DoNext--;
-                            PrintDebug("\nRX Timeout");
-                        }
-                        break;
-
-                    case 12:
-                        DoNext++;
-                        len = 0;
-                        tick = Tick_Get();
-                        serialPort1.Write("AT#MONI=0\r");
-                        PrintTxDebug("\nTX: AT#MONI=0");
-                        break;
-
-                    case 13:
-                        if (serialPort1.BytesToRead > 0)
-                        {
-                            PrintRxDebug("\nRX: ");
-
-                            for (int i = 0; i < serialPort1.BytesToRead; i++)
-                            {
-                                char c = (char)serialPort1.ReadByte();
-
-                                PrintRxDebug(c.ToString());
-
-                                if (FindString(c, ref idx, "\r\nOK\r\n"))
-                                    DoNext++;
-                            }
-                        }
-                        else if (Tick_IsOverMs(ref tick, 500))
-                        {
-                            DoNext--;
-                            PrintDebug("\nRX Timeout");
-                        }
-                        break;
-
-                    case 14:
-                        DoNext++;
-                        len = 0;
-                        tick = Tick_Get();
-                        serialPort1.Write("AT+CSQ\r");
-                        PrintTxDebug("\nTX: AT+CSQ");
-                        break;
-
-                    case 15:
-                        if (serialPort1.BytesToRead > 0)
-                        {
-                            PrintRxDebug("\nRX: ");
-
-                            for (int i = 0; i < serialPort1.BytesToRead; i++)
-                            {
-                                buffer[len] = (char)serialPort1.ReadByte();
-                                PrintRxDebug(buffer[len].ToString());
-
-                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
-                                {
-                                    DoNext++;
-                                    csq = int.Parse(new string(DataCatch(buffer, "+CSQ: ", ",")));
-                                }
-
-                                if (++len > buffer.Length)
-                                    len = 0;
-                            }
-                        }
-                        else if (Tick_IsOverMs(ref tick, 500))
-                        {
-                            DoNext--;
-                            PrintDebug("\nRX Timeout");
-                        }
-                        break;
-
-                    case 16:
-                        DoNext++;
-                        len = 0;
-                        tick = Tick_Get();
-                        serialPort1.Write("AT#MONI\r");
-                        PrintTxDebug("\nTX: AT#MONI");
-                        break;
-
-                    case 17:
-                        if (serialPort1.BytesToRead > 0)
-                        {
-                            PrintRxDebug("\nRX: ");
-
-                            for (int i = 0; i < serialPort1.BytesToRead; i++)
-                            {
-                                buffer[len] = (char)serialPort1.ReadByte();
-                                PrintRxDebug(buffer[len].ToString());
-
-                                if (FindString(buffer[len], ref idx, "\r\nOK\r\n"))
-                                {
-                                    DoNext++;
-                                    tick = Tick_Get();
-                                    rsrp = int.Parse(new string(DataCatch(buffer, "RSRP:", " RSRQ:")));
-                                    rsrq = int.Parse(new string(DataCatch(buffer, "RSRQ:", " TAC:")));
-                                    rtb_Info.AppendText("\nTAC: ");
-                                    rtb_Info.AppendText(new string(DataCatch(buffer, "TAC:", " Id:")));
-                                    rtb_Info.AppendText(", Cell ID: ");
-                                    rtb_Info.AppendText(new string(DataCatch(buffer, " Id:", " EARFCN:")));
-                                }
-
-                                if (++len > buffer.Length)
-                                    len = 0;
-                            }
-                        }
-                        else if (Tick_IsOverMs(ref tick, 500))
-                        {
-                            DoNext--;
-                            PrintDebug("\nRX Timeout");
                         }
                         break;
 
@@ -972,70 +910,70 @@ namespace NBST
                         break;
 
                     default:
-                        if (Tick_IsOverMs(ref tick, 1000))
+                        DoNext = 7;
+                        WriteLogFile(rsrp, rsrq, csq);
+
+                        if (zedGraph1.GraphPane.CurveList.Count <= 0)
+                            break;
+
+                        LineItem curve1 = zedGraph1.GraphPane.CurveList[0] as LineItem;
+                        LineItem curve2 = zedGraph1.GraphPane.CurveList[1] as LineItem;
+                        LineItem curve3 = zedGraph1.GraphPane.CurveList[2] as LineItem;
+
+                        if (curve1 == null)
+                            break;
+
+                        if (curve2 == null)
+                            break;
+
+                        if (curve3 == null)
+                            break;
+
+                        IPointListEdit list1 = curve1.Points as IPointListEdit;
+                        IPointListEdit list2 = curve2.Points as IPointListEdit;
+                        IPointListEdit list3 = curve3.Points as IPointListEdit;
+
+                        if (list1 == null)
+                            break;
+
+                        if (list2 == null)
+                            break;
+
+                        if (list3 == null)
+                            break;
+
+                        double time = (Environment.TickCount - TickStart) / 1000.0;
+
+                        list1.Add(time, rsrp);
+                        list2.Add(time, rsrq);
+                        list2.Add(time, csq);
+
+                        Scale xScale = zedGraph1.GraphPane.XAxis.Scale;
+
+                        if (time > xScale.Max - xScale.MajorStep)
                         {
-                            DoNext = 14;
-                            WriteLogFile(rsrp, rsrq, csq);
-
-                            if (zedGraph1.GraphPane.CurveList.Count <= 0)
-                                break;
-
-                            LineItem curve1 = zedGraph1.GraphPane.CurveList[0] as LineItem;
-                            LineItem curve2 = zedGraph1.GraphPane.CurveList[1] as LineItem;
-                            LineItem curve3 = zedGraph1.GraphPane.CurveList[2] as LineItem;
-
-                            if (curve1 == null)
-                                break;
-
-                            if (curve2 == null)
-                                break;
-
-                            if (curve3 == null)
-                                break;
-
-                            IPointListEdit list1 = curve1.Points as IPointListEdit;
-                            IPointListEdit list2 = curve2.Points as IPointListEdit;
-                            IPointListEdit list3 = curve3.Points as IPointListEdit;
-
-                            if (list1 == null)
-                                break;
-
-                            if (list2 == null)
-                                break;
-
-                            if (list3 == null)
-                                break;
-
-                            double time = (Environment.TickCount - TickStart) / 1000.0;
-
-                            list1.Add(time, rsrp);
-                            list2.Add(time, rsrq);
-                            list2.Add(time, csq);
-
-                            Scale xScale = zedGraph1.GraphPane.XAxis.Scale;
-
-                            if (time > xScale.Max - xScale.MajorStep)
+                            if (cb_ViewMode.Text == "Scroll")
                             {
-                                if (cb_ViewMode.Text == "Scroll")
-                                {
-                                    xScale.Max = time + xScale.MajorStep;
-                                    xScale.Min = 0;
-                                }
-                                else
-                                {
-                                    xScale.Max = time + xScale.MajorStep;
-                                    xScale.Min = xScale.Max - 30.0;
-                                }
+                                xScale.Max = time + xScale.MajorStep;
+                                xScale.Min = 0;
                             }
-
-                            zedGraph1.AxisChange();
-                            zedGraph1.Invalidate();
+                            else
+                            {
+                                xScale.Max = time + xScale.MajorStep;
+                                xScale.Min = xScale.Max - 30.0;
+                            }
                         }
+
+                        zedGraph1.AxisChange();
+                        zedGraph1.Invalidate();
+                        Thread.Sleep(900);
                         break;
                 }
             }
 
-            Thread_Task.Suspend();
+            Thread_Task.Interrupt();
+            Thread_Task.Abort();
+            Thread_Task.Join();
         }
 
         private void rtb_Log_MouseDoubleClick(object sender, MouseEventArgs e)

@@ -31,6 +31,7 @@
             this.components = new System.ComponentModel.Container();
             this.tabCtrl1 = new System.Windows.Forms.TabControl();
             this.tabGraph = new System.Windows.Forms.TabPage();
+            this.cb_ViewMode = new System.Windows.Forms.ComboBox();
             this.zedGraph1 = new ZedGraph.ZedGraphControl();
             this.tabLog = new System.Windows.Forms.TabPage();
             this.rtb_Log = new System.Windows.Forms.RichTextBox();
@@ -47,7 +48,6 @@
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.lb_Percent = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
-            this.cb_ViewMode = new System.Windows.Forms.ComboBox();
             this.tabCtrl1.SuspendLayout();
             this.tabGraph.SuspendLayout();
             this.tabLog.SuspendLayout();
@@ -77,6 +77,19 @@
             this.tabGraph.Size = new System.Drawing.Size(700, 378);
             this.tabGraph.TabIndex = 0;
             this.tabGraph.Text = "Graph";
+            // 
+            // cb_ViewMode
+            // 
+            this.cb_ViewMode.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.cb_ViewMode.FormattingEnabled = true;
+            this.cb_ViewMode.Items.AddRange(new object[] {
+            "Compact",
+            "Scroll"});
+            this.cb_ViewMode.Location = new System.Drawing.Point(12, 345);
+            this.cb_ViewMode.Name = "cb_ViewMode";
+            this.cb_ViewMode.Size = new System.Drawing.Size(81, 21);
+            this.cb_ViewMode.TabIndex = 4;
+            this.cb_ViewMode.Text = "Compact";
             // 
             // zedGraph1
             // 
@@ -262,18 +275,6 @@
             this.label3.Size = new System.Drawing.Size(70, 13);
             this.label3.TabIndex = 8;
             this.label3.Text = "Downloaded:";
-            // 
-            // cb_ViewMode
-            // 
-            this.cb_ViewMode.FormattingEnabled = true;
-            this.cb_ViewMode.Items.AddRange(new object[] {
-            "Compact",
-            "Scroll"});
-            this.cb_ViewMode.Location = new System.Drawing.Point(12, 345);
-            this.cb_ViewMode.Name = "cb_ViewMode";
-            this.cb_ViewMode.Size = new System.Drawing.Size(81, 21);
-            this.cb_ViewMode.TabIndex = 4;
-            this.cb_ViewMode.Text = "Compact";
             // 
             // Form1
             // 
