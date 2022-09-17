@@ -90,6 +90,7 @@
             this.cb_ViewMode.Size = new System.Drawing.Size(81, 21);
             this.cb_ViewMode.TabIndex = 4;
             this.cb_ViewMode.Text = "Compact";
+            this.cb_ViewMode.SelectedIndexChanged += new System.EventHandler(this.cb_ViewMode_SelectedIndexChanged);
             // 
             // zedGraph1
             // 

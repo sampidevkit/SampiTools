@@ -42,6 +42,8 @@ namespace NBST
         private PointPairList pointPairList_RSSI = null;
         private LineItem lineItem_RSSI = null;
 
+        private volatile bool viewMode = true;
+
         private GraphPane graphPane = null;
         private static Thread Thread_Task = null;
         private volatile int DoNext = 0;
@@ -135,6 +137,23 @@ namespace NBST
             int i, j;
             int len = ChrArr.Length;
 
+            /*
+            PrintDebug("\nOld: ");
+
+            if (isPrintable(oldChar))
+                PrintDebug(oldChar.ToString());
+            else
+                PrintDebug("<" + Convert.ToByte(oldChar).ToString("X2") + ">");
+
+            PrintDebug(", New: ");
+
+            if (isPrintable(newChar))
+                PrintDebug(newChar.ToString());
+            else
+                PrintDebug("<" + Convert.ToByte(newChar).ToString("X2") + ">");
+
+            PrintChar("\nData: ", ChrArr, null);
+            */
             for (i = 0; i < len; i++)
             {
                 if (ChrArr[i] == oldChar)
@@ -146,6 +165,7 @@ namespace NBST
                         for (j = i; j < (len - 1); j++)
                             ChrArr[j] = ChrArr[j + 1];
 
+                        i = 0;
                         ChrArr[j] = (char)0x00;
                         len--;
                     }
@@ -156,6 +176,8 @@ namespace NBST
 
             for (i = 0; i < len; i++)
                 newChrArr[i] = ChrArr[i];
+
+            //PrintChar("\nReplace: ", newChrArr, null);
 
             ChrArr = null;
             ChrArr = newChrArr;
@@ -205,9 +227,39 @@ namespace NBST
 
         private void PrintDebug(string msg, Color color)
         {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string, Color>(PrintDebug), new object[] { msg, color });
+                return;
+            }
+
+            if (msg == null)
+                return;
+
             rtb_Log.SelectionColor = color;
             rtb_Log.AppendText(msg);
             //rtb_Log.ForeColor = color;
+        }
+
+        private void PrintChar(string prefix, char[] chr, string subfix)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string, char[], string>(PrintChar), new object[] { prefix, chr, subfix });
+                return;
+            }
+
+            PrintDebug(prefix + "Char len=" + chr.Length.ToString() + ": ");
+
+            foreach (char c in chr)
+            {
+                if (isPrintable(c))
+                    PrintDebug(c.ToString());
+                else
+                    PrintDebug("<" + Convert.ToByte(c).ToString("X2") + ">");
+            }
+
+            PrintDebug(subfix);
         }
 
         private void PrintDebug(string msg)
@@ -612,7 +664,15 @@ namespace NBST
             }
         }
 
-        private int Get_Index(char[] buffer, string para, HeadTail head_tail)
+        private bool isPrintable(char c)
+        {
+            if ((c >= 0x21) && (c <= 0x7E))
+                return true;
+
+            return false;
+        }
+
+        private int Get_1stIndex(char[] buffer, string para, HeadTail head_tail)
         {
             int i, j;
             char[] p = para.ToCharArray();
@@ -624,11 +684,20 @@ namespace NBST
                     if (++j == p.Length)
                     {
                         if (head_tail == HeadTail.head)
-                            i -= j;
+                            i -= (j - 1);
+                        /*
+                        PrintDebug("\nIdx=" + i.ToString() + ", ");
 
+                        if (isPrintable(buffer[i]))
+                            PrintDebug(buffer[i].ToString());
+                        else
+                            PrintDebug("<" + Convert.ToByte(buffer[i]).ToString("X2") + ">");
+                        */
                         return i;
                     }
                 }
+                else if (buffer[i] == p[0])
+                    j = 1;
                 else
                     j = 0;
             }
@@ -638,19 +707,24 @@ namespace NBST
 
         private char[] SubArray(char[] buffer, int headIdx, int tailIdx)
         {
-            char[] chr = new char[tailIdx - headIdx];
-            int i;
+            if ((headIdx >= 0) && (tailIdx >= 0) && (headIdx < tailIdx))
+            {
+                char[] chr = new char[tailIdx - headIdx + 1];
+                int i;
 
-            for (i = 0; i < chr.Length; i++)
-                chr[i] = buffer[headIdx + i];
+                for (i = 0; i < chr.Length; i++)
+                    chr[i] = buffer[headIdx + i];
 
-            return chr;
+                return chr;
+            }
+
+            return null;
         }
 
         private char[] SubArray(char[] buffer, string str_head, string str_tail)
         {
-            int head = Get_Index(buffer, str_head, HeadTail.tail);
-            int tail = Get_Index(buffer, str_tail, HeadTail.head);
+            int head = Get_1stIndex(buffer, str_head, HeadTail.tail) + 1;
+            int tail = Get_1stIndex(buffer, str_tail, HeadTail.head) - 1;
 
             //PrintDebug("\n--> head " + head.ToString()+ "tail " + tail.ToString());
 
@@ -745,10 +819,18 @@ namespace NBST
         private string RemoveAT(string atResp)
         {
             char[] arr = atResp.ToCharArray();
-            int head = Get_Index(arr, "\r\nOK\r\n", HeadTail.head);
-            PrintDebug("\n--> head " + head.ToString());
-
+            int head = Get_1stIndex(arr, "\r\nOK\r\n", HeadTail.head);
             /*
+            PrintDebug("\nIdx=" + head.ToString() + ", ");
+
+            for (int i = head; i < arr.Length; i++)
+            {
+                if (isPrintable(arr[i]))
+                    PrintDebug(arr[i].ToString());
+                else
+                    PrintDebug("<" + Convert.ToByte(arr[i]).ToString("X2") + ">");
+            }
+            */
             if (head >= 0)
             {
                 arr[head + 2] = '\r';
@@ -757,9 +839,31 @@ namespace NBST
 
             atResp = new string(arr);
             RemoveStr(ref atResp, '\r', '\0');
-            RemoveStr(ref atResp, '\n', '\0');
-            */
+            /*
+            arr = atResp.ToCharArray();
+            PrintDebug("\nLen=" + arr.Length.ToString() + ": ");
 
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (isPrintable(arr[i]))
+                    PrintDebug(arr[i].ToString());
+                else
+                    PrintDebug("<" + Convert.ToByte(arr[i]).ToString("X2") + ">");
+            }
+            */
+            RemoveStr(ref atResp, '\n', '\0');
+            /*
+            arr = atResp.ToCharArray();
+            PrintDebug("\nLen=" + arr.Length.ToString() + ": ");
+
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (isPrintable(arr[i]))
+                    PrintDebug(arr[i].ToString());
+                else
+                    PrintDebug("<" + Convert.ToByte(arr[i]).ToString("X2") + ">");
+            }
+            */
             return atResp;
         }
 
@@ -815,7 +919,8 @@ namespace NBST
                             {
                                 DoNext++;
                                 InfoAppendText("\nIMEI: ");
-                                InfoAppendText(new string(SubArray(cmdCxt.buffer, "AT+CGSN\r\n", "\r\nOK")));
+                                InfoAppendText(RemoveAT(resp));
+                                //InfoAppendText(new string(SubArray(cmdCxt.buffer, "AT+CGSN\r\n", "\r\nOK")));
                             }
                         }
                         break;
@@ -827,9 +932,10 @@ namespace NBST
                         {
                             if (resp.Contains("\r\nOK\r\n"))
                             {
-                                DoNext += 2;
-                                InfoAppendText("\nCCID: ");
-                                InfoAppendText(new string(SubArray(cmdCxt.buffer, "AT#CIMI\r\n", "\r\nOK")));
+                                DoNext++;
+                                InfoAppendText("\nCIMI: ");
+                                resp = new string(SubArray(cmdCxt.buffer, "#CIMI: ", "\r\nOK"));
+                                InfoAppendText(RemoveAT(resp));
                             }
                             else if (resp.Contains("\r\nERROR\r\n"))
                                 DoNext++;
@@ -837,7 +943,7 @@ namespace NBST
                         break;
 
                     case 4:
-                        resp = SendCmd_GetRes(ref cmdCxt, "AT#CCID\r");
+                        resp = SendCmd_GetRes(ref cmdCxt, "AT+CCID\r");
 
                         if (resp != null)
                         {
@@ -845,7 +951,8 @@ namespace NBST
                             {
                                 DoNext++;
                                 InfoAppendText("\nCCID: ");
-                                InfoAppendText(new string(SubArray(cmdCxt.buffer, "AT#CCID\r\n", "\r\nOK")));
+                                resp = new string(SubArray(cmdCxt.buffer, "+CCID: ", "\r\nOK"));
+                                InfoAppendText(RemoveAT(resp));
                             }
                         }
                         break;
@@ -952,7 +1059,7 @@ namespace NBST
 
                         if (time > xScale.Max - xScale.MajorStep)
                         {
-                            if (cb_ViewMode.Text == "Scroll")
+                            if (viewMode)
                             {
                                 xScale.Max = time + xScale.MajorStep;
                                 xScale.Min = 0;
@@ -966,6 +1073,7 @@ namespace NBST
 
                         zedGraph1.AxisChange();
                         zedGraph1.Invalidate();
+                        zedGraph1.Update();
                         Thread.Sleep(900);
                         break;
                 }
@@ -1084,6 +1192,14 @@ namespace NBST
             }
             */
             Thread_Task.Suspend();
+        }
+
+        private void cb_ViewMode_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cb_ViewMode.Text == "Scroll")
+                viewMode = true;
+            else
+                viewMode = false;
         }
     }
 }
