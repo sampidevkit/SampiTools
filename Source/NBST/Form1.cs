@@ -14,6 +14,8 @@ using ZedGraph;
 using System.Security.Cryptography;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 using System.Runtime.Remoting.Messaging;
+using System.Runtime.ConstrainedExecution;
+using System.Windows.Forms.VisualStyles;
 
 namespace NBST
 {
@@ -25,38 +27,96 @@ namespace NBST
             tail
         }
 
+        private enum ThreadMode
+        {
+            RF_TEST,
+            DOWNLOAD
+        }
+
         private struct CmdCxt
         {
             public char[] buffer;
             public int len;
+            public int findIdx;
             public int donext;
             public long tick;
         }
 
-        private PointPairList pointPairList_RSRP = null;
-        private LineItem lineItem_RSRP = null;
+        private struct DownloadCxt
+        {
+            public string Host;
+            public string FilePath;
+            public string FileName;
+            public string Md5;
+            public int FileSize;
+            public int DownloadedSize;
+            public StreamWriter sW;
+        }
 
-        private PointPairList pointPairList_RSRQ = null;
-        private LineItem lineItem_RSRQ = null;
+        private struct ModuleInfo
+        {
+            public string Name;
+            public string Imei;
+            public string Cimi;
+            public string Ccid;
+            public string Operator;
+            public string NetworkType;
+            public string Rsrp;
+            public string Rsrq;
+            public string Tac;
+            public string CellID;
+            public string Csq;
+            public string BitErrRate;
+            public string Apn;
+            public string Ip;
+        }
 
-        private PointPairList pointPairList_RSSI = null;
-        private LineItem lineItem_RSSI = null;
+        private DownloadCxt downloadCxt = new DownloadCxt
+        {
+            Host = null,
+            FilePath = null,
+            FileName = null,
+            Md5 = null,
+            FileSize = 0,
+            DownloadedSize=0,
+            sW = null
+        };
+
+        private ModuleInfo moduleInfo = new ModuleInfo
+        {
+            Name = null,
+            Imei = null,
+            Cimi = null,
+            Ccid = null,
+            Operator = null,
+            NetworkType = null,
+            Rsrp = null,
+            Rsrq = null,
+            Tac = null,
+            CellID = null,
+            Csq = null,
+            BitErrRate = null,
+            Apn = null,
+            Ip = null
+        };
 
         private volatile bool viewMode = true;
-
-        private GraphPane graphPane = null;
         private static Thread Thread_Task = null;
+        private volatile ThreadMode Thread_Mode = ThreadMode.RF_TEST;
+        private volatile int Thread_Enbale = 0;
         private volatile int DoNext = 0;
-        private string ModuleName = null;
-        private string ModuleImei = null;
         private StreamWriter sW = null;
-        private string fileName = null;
+        private string logfileName = null;
         private long line = 0;
-        private long TickStart = 0;
-        private string[] UsbPid = new string[3] { 
+        private int TickStart = 0;
+        private volatile string portName = null;
+
+        private string[] UsbPid = new string[3]
+        { 
         /* xE866 */ "VID_1BC7&PID_0021", 
         /* MEx10G1 */ "VID_1BC7&PID_110A",
-        /* LE910 */ "VID_1BC7&PID_1201"};
+        /* LE910 */ "VID_1BC7&PID_1201"
+        };
 
         private long Tick_Get()
         {
@@ -65,17 +125,17 @@ namespace NBST
 
         private long Tick_DifUs(long tk)
         {
-            return (long)((UInt64)(DateTime.Now.Ticks - tk));
+            return (long)((UInt64)(DateTime.Now.Ticks - tk)/10);
         }
 
         private long Tick_DifMs(long tk)
         {
-            return (long)((UInt64)(DateTime.Now.Ticks - tk) / 1000);
+            return (long)((UInt64)(DateTime.Now.Ticks - tk) / 10000);
         }
 
         private bool Tick_IsOverUs(ref long tk, long ms)
         {
-            long dif = (long)((UInt64)(DateTime.Now.Ticks - tk));
+            long dif = (long)((UInt64)(DateTime.Now.Ticks - tk)/10);
 
             if (dif > ms)
             {
@@ -88,7 +148,7 @@ namespace NBST
 
         private bool Tick_IsOverMs(ref long tk, long ms)
         {
-            long dif = (long)((UInt64)(DateTime.Now.Ticks - tk) / 1000);
+            long dif = (long)((UInt64)(DateTime.Now.Ticks - tk) / 10000);
 
             if(dif > ms)
             {
@@ -107,12 +167,14 @@ namespace NBST
             {
                 pIdx++;
 
-                if (pIdx == pStrSample.Length) 
+                if (pIdx == pStrSample.Length)
                 {
                     pIdx = 0;
                     return true; // matched
                 }
             }
+            else if (c == pStrSample[0])
+                pIdx = 1;
             else
                 pIdx = 0;
 
@@ -321,14 +383,14 @@ namespace NBST
         {
             if (sW != null)
             {
-                StreamWriter slog = new StreamWriter(fileName + ".txt");
+                StreamWriter slog = new StreamWriter(logfileName + ".txt");
 
                 slog.WriteLine(rtb_Log.Text);
                 slog.Close();
                 sW.WriteLine(NBST.Properties.Resources.footer);
 
                 sW.Close();
-                PrintDebug("\nLog file " + fileName + ".m has been saved");
+                PrintDebug("\nLog file " + logfileName + ".m has been saved");
                 Thread.Sleep(1000);
                 //rtb_Log.Clear();
                 sW = null;
@@ -338,11 +400,11 @@ namespace NBST
         private void OpenLogFile()
         {
             CloseLogFile();
-            fileName = FileNameGenerate("NBST_");
+            logfileName = FileNameGenerate("NBST_");
 
             try
             {
-                sW = new StreamWriter(fileName + ".m");
+                sW = new StreamWriter(logfileName + ".m");
                 sW.WriteLine("%{");
                 sW.WriteLine(rtb_Info.Text);
                 sW.WriteLine("%}");
@@ -350,12 +412,12 @@ namespace NBST
                 sW.WriteLine("\nstartTime=" + ToUnixTimeSeconds().ToString() + ";");
                 sW.WriteLine("\na=[");
 
-                rtb_Log.Text = "New log file " + fileName + ".m has been created";
+                rtb_Log.Text = "New log file " + logfileName + ".m has been created";
                 line = 0;
             }
             catch (Exception e)
             {
-                PrintDebug("\nFile name \"" + fileName + "\"error");
+                PrintDebug("\nFile name \"" + logfileName + "\"error");
             }
         }
 
@@ -406,6 +468,7 @@ namespace NBST
             CmdCxt cmdCxt = new CmdCxt();
             cmdCxt.buffer = new char[1024];
             cmdCxt.donext = 0;
+            cmdCxt.findIdx = 0;
 
             try
             {
@@ -414,10 +477,11 @@ namespace NBST
 
                 serialPort1.PortName = portName;
                 serialPort1.BaudRate = 115200;
-                serialPort1.WriteTimeout = 1000;
+                serialPort1.WriteTimeout = 10;
                 serialPort1.DtrEnable = true;
+                serialPort1.RtsEnable = true;
                 serialPort1.Open();
-                PrintDebug("\nOpen " + portName);
+                //PrintDebug("\nOpen " + portName);
 
                 do
                 {
@@ -427,26 +491,31 @@ namespace NBST
                     {
                         if (resp.Contains("\r\nOK\r\n"))
                         {
-                            loop = 5;
+                            loop = 2;
                             found = true;
                         }
                     }
-                    else if (Tick_IsOverMs(ref tick, 500))
+                    else if (Tick_IsOverMs(ref tick, 250))
                     {
                         loop++;
-                        PrintDebug("\nRX Timeout");
+                        //PrintDebug("\nRX Timeout");
                     }
                 }
-                while (loop < 5);
+                while (loop < 2);
             }
             catch
             { 
-                PrintDebug("\nTX Timeout");
+                //PrintDebug("\nTX Timeout");
             }
 
-            serialPort1.DtrEnable = false;
-            serialPort1.Close();
-            serialPort1.Dispose();
+            try
+            {
+                serialPort1.DtrEnable = false;
+                serialPort1.RtsEnable = false;
+                serialPort1.Close();
+                serialPort1.Dispose();
+            }
+            catch { }
 
             return found;
         }
@@ -557,40 +626,6 @@ namespace NBST
         public Form1()
         {
             InitializeComponent();
-            TickStart = Tick_Get();
-            graphPane = zedGraph1.GraphPane;
-            zedGraph1.GraphPane.CurveList.Clear();
-            zedGraph1.GraphPane.YAxisList.Clear();
-            zedGraph1.GraphPane.Title.Text = "RF Measurement";
-            zedGraph1.GraphPane.XAxis.Title.Text = "Time";
-
-            lineItem_RSRP = graphPane.AddCurve("RSRP, ", pointPairList_RSRP, Color.Red, SymbolType.Circle);
-            zedGraph1.GraphPane.AddYAxis("dBm");
-            zedGraph1.GraphPane.YAxisList[0].Scale.Max = 0;
-            zedGraph1.GraphPane.YAxisList[0].Scale.Min = -150;
-            zedGraph1.GraphPane.YAxisList[0].Scale.FontSpec.FontColor = Color.Red;
-            zedGraph1.GraphPane.YAxisList[0].Title.FontSpec.FontColor = Color.Red;
-            zedGraph1.GraphPane.YAxisList[0].Color = Color.Red;
-
-            lineItem_RSRQ = graphPane.AddCurve("RSRQ, ", pointPairList_RSRQ, Color.Green, SymbolType.Triangle);
-            zedGraph1.GraphPane.AddYAxis("dB");
-            zedGraph1.GraphPane.YAxisList[1].Scale.Max = 0;
-            zedGraph1.GraphPane.YAxisList[1].Scale.Min = -150;
-            zedGraph1.GraphPane.YAxisList[1].Scale.FontSpec.FontColor = Color.Green;
-            zedGraph1.GraphPane.YAxisList[1].Title.FontSpec.FontColor = Color.Green;
-            zedGraph1.GraphPane.YAxisList[1].Color = Color.Green;
-
-            lineItem_RSSI = graphPane.AddCurve("RSSI, ", pointPairList_RSSI, Color.Blue, SymbolType.Square);
-            zedGraph1.GraphPane.AddYAxis("dBm");
-            zedGraph1.GraphPane.YAxisList[2].Scale.Max = 31;
-            zedGraph1.GraphPane.YAxisList[2].Scale.Min = -1;
-            zedGraph1.GraphPane.YAxisList[2].Scale.FontSpec.FontColor = Color.Blue;
-            zedGraph1.GraphPane.YAxisList[2].Title.FontSpec.FontColor = Color.Blue;
-            zedGraph1.GraphPane.YAxisList[2].Color = Color.Blue;
-
-            zedGraph1.GraphPane.XAxis.ResetAutoScale(zedGraph1.GraphPane, CreateGraphics());
-            zedGraph1.GraphPane.YAxis.ResetAutoScale(zedGraph1.GraphPane, CreateGraphics());
-            zedGraph1.Refresh();
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -599,6 +634,21 @@ namespace NBST
 
             this.Text += " v." + $"{version}";
             this.Update();
+
+            downloadCxt.Md5 = tb_Md5.Text;
+            moduleInfo.Apn = tb_Apn.Text;
+
+            Uri myUri;
+            bool result = Uri.TryCreate(tb_Url.Text, UriKind.Absolute, out myUri) && myUri.Scheme == Uri.UriSchemeHttps;
+
+            if (result)
+            {
+                downloadCxt.Host = myUri.Host;
+                downloadCxt.FilePath = myUri.AbsolutePath;
+            }
+            else
+                MessageBox.Show("Invalid HTTPS URL", "Error");
+
             Scan_AT_Port();
         }
 
@@ -608,6 +658,8 @@ namespace NBST
             {
                 if (Thread_Task.IsAlive)
                 {
+                    Thread_Enbale = 0;
+                    Thread_Task.Abort();
                     Thread_Task.Interrupt();
                     Thread_Task.Abort();
                     Thread_Task.Join();
@@ -632,36 +684,85 @@ namespace NBST
             Scan_AT_Port();
         }
 
+        private void bt_RFTest_Update(string msg)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(bt_RFTest_Update), new object[] { msg  });
+                return;
+            }
+
+            CloseLogFile();
+            bt_Download.Enabled = true;
+            bt_Scan.Enabled = true;
+            tb_Apn.Enabled = true;
+            bt_RFTest.Text = "RF Test";
+        }
+
+        private void bt_Download_Update(string msg)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(bt_Download_Update), new object[] { msg });
+                return;
+            }
+
+            bt_RFTest.Enabled = true;
+            bt_Scan.Enabled = true;
+            tb_Apn.Enabled = true;
+            tb_Url.Enabled = true;
+            tb_Md5.Enabled = true;
+            bt_Download.Text = "Download";
+        }
+
         private void bt_RFTest_Click(object sender, EventArgs e)
         {
-            if (bt_RFTest.Text == "RF Test")
+            try
             {
-                DoNext = 0;
-                serialPort1.PortName = cb_Port1.Text;
-                serialPort1.BaudRate = 115200;
-                serialPort1.WriteTimeout = 500;
-                serialPort1.DtrEnable = true;
-                serialPort1.Open();
-                OpenLogFile();
-                bt_Download.Enabled = false;
-                bt_Scan.Enabled = false;
-                Thread_Task = new Thread(() => RFTest()); // Create new app tasks
-                Thread_Task.Start();
-                bt_RFTest.Text = "Stop";
-            }
-            else
-            {
-                DoNext = 0xFF;
-                while (Thread_Task.IsAlive) ;
+                if (bt_RFTest.Text == "RF Test")
+                {
+                    zedGraphControl1.GraphPane.CurveList.Clear();
+                    zedGraphControl1.GraphPane.GraphObjList.Clear();
+                    zedGraphControl1.Refresh();
 
-                CloseLogFile();
-                serialPort1.DtrEnable = false;
-                serialPort1.Close();
-                serialPort1.Dispose();
-                bt_Download.Enabled = true;
-                bt_Scan.Enabled = true;
-                bt_RFTest.Text = "RF Test";
+                    zedGraphControl1.GraphPane.Title.Text = "RF Measurement";
+                    zedGraphControl1.GraphPane.XAxis.Title.Text = "Time";
+                    zedGraphControl1.GraphPane.YAxis.Title.Text = "Strength";
+
+                    RollingPointPairList list1 = new RollingPointPairList(65536);
+                    RollingPointPairList list2 = new RollingPointPairList(65536);
+                    RollingPointPairList list3 = new RollingPointPairList(65536);
+
+                    LineItem curve1 = zedGraphControl1.GraphPane.AddCurve("RSRP (dBm)", list1, Color.Red, SymbolType.None);
+                    LineItem curve2 = zedGraphControl1.GraphPane.AddCurve("RSRQ (dB)", list2, Color.Green, SymbolType.None);
+                    LineItem curve3 = zedGraphControl1.GraphPane.AddCurve("RSSI (dBm)", list3, Color.Blue, SymbolType.None);
+
+                    curve1.Line.Width = 2;
+                    curve2.Line.Width = 2;
+                    curve3.Line.Width = 2;
+
+                    zedGraphControl1.GraphPane.XAxis.Scale.Min = 0;
+                    zedGraphControl1.GraphPane.XAxis.Scale.Max = 60;
+                    zedGraphControl1.GraphPane.XAxis.Scale.MinorStep = 1;
+                    zedGraphControl1.GraphPane.XAxis.Scale.MajorStep = 5;
+                    zedGraphControl1.AxisChange();
+
+                    Thread_Mode = ThreadMode.RF_TEST;
+                    Thread_Enbale = 1;
+                    OpenLogFile();
+                    bt_Download.Enabled = false;
+                    bt_Scan.Enabled = false;
+                    tb_Apn.Enabled = false;
+                    Thread_Task = new Thread(() => Thread_Tasks()); // Create new app tasks
+                    Thread_Task.Start();
+                    bt_RFTest.Text = "Stop";
+                }
+                else
+                {
+                    Thread_Enbale = 0;
+                }
             }
+            catch { }
         }
 
         private bool isPrintable(char c)
@@ -731,53 +832,70 @@ namespace NBST
             return SubArray(buffer, head, tail);
         }
 
-        private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd)
+        private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd, long timeout, bool AT_Track)
         {
-            switch(cmdCxt.donext)
+            try
             {
-                case 0:
-                    cmdCxt.donext++;
-                    cmdCxt.buffer = new char[1024];
-                    cmdCxt.tick = Tick_Get();
-                    serialPort1.Write(cmd + "\r");
-                    PrintTxDebug("\nTX: " + cmd);
-                    break;
-
-                case 1:
-                    if (serialPort1.BytesToRead > 0)
-                    {
+                switch (cmdCxt.donext)
+                {
+                    case 0:
                         cmdCxt.donext++;
-                        cmdCxt.len = 0;
+                        cmdCxt.buffer = new char[1024];
                         cmdCxt.tick = Tick_Get();
-                        PrintRxDebug("\nRX: ");
-                    }
-                    else if (Tick_IsOverMs(ref cmdCxt.tick, 500))
-                    {
-                        cmdCxt.donext--;
-                        PrintDebug("\nRX Timeout");
-                    }
-                    break;
+                        serialPort1.Write(cmd);
+                        PrintTxDebug("\nTX: " + cmd);
+                        break;
 
-                default:
-                case 2:
-                    if (serialPort1.BytesToRead > 0)
-                    {
-                        for (int i = 0; i < serialPort1.BytesToRead; i++)
+                    case 1:
+                        if (serialPort1.BytesToRead > 0)
                         {
-                            char c = (char)serialPort1.ReadByte();
-
-                            cmdCxt.buffer[cmdCxt.len++] = c;
-
-                            if (cmdCxt.len > cmdCxt.buffer.Length)
-                                cmdCxt.len = 0;
-
-                            PrintRxDebug(c.ToString());
+                            cmdCxt.donext++;
+                            cmdCxt.len = 0;
+                            cmdCxt.tick = Tick_Get();
+                            //PrintRxDebug("\nRX: ");
                         }
+                        else if (Tick_IsOverMs(ref cmdCxt.tick, timeout))
+                        {
+                            cmdCxt.donext--;
+                            //PrintDebug("\nRX Timeout");
+                        }
+                        break;
 
-                        cmdCxt.tick = Tick_Get();
-                    }
-                    else if (Tick_IsOverMs(ref cmdCxt.tick, 500))
-                    {
+                    case 2:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                char c = (char)serialPort1.ReadByte();
+
+                                cmdCxt.buffer[cmdCxt.len++] = c;
+
+                                if (cmdCxt.len > cmdCxt.buffer.Length)
+                                    cmdCxt.len = 0;
+
+                                if ((AT_Track == true) && FindString(c, ref cmdCxt.findIdx, "\r\nOK\r\n"))
+                                {
+                                    cmdCxt.donext++;
+                                    //PrintRxDebug("\n-->OK\n");
+                                }
+
+                                /*
+                                PrintRxDebug("\nIdx: " + cmdCxt.findIdx.ToString() + ", ");
+
+                                if (isPrintable(c))
+                                    PrintRxDebug(c.ToString());
+                                else
+                                    PrintRxDebug("<" + Convert.ToByte(c).ToString("X2") + ">");
+                                */
+                            }
+
+                            cmdCxt.tick = Tick_Get();
+                        }
+                        else if (Tick_IsOverMs(ref cmdCxt.tick, 100))
+                            cmdCxt.donext++;
+                        break;
+
+                    default:
                         char[] chr = new char[cmdCxt.len];
 
                         for (int i = 0; i < cmdCxt.len; i++)
@@ -787,13 +905,25 @@ namespace NBST
                         cmdCxt.donext = 0;
 
                         return new string(chr);
-                    }
-                    break;
+                }
+            }
+            catch(Exception ex) 
+            {
+                //PrintDebug(ex.ToString());
             }
 
             return null;
         }
 
+        private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd, long timeout)
+        {
+            return SendCmd_GetRes(ref cmdCxt, cmd, timeout, true);
+        }
+
+        private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd)
+        {
+            return SendCmd_GetRes(ref cmdCxt, cmd, 500, true);
+        }
         private void InfoAppendText(string msg)
         {
             if (InvokeRequired)
@@ -802,6 +932,25 @@ namespace NBST
                 return;
             }
 
+            if (msg == null)
+                return;
+
+            rtb_Info.SelectionColor = Color.Black;
+            rtb_Info.AppendText(msg);
+        }
+
+        private void InfoAppendText(string msg, Color color)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string, Color>(InfoAppendText), new object[] { msg, color });
+                return;
+            }
+
+            if (msg == null)
+                return;
+
+            rtb_Info.SelectionColor = color;
             rtb_Info.AppendText(msg);
         }
 
@@ -813,24 +962,32 @@ namespace NBST
                 return;
             }
 
-            rtb_Info.AppendText(msg);
+            if (msg == null)
+                return;
+
+            rtb_Info.SelectionColor = Color.Black;
+            rtb_Info.Text = msg;
+        }
+
+        private void ProgressBar_Update(int maxSize, int curSize)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<int, int>(ProgressBar_Update), new object[] { maxSize, curSize });
+                return;
+            }
+
+            float per = ((float)curSize * 100.0f) / (float)maxSize + 0.5f;
+
+            pgb_Percent.Value = (int)per;
+            lb_Percent.Text = curSize.ToString() + " / " + maxSize.ToString();
         }
 
         private string RemoveAT(string atResp)
         {
             char[] arr = atResp.ToCharArray();
             int head = Get_1stIndex(arr, "\r\nOK\r\n", HeadTail.head);
-            /*
-            PrintDebug("\nIdx=" + head.ToString() + ", ");
 
-            for (int i = head; i < arr.Length; i++)
-            {
-                if (isPrintable(arr[i]))
-                    PrintDebug(arr[i].ToString());
-                else
-                    PrintDebug("<" + Convert.ToByte(arr[i]).ToString("X2") + ">");
-            }
-            */
             if (head >= 0)
             {
                 arr[head + 2] = '\r';
@@ -839,246 +996,574 @@ namespace NBST
 
             atResp = new string(arr);
             RemoveStr(ref atResp, '\r', '\0');
-            /*
-            arr = atResp.ToCharArray();
-            PrintDebug("\nLen=" + arr.Length.ToString() + ": ");
-
-            for (int i = 0; i < arr.Length; i++)
-            {
-                if (isPrintable(arr[i]))
-                    PrintDebug(arr[i].ToString());
-                else
-                    PrintDebug("<" + Convert.ToByte(arr[i]).ToString("X2") + ">");
-            }
-            */
             RemoveStr(ref atResp, '\n', '\0');
-            /*
-            arr = atResp.ToCharArray();
-            PrintDebug("\nLen=" + arr.Length.ToString() + ": ");
 
-            for (int i = 0; i < arr.Length; i++)
-            {
-                if (isPrintable(arr[i]))
-                    PrintDebug(arr[i].ToString());
-                else
-                    PrintDebug("<" + Convert.ToByte(arr[i]).ToString("X2") + ">");
-            }
-            */
             return atResp;
         }
 
-        private void RFTest()
+        private void PlotData(int rsrp, int rsrq, int rssi, long count)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<int, int, int, long>(PlotData), new object[] { rsrp, rsrq, rssi, count });
+                return;
+            }
+
+            LineItem curve1 = zedGraphControl1.GraphPane.CurveList[0] as LineItem;
+            LineItem curve2 = zedGraphControl1.GraphPane.CurveList[1] as LineItem;
+            LineItem curve3 = zedGraphControl1.GraphPane.CurveList[2] as LineItem;
+
+            if ((curve1 == null)|| (curve2 == null)|| (curve3 == null))
+                return;
+
+            IPointListEdit list1 = curve1.Points as IPointListEdit;
+            IPointListEdit list2 = curve2.Points as IPointListEdit;
+            IPointListEdit list3 = curve3.Points as IPointListEdit;
+
+            if ((list1 == null) || (list2 == null) || (list3 == null))
+                return;
+
+            list1.Add(TickStart, (double)rsrp);
+            list2.Add(TickStart, (double)rsrq);
+            list3.Add(TickStart, (double)rssi);
+
+            Scale xScale = zedGraphControl1.GraphPane.XAxis.Scale;
+
+            if (TickStart > xScale.Max - xScale.MajorStep)
+            {
+                if (viewMode)
+                {
+                    xScale.Max = TickStart + xScale.MajorStep;
+                    xScale.Min = 0;
+                }
+                else
+                {
+                    xScale.Max = TickStart + xScale.MajorStep;
+                    xScale.Min = xScale.Max - 60.0;
+                }
+            }
+
+            zedGraphControl1.AxisChange();
+            zedGraphControl1.Invalidate();
+        }
+
+        private char[] HttpRcv_GetData(in char[] datain, int lenin)
+        {
+            int startIdx = Get_1stIndex(datain, "<<<:", HeadTail.tail) + 1;
+
+            if (startIdx < 0)
+                return null;
+
+            if ((datain[lenin - 6] != '\r')|| (datain[lenin - 5] != '\n'))
+                return null;
+
+            if ((datain[lenin - 4] != 'O') || (datain[lenin - 3] != 'K'))
+                return null;
+
+            if ((datain[lenin - 2] != '\r') || (datain[lenin - 1] != '\n'))
+                return null;
+
+            char[] dataout = new char[lenin - 6 - startIdx];
+
+            for (int i = 0; i < dataout.Length; i++)
+                dataout[i] = datain[startIdx + i];
+
+            return dataout;
+        }
+
+        private void Thread_Tasks()
         {
             int csq = 99;
+            int ber = 99;
+            int rssi = -150;
             int rsrp = -150;
             int rsrq = -150;
-            bool cont = true;
-            string resp = null;
+            string tmpStr = null;
+            char[] tmpArr = null;
 
             CmdCxt cmdCxt = new CmdCxt();
 
+            cmdCxt.buffer = new char[1024];
             cmdCxt.donext = 0;
+            cmdCxt.findIdx = 0;
 
-            while (cont)
+            moduleInfo.Name = null;
+            moduleInfo.Imei = null;
+            moduleInfo.Cimi = null;
+            moduleInfo.Ccid = null;
+            moduleInfo.Operator = null;
+            moduleInfo.NetworkType = null;
+            moduleInfo.Rsrp = null;
+            moduleInfo.Rsrq = null;
+            moduleInfo.Tac = null;
+            moduleInfo.CellID = null;
+            moduleInfo.Csq = null;
+            moduleInfo.BitErrRate = null;
+            moduleInfo.Ip = null;
+
+            serialPort1.PortName = portName;
+            serialPort1.BaudRate = 115200;
+            serialPort1.WriteTimeout = 10;
+            serialPort1.DtrEnable = true;
+            serialPort1.RtsEnable = true;
+            serialPort1.Open();
+
+            DoNext = 0;
+            InfoWriteText("Reading module info...");
+
+            int thisTick = Environment.TickCount;
+
+            while (Thread_Enbale == 1)
             {
-                Thread.Sleep(100);
-
                 switch (DoNext)
                 {
                     case 0:
-                        resp = SendCmd_GetRes(ref cmdCxt, "ATE0\r");
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "ATI4\r");
 
-                        if (resp != null)
+                        if (tmpStr != null)
                         {
-                            if (resp.Contains("\r\nOK\r\n"))
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            {
                                 DoNext++;
+                                moduleInfo.Name = RemoveAT(tmpStr);
+                            }
                         }
                         break;
 
                     case 1:
-                        resp = SendCmd_GetRes(ref cmdCxt, "ATI4\r");
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGSN\r");
 
-                        if (resp != null)
+                        if (tmpStr != null)
                         {
-                            if (resp.Contains("\r\nOK\r\n"))
+                            if (tmpStr.Contains("\r\nOK\r\n"))
                             {
                                 DoNext++;
-                                InfoWriteText("Module: ");
-                                InfoAppendText(RemoveAT(resp));
-                                //InfoAppendText(new string(SubArray(cmdCxt.buffer, "ATI4\r\n", "\r\nOK")));
+                                moduleInfo.Imei = RemoveAT(tmpStr);
                             }
                         }
                         break;
 
                     case 2:
-                        resp = SendCmd_GetRes(ref cmdCxt, "AT+CGSN\r");
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#CIMI\r");
 
-                        if (resp != null)
+                        if (tmpStr != null)
                         {
-                            if (resp.Contains("\r\nOK\r\n"))
+                            if (tmpStr.Contains("\r\nOK\r\n"))
                             {
                                 DoNext++;
-                                InfoAppendText("\nIMEI: ");
-                                InfoAppendText(RemoveAT(resp));
-                                //InfoAppendText(new string(SubArray(cmdCxt.buffer, "AT+CGSN\r\n", "\r\nOK")));
+                                tmpStr = new string(SubArray(cmdCxt.buffer, "#CIMI: ", "\r\nOK"));
+                                moduleInfo.Cimi = RemoveAT(tmpStr);
                             }
+                            else if (tmpStr.Contains("\r\nERROR\r\n"))
+                                DoNext++;
                         }
                         break;
 
                     case 3:
-                        resp = SendCmd_GetRes(ref cmdCxt, "AT#CIMI\r");
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CCID\r");
 
-                        if (resp != null)
+                        if (tmpStr != null)
                         {
-                            if (resp.Contains("\r\nOK\r\n"))
+                            if (tmpStr.Contains("\r\nOK\r\n"))
                             {
-                                DoNext++;
-                                InfoAppendText("\nCIMI: ");
-                                resp = new string(SubArray(cmdCxt.buffer, "#CIMI: ", "\r\nOK"));
-                                InfoAppendText(RemoveAT(resp));
+                                DoNext+=2;
+                                tmpStr = new string(SubArray(cmdCxt.buffer, "+CCID: ", "\r\nOK"));
+                                moduleInfo.Ccid = RemoveAT(tmpStr);
                             }
-                            else if (resp.Contains("\r\nERROR\r\n"))
+                            else if (tmpStr.Contains("\r\nERROR\r\n"))
                                 DoNext++;
                         }
                         break;
 
                     case 4:
-                        resp = SendCmd_GetRes(ref cmdCxt, "AT+CCID\r");
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#CCID\r");
 
-                        if (resp != null)
+                        if (tmpStr != null)
                         {
-                            if (resp.Contains("\r\nOK\r\n"))
+                            if (tmpStr.Contains("\r\nOK\r\n"))
                             {
                                 DoNext++;
-                                InfoAppendText("\nCCID: ");
-                                resp = new string(SubArray(cmdCxt.buffer, "+CCID: ", "\r\nOK"));
-                                InfoAppendText(RemoveAT(resp));
+                                tmpStr = new string(SubArray(cmdCxt.buffer, "#CCID: ", "\r\nOK"));
+                                moduleInfo.Ccid = RemoveAT(tmpStr);
                             }
+                            else
+                                DoNext--;
                         }
                         break;
 
                     case 5:
-                        resp = SendCmd_GetRes(ref cmdCxt, "AT+COPS?\r");
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+COPS?\r");
 
-                        if (resp != null)
+                        if (tmpStr != null)
                         {
-                            if (resp.Contains("\r\nOK\r\n"))
+                            if (tmpStr.Contains("\r\nOK\r\n"))
                             {
                                 DoNext++;
-                                InfoAppendText("\nOperator: ");
-                                InfoAppendText(new string(SubArray(cmdCxt.buffer, ",\"", "\",")));
+                                TickStart = 0;
+                                moduleInfo.Operator = new string(SubArray(cmdCxt.buffer, ",\"", "\","));
+                                moduleInfo.NetworkType = new string(SubArray(cmdCxt.buffer, "\",", "\r\nOK"));
+                                RemoveStr(ref moduleInfo.NetworkType, '\r', '\0');
+                                RemoveStr(ref moduleInfo.NetworkType, '\n', '\0');
                             }
                         }
                         break;
 
                     case 6:
-                        resp = SendCmd_GetRes(ref cmdCxt, "AT#MONI=0\r");
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SGACT=1,0\r");
 
-                        if (resp != null)
+                        if (tmpStr != null)
                         {
-                            if (resp.Contains("\r\nOK\r\n"))
+                            if (tmpStr.Contains("\r\nOK\r\n"))
                                 DoNext++;
                         }
                         break;
 
                     case 7:
-                        resp = SendCmd_GetRes(ref cmdCxt, "AT+CSQ\r");
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGDCONT=1,\"IP\",\"" + moduleInfo.Apn + "\"\r");
 
-                        if (resp != null)
+                        if (tmpStr != null)
                         {
-                            if (resp.Contains("\r\nOK\r\n"))
-                            {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
                                 DoNext++;
-                                csq = int.Parse(new string(SubArray(cmdCxt.buffer, "+CSQ: ", ",")));
-                            }
                         }
                         break;
 
                     case 8:
-                        resp = SendCmd_GetRes(ref cmdCxt, "AT#MONI\r");
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SGACT=1,1\r", 10000);
 
-                        if (resp != null)
+                        if (tmpStr != null)
                         {
-                            if (resp.Contains("\r\nOK\r\n"))
+                            if (tmpStr.Contains("\r\nOK\r\n"))
                             {
                                 DoNext++;
-                                rsrp = int.Parse(new string(SubArray(cmdCxt.buffer, "RSRP:", " RSRQ:")));
-                                rsrq = int.Parse(new string(SubArray(cmdCxt.buffer, "RSRQ:", " TAC:")));
-                                InfoAppendText("\nTAC: ");
-                                InfoAppendText(new string(SubArray(cmdCxt.buffer, "TAC:", " Id:")));
-                                InfoAppendText(", Cell ID: ");
-                                InfoAppendText(new string(SubArray(cmdCxt.buffer, " Id:", " EARFCN:")));
+                                tmpStr = new string(SubArray(cmdCxt.buffer, "#SGACT: ", "\r\nOK"));
+                                moduleInfo.Ip = RemoveAT(tmpStr);
                             }
                         }
                         break;
 
-                    case 0xFF:
-                        cont = false;
+                    case 9:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#MONI=0\r");
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            {
+                                DoNext++;
+                                thisTick = Environment.TickCount;
+                            }
+                        }
+                        break;
+
+                    case 10:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CSQ\r");
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            {
+                                DoNext++;
+                                moduleInfo.Csq = new string(SubArray(cmdCxt.buffer, "+CSQ: ", ","));
+                                moduleInfo.BitErrRate = new string(SubArray(cmdCxt.buffer, ",", "\r\nOK"));
+                            }
+                        }
+                        break;
+
+                    case 11:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#MONI\r");
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            {
+                                DoNext++;
+                                moduleInfo.Rsrp = new string(SubArray(cmdCxt.buffer, "RSRP:", " RSRQ:"));
+                                moduleInfo.Rsrq = new string(SubArray(cmdCxt.buffer, "RSRQ:", " TAC:"));
+                                moduleInfo.Tac = new string(SubArray(cmdCxt.buffer, "TAC:", " Id:"));
+                                moduleInfo.CellID = new string(SubArray(cmdCxt.buffer, " Id:", " EARFCN:"));
+                            }
+                        }
+                        break;
+
+                    case 12:
+                        InfoWriteText("Module:          " + moduleInfo.Name);
+                        InfoAppendText("\nIMEI:            " + moduleInfo.Imei);
+                        InfoAppendText("\nCIMI:            " + moduleInfo.Cimi);
+                        InfoAppendText("\nCCID:            " + moduleInfo.Ccid);
+                        InfoAppendText("\nOperator:        " + moduleInfo.Operator);
+                        InfoAppendText("\nNetwork " + "(" + moduleInfo.NetworkType + "):     ");
+
+                        switch (int.Parse(moduleInfo.NetworkType))
+                        {
+                            case 0:
+                                InfoAppendText("GSM");
+                                break;
+
+                            case 1:
+                                InfoAppendText("GSM Compact");
+                                break;
+
+                            case 2:
+                                InfoAppendText("UTRAN");
+                                break;
+
+                            case 3:
+                                InfoAppendText("GSM w/EGPRS");
+                                break;
+
+                            case 4:
+                                InfoAppendText("UTRAN w/HSDPA");
+                                break;
+
+                            case 5:
+                                InfoAppendText("UTRAN w/HSUPA");
+                                break;
+
+                            case 6:
+                                InfoAppendText("UTRAN w/HSDPA and HSUPA");
+                                break;
+
+                            case 7:
+                                InfoAppendText("E-UTRAN");
+                                break;
+
+                            case 8:
+                                InfoAppendText("CAT M1");
+                                break;
+
+                            case 9:
+                                InfoAppendText("NB IoT");
+                                break;
+
+                            default:
+                                InfoAppendText("Unknown");
+                                break;
+                        }
+
+                        InfoAppendText("\nIP:              " + moduleInfo.Ip);
+                        InfoAppendText("\nTAC(LAC):        " + moduleInfo.Tac + " (" + Convert.ToUInt32(moduleInfo.Tac, 16).ToString() + ")");
+                        InfoAppendText("\nCell ID:         " + moduleInfo.CellID + " (" + Convert.ToUInt32(moduleInfo.CellID, 16).ToString() + ")");
+                        csq = int.Parse(moduleInfo.Csq);
+                        InfoAppendText("\nQuality" + " (" + csq.ToString("D2") + "):    ");
+
+                        switch(csq)
+                        {
+                            case 0:
+                                rssi = -113;
+                                break;
+
+                            case 1:
+                                rssi = -111;
+                                break;
+
+                            case 31:
+                                rssi = -51;
+                                break;
+
+                            case 99:
+                                rssi = -150;
+                                break;
+
+                            default:
+                                rssi = 2 * csq - 113;
+                                break;
+                        }
+
+                        if (rssi > (-60))
+                            InfoAppendText(rssi.ToString() + "dBm (Excellent)", Color.Blue);
+                        else if (rssi > (-70))
+                            InfoAppendText(rssi.ToString() + "dBm (Good)", Color.Green);
+                        else if (rssi > (-80))
+                            InfoAppendText(rssi.ToString() + "dBm (Low)", Color.Green);
+                        else if (rssi > (-90))
+                            InfoAppendText(rssi.ToString() + "dBm (Very low)", Color.OrangeRed);
+                        else
+                            InfoAppendText(rssi.ToString() + "dBm (No signal)", Color.Red);
+
+                        ber = int.Parse(moduleInfo.BitErrRate);
+                        InfoAppendText("\nError rate " + "(" + ber.ToString("D2") + "): ");
+
+                        switch (ber)
+                        {
+                            case 0:
+                                InfoAppendText("Less than 0.2%", Color.Blue);
+                                break;
+
+                            case 1:
+                                InfoAppendText("0.2% to 0.4%", Color.Blue);
+                                break;
+
+                            case 2:
+                                InfoAppendText("0.4% to 0.8%", Color.Green);
+                                break;
+
+                            case 3:
+                                InfoAppendText("0.8% to 1.6%", Color.Green);
+                                break;
+
+                            case 4:
+                                InfoAppendText("1.6% to 3.2%", Color.Orange);
+                                break;
+
+                            case 5:
+                                InfoAppendText("3.2% to 6.4%", Color.Orange);
+                                break;
+
+                            case 6:
+                                InfoAppendText("6.4% to 12.8%", Color.OrangeRed);
+                                break;
+
+                            case 7:
+                                InfoAppendText("More than 12.8%", Color.OrangeRed);
+                                break;
+
+                            default:
+                                InfoAppendText("Not known or not detectable", Color.Red);
+                                break;
+                        }
+
+                        rsrp = int.Parse(moduleInfo.Rsrp);
+                        InfoAppendText("\nRSRP:            ");
+
+                        if (rsrp >= -80)
+                            InfoAppendText(moduleInfo.Rsrp, Color.Blue);
+                        else if (rsrp >= -90)
+                            InfoAppendText(moduleInfo.Rsrp, Color.Green);
+                        else if (rsrp >= -100)
+                            InfoAppendText(moduleInfo.Rsrp, Color.Orange);
+                        else if (rsrp >= -110)
+                            InfoAppendText(moduleInfo.Rsrp, Color.OrangeRed);
+                        else
+                            InfoAppendText(moduleInfo.Rsrp, Color.Red);
+
+                        rsrq = int.Parse(moduleInfo.Rsrq);
+                        InfoAppendText("\nRSRQ:            ");
+
+                        if (rsrq >= -10)
+                            InfoAppendText(moduleInfo.Rsrq, Color.Blue);
+                        else if (rsrq > -15)
+                            InfoAppendText(moduleInfo.Rsrq, Color.Green);
+                        else if (rsrq > -18)
+                            InfoAppendText(moduleInfo.Rsrq, Color.Orange);
+                        else if (rsrq > -20)
+                            InfoAppendText(moduleInfo.Rsrq, Color.OrangeRed);
+                        else
+                            InfoAppendText(moduleInfo.Rsrq, Color.Red);
+
+                        if (Thread_Mode == ThreadMode.RF_TEST)
+                        {
+                            DoNext = 10;
+                            WriteLogFile(rsrp, rsrq, rssi);
+                            PlotData(rsrp, rsrq, rssi, TickStart++);
+
+                            int t = (Environment.TickCount - thisTick);
+
+                            if (t > 0)
+                                Thread.Sleep(1000 - t);
+
+                            thisTick = Environment.TickCount;
+                        }
+                        else
+                            DoNext++;
+                        break;
+
+                    case 13:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443,0,,,1,120,1", 5000);
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                                DoNext++;
+                        }
+                        break;
+
+                    case 14:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443,0,,,1,120,1", 10000, false);
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("#HTTPRING:"))
+                            {
+                                tmpStr = new string(SubArray(cmdCxt.buffer, ",\"", "\r\n"));
+                                RemoveStr(ref tmpStr, '\r', '\0');
+                                RemoveStr(ref tmpStr, '\n', '\0');
+
+                                if (tmpStr != null)
+                                {
+                                    try
+                                    {
+                                        downloadCxt.FileSize = int.Parse(tmpStr);
+                                    }
+                                    catch
+                                    {
+                                        downloadCxt.FileSize = 0;
+                                    }
+                                }
+
+                                if (downloadCxt.FileSize == 0)
+                                {
+                                    DoNext += 2;
+                                    InfoAppendText("\nFile size = 0, error");
+                                }
+                                else
+                                {
+                                    DoNext++;
+                                    downloadCxt.DownloadedSize = 0;
+                                    ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
+                                    downloadCxt.sW = new StreamWriter(downloadCxt.FileName);
+                                    InfoAppendText("\nFile size = " + downloadCxt.FileSize + " byte(s)");
+                                }
+                            }
+                        }
+                        break;
+
+                    case 15:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPRCV=1500\r", 10000, false);
+
+                        if (tmpStr != null)
+                        {
+                            tmpArr = HttpRcv_GetData(cmdCxt.buffer, cmdCxt.len);
+
+                            if (tmpArr != null)
+                            {
+                                downloadCxt.sW.WriteLine(new String(tmpArr));
+                                downloadCxt.DownloadedSize += tmpArr.Length;
+                                ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
+
+                                if (downloadCxt.DownloadedSize >= downloadCxt.FileSize)
+                                    DoNext++;
+                            }
+                        }
+                        break;
+
+                    case 16:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SH=1\r");
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                                DoNext++;
+                        }
                         break;
 
                     default:
-                        DoNext = 7;
-                        WriteLogFile(rsrp, rsrq, csq);
-
-                        if (zedGraph1.GraphPane.CurveList.Count <= 0)
-                            break;
-
-                        LineItem curve1 = zedGraph1.GraphPane.CurveList[0] as LineItem;
-                        LineItem curve2 = zedGraph1.GraphPane.CurveList[1] as LineItem;
-                        LineItem curve3 = zedGraph1.GraphPane.CurveList[2] as LineItem;
-
-                        if (curve1 == null)
-                            break;
-
-                        if (curve2 == null)
-                            break;
-
-                        if (curve3 == null)
-                            break;
-
-                        IPointListEdit list1 = curve1.Points as IPointListEdit;
-                        IPointListEdit list2 = curve2.Points as IPointListEdit;
-                        IPointListEdit list3 = curve3.Points as IPointListEdit;
-
-                        if (list1 == null)
-                            break;
-
-                        if (list2 == null)
-                            break;
-
-                        if (list3 == null)
-                            break;
-
-                        double time = (Environment.TickCount - TickStart) / 1000.0;
-
-                        list1.Add(time, rsrp);
-                        list2.Add(time, rsrq);
-                        list2.Add(time, csq);
-
-                        Scale xScale = zedGraph1.GraphPane.XAxis.Scale;
-
-                        if (time > xScale.Max - xScale.MajorStep)
-                        {
-                            if (viewMode)
-                            {
-                                xScale.Max = time + xScale.MajorStep;
-                                xScale.Min = 0;
-                            }
-                            else
-                            {
-                                xScale.Max = time + xScale.MajorStep;
-                                xScale.Min = xScale.Max - 30.0;
-                            }
-                        }
-
-                        zedGraph1.AxisChange();
-                        zedGraph1.Invalidate();
-                        zedGraph1.Update();
-                        Thread.Sleep(900);
+                        downloadCxt.sW.Close();
+                        Thread_Enbale = 0;
                         break;
                 }
             }
 
+            serialPort1.DtrEnable = false;
+            serialPort1.RtsEnable = false;
+            serialPort1.Close();
+            serialPort1.Dispose();
+
+            if (Thread_Mode == ThreadMode.RF_TEST)
+                bt_RFTest_Update(null);
+            else
+                bt_Download_Update(null);
+
+            Thread_Task.Abort();
             Thread_Task.Interrupt();
             Thread_Task.Abort();
             Thread_Task.Join();
@@ -1098,35 +1583,22 @@ namespace NBST
             {
                 if (bt_Download.Text == "Download")
                 {
-                    DoNext = 0;
-                    serialPort1.PortName = cb_Port1.Text;
-                    serialPort1.BaudRate = 115200;
-                    serialPort1.WriteTimeout = 1000;
-                    serialPort1.DtrEnable = true;
-                    serialPort1.Open();
-
+                    Thread_Mode = ThreadMode.DOWNLOAD;
+                    Thread_Enbale = 1;
                     bt_RFTest.Enabled = false;
                     bt_Scan.Enabled = false;
+                    tb_Apn.Enabled = false;
+                    tb_Url.Enabled = false;
+                    tb_Md5.Enabled = false;
 
-                    Thread_Task = new Thread(() => Download()); // Create new app tasks
+                    Thread_Task = new Thread(() => Thread_Tasks()); // Create new app tasks
                     Thread_Task.Start();
 
                     bt_Download.Text = "Stop";
                 }
                 else
                 {
-                    DoNext = 0xFF;
-                    Thread_Task.Interrupt();
-                    Thread_Task.Abort();
-                    Thread_Task.Join();
-                    while (Thread_Task.IsAlive) ;
-
-                    serialPort1.DtrEnable = false;
-                    serialPort1.Close();
-                    serialPort1.Dispose();
-                    bt_RFTest.Enabled = true;
-                    bt_Scan.Enabled = true;
-                    bt_Download.Text = "Download";
+                    Thread_Enbale = 0;
                 }
             }
             catch (Exception ex)
@@ -1135,71 +1607,41 @@ namespace NBST
             }
         }
 
-        private void Download()
-        {
-            int idx = 0;
-            long tick = 0;
-            bool cont = true;
-            string res = null;
-            /*
-            while(cont)
-            {
-                switch(DoNext)
-                {
-                    case 0:
-                        DoNext++;
-                        tick = Tick_Get();
-                        serialPort1.Write("AT#MONI=0\r");
-                        PrintTxDebug("\nTX: AT#MONI=0");
-                        res = "OK";
-                        break;
-
-                    case 2:
-                        DoNext++;
-                        tick = Tick_Get();
-                        serialPort1.Write("AT#MONI\r");
-                        PrintTxDebug("\nTX: AT#MONI");
-                        res = "OK";
-                        break;
-
-                    case 1:
-                    case 3:
-                        if (serialPort1.BytesToRead > 0)
-                        {
-                            PrintRxDebug("\nRX: ");
-
-                            for (int i = 0; i < serialPort1.BytesToRead; i++)
-                            {
-                                char c = (char)serialPort1.ReadByte();
-
-                                PrintRxDebug(c.ToString());
-
-                                if (FindString(c, ref idx, res))
-                                    DoNext++;
-                            }
-                        }
-                        else if (Tick_IsOverMs(ref tick, 500))
-                        {
-                            DoNext --;
-                            PrintDebug("\nRX Timeout");
-                        }
-                        break;
-
-                    case 0xFF:
-                        cont = false;
-                        break;
-                }
-            }
-            */
-            Thread_Task.Suspend();
-        }
-
         private void cb_ViewMode_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (cb_ViewMode.Text == "Scroll")
                 viewMode = true;
             else
                 viewMode = false;
+        }
+
+        private void cb_Port1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            portName = cb_Port1.Text;
+        }
+
+        private void tb_Url_TextChanged(object sender, EventArgs e)
+        {
+            Uri myUri;
+            bool result = Uri.TryCreate(tb_Url.Text, UriKind.Absolute, out myUri) && myUri.Scheme == Uri.UriSchemeHttps;
+
+            if (result)
+            {
+                downloadCxt.Host = myUri.Host;
+                downloadCxt.FilePath = myUri.AbsolutePath;
+            }
+            else
+                MessageBox.Show("Invalid HTTPS URL", "Error");
+        }
+
+        private void tb_Apn_TextChanged(object sender, EventArgs e)
+        {
+            moduleInfo.Apn=tb_Apn.Text;
+        }
+
+        private void tb_Md5_TextChanged(object sender, EventArgs e)
+        {
+            downloadCxt.Md5 = tb_Md5.Text;
         }
     }
 }
