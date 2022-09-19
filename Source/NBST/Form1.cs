@@ -39,7 +39,7 @@ namespace NBST
             public int len;
             public int findIdx;
             public int donext;
-            public long tick;
+            public UInt32 tick;
         }
 
         private struct DownloadCxt
@@ -108,7 +108,7 @@ namespace NBST
         private StreamWriter sW = null;
         private string logfileName = null;
         private long line = 0;
-        private int TickStart = 0;
+        private UInt32 TickStart = 0;
         private volatile string portName = null;
 
         private string[] UsbPid = new string[3]
@@ -118,39 +118,24 @@ namespace NBST
         /* LE910 */ "VID_1BC7&PID_1201"
         };
 
-        private long Tick_Get()
+        private UInt32 Tick_Get()
         {
-            return DateTime.Now.Ticks;
+            return (UInt32)Environment.TickCount;
         }
 
-        private long Tick_DifUs(long tk)
+        private UInt32 Tick_DifMs(UInt32 tk)
         {
-            return (long)((UInt64)(DateTime.Now.Ticks - tk)/10);
+            UInt32 t = (UInt32)Environment.TickCount;
+            t = (UInt32)(t - tk);
+
+            return t;
         }
 
-        private long Tick_DifMs(long tk)
+        private bool Tick_IsOverMs(ref UInt32 tk, UInt32 ms)
         {
-            return (long)((UInt64)(DateTime.Now.Ticks - tk) / 10000);
-        }
-
-        private bool Tick_IsOverUs(ref long tk, long ms)
-        {
-            long dif = (long)((UInt64)(DateTime.Now.Ticks - tk)/10);
+            UInt32 dif = Tick_DifMs(tk);
 
             if (dif > ms)
-            {
-                tk = Tick_Get();
-                return true;
-            }
-
-            return false;
-        }
-
-        private bool Tick_IsOverMs(ref long tk, long ms)
-        {
-            long dif = (long)((UInt64)(DateTime.Now.Ticks - tk) / 10000);
-
-            if(dif > ms)
             {
                 tk = Tick_Get();
                 return true;
@@ -245,7 +230,7 @@ namespace NBST
             ChrArr = newChrArr;
         }
 
-        private void RemoveStr(ref string Str, char oldChar, char newChar)
+        private void ReplaceStr(ref string Str, char oldChar, char newChar)
         {
             char[] Arr = Str.ToCharArray();
 
@@ -463,10 +448,10 @@ namespace NBST
             int loop = 0;
             bool found = false;
             string resp = null;
-            long tick = Tick_Get();
+            UInt32 tick = Tick_Get();
 
             CmdCxt cmdCxt = new CmdCxt();
-            cmdCxt.buffer = new char[1024];
+            cmdCxt.buffer = new char[4096];
             cmdCxt.donext = 0;
             cmdCxt.findIdx = 0;
 
@@ -645,6 +630,13 @@ namespace NBST
             {
                 downloadCxt.Host = myUri.Host;
                 downloadCxt.FilePath = myUri.AbsolutePath;
+                downloadCxt.FileName = Path.GetFileName(downloadCxt.FilePath);
+
+                if (downloadCxt.FileName == null)
+                    MessageBox.Show("No file name", "Error");
+
+                if (downloadCxt.FilePath == null)
+                    MessageBox.Show("No file path", "Error");
             }
             else
                 MessageBox.Show("Invalid HTTPS URL", "Error");
@@ -806,6 +798,41 @@ namespace NBST
             return (-1);
         }
 
+        private int Get_LastIndex(char[] buffer, string para, HeadTail head_tail)
+        {
+            int i, j;
+            int l = (-1);
+            char[] p = para.ToCharArray();
+
+            for (i = 0, j = 0; i < buffer.Length; i++)
+            {
+                if (buffer[i] == p[j])
+                {
+                    if (++j == p.Length)
+                    {
+                        if (head_tail == HeadTail.head)
+                            i -= (j - 1);
+                        /*
+                        PrintDebug("\nIdx=" + i.ToString() + ", ");
+
+                        if (isPrintable(buffer[i]))
+                            PrintDebug(buffer[i].ToString());
+                        else
+                            PrintDebug("<" + Convert.ToByte(buffer[i]).ToString("X2") + ">");
+                        */
+                        l = i;
+                        j = 0;
+                    }
+                }
+                else if (buffer[i] == p[0])
+                    j = 1;
+                else
+                    j = 0;
+            }
+
+            return l;
+        }
+
         private char[] SubArray(char[] buffer, int headIdx, int tailIdx)
         {
             if ((headIdx >= 0) && (tailIdx >= 0) && (headIdx < tailIdx))
@@ -832,7 +859,27 @@ namespace NBST
             return SubArray(buffer, head, tail);
         }
 
-        private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd, long timeout, bool AT_Track)
+        private char[] SubArray(char[] buffer, string str_head, string str_tail, bool last)
+        {
+            int head, tail;
+
+            if (last)
+            {
+                head = Get_LastIndex(buffer, str_head, HeadTail.tail) + 1;
+                tail = Get_LastIndex(buffer, str_tail, HeadTail.head) - 1;
+            }
+            else
+            {
+                head = Get_1stIndex(buffer, str_head, HeadTail.tail) + 1;
+                tail = Get_1stIndex(buffer, str_tail, HeadTail.head) - 1;
+            }
+
+            //PrintDebug("\n--> head " + head.ToString() + "tail " + tail.ToString());
+
+            return SubArray(buffer, head, tail);
+        }
+
+        private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd, UInt32 timeout, bool AT_Track)
         {
             try
             {
@@ -840,7 +887,7 @@ namespace NBST
                 {
                     case 0:
                         cmdCxt.donext++;
-                        cmdCxt.buffer = new char[1024];
+                        cmdCxt.buffer = new char[4096];
                         cmdCxt.tick = Tick_Get();
                         serialPort1.Write(cmd);
                         PrintTxDebug("\nTX: " + cmd);
@@ -852,12 +899,12 @@ namespace NBST
                             cmdCxt.donext++;
                             cmdCxt.len = 0;
                             cmdCxt.tick = Tick_Get();
-                            //PrintRxDebug("\nRX: ");
+                            PrintRxDebug("\nRX: ");
                         }
                         else if (Tick_IsOverMs(ref cmdCxt.tick, timeout))
                         {
                             cmdCxt.donext--;
-                            //PrintDebug("\nRX Timeout");
+                            PrintDebug("\nRX Timeout");
                         }
                         break;
 
@@ -915,7 +962,88 @@ namespace NBST
             return null;
         }
 
-        private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd, long timeout)
+        private string Get_ExtResp(ref CmdCxt cmdCxt, string escSeq, UInt32 timeout)
+        {
+            try
+            {
+                switch (cmdCxt.donext)
+                {
+                    case 0:
+                        cmdCxt.donext++;
+                        cmdCxt.buffer = new char[4096];
+                        cmdCxt.tick = Tick_Get();
+                        break;
+
+                    case 1:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            cmdCxt.donext++;
+                            cmdCxt.len = 0;
+                            cmdCxt.tick = Tick_Get();
+                            PrintRxDebug("\nRX: ");
+                        }
+                        else if (Tick_IsOverMs(ref cmdCxt.tick, timeout))
+                        {
+                            cmdCxt.donext--;
+                            PrintDebug("\nRX Timeout");
+                        }
+                        break;
+
+                    case 2:
+                        if (serialPort1.BytesToRead > 0)
+                        {
+                            for (int i = 0; i < serialPort1.BytesToRead; i++)
+                            {
+                                char c = (char)serialPort1.ReadByte();
+
+                                cmdCxt.buffer[cmdCxt.len++] = c;
+
+                                if (cmdCxt.len > cmdCxt.buffer.Length)
+                                    cmdCxt.len = 0;
+
+                                if (escSeq != null)
+                                {
+                                    if (FindString(c, ref cmdCxt.findIdx, escSeq))
+                                        cmdCxt.donext++;
+                                }
+
+                                
+                                //PrintRxDebug("\nIdx: " + cmdCxt.findIdx.ToString() + ", ");
+
+                                if (isPrintable(c))
+                                    PrintRxDebug(c.ToString());
+                                else
+                                    PrintRxDebug("<" + Convert.ToByte(c).ToString("X2") + ">");
+                                
+                            }
+
+                            cmdCxt.tick = Tick_Get();
+                        }
+                        else if (Tick_IsOverMs(ref cmdCxt.tick, 100))
+                            cmdCxt.donext++;
+                        break;
+
+                    default:
+                        char[] chr = new char[cmdCxt.len];
+
+                        for (int i = 0; i < cmdCxt.len; i++)
+                            chr[i] = cmdCxt.buffer[i];
+
+                        cmdCxt.buffer = chr;
+                        cmdCxt.donext = 0;
+
+                        return new string(chr);
+                }
+            }
+            catch (Exception ex)
+            {
+                //PrintDebug(ex.ToString());
+            }
+
+            return null;
+        }
+
+        private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd, UInt32 timeout)
         {
             return SendCmd_GetRes(ref cmdCxt, cmd, timeout, true);
         }
@@ -995,8 +1123,8 @@ namespace NBST
             }
 
             atResp = new string(arr);
-            RemoveStr(ref atResp, '\r', '\0');
-            RemoveStr(ref atResp, '\n', '\0');
+            ReplaceStr(ref atResp, '\r', '\0');
+            ReplaceStr(ref atResp, '\n', '\0');
 
             return atResp;
         }
@@ -1083,7 +1211,7 @@ namespace NBST
 
             CmdCxt cmdCxt = new CmdCxt();
 
-            cmdCxt.buffer = new char[1024];
+            cmdCxt.buffer = new char[4096];
             cmdCxt.donext = 0;
             cmdCxt.findIdx = 0;
 
@@ -1111,7 +1239,7 @@ namespace NBST
             DoNext = 0;
             InfoWriteText("Reading module info...");
 
-            int thisTick = Environment.TickCount;
+            UInt32 thisTick = Tick_Get();
 
             while (Thread_Enbale == 1)
             {
@@ -1202,8 +1330,8 @@ namespace NBST
                                 TickStart = 0;
                                 moduleInfo.Operator = new string(SubArray(cmdCxt.buffer, ",\"", "\","));
                                 moduleInfo.NetworkType = new string(SubArray(cmdCxt.buffer, "\",", "\r\nOK"));
-                                RemoveStr(ref moduleInfo.NetworkType, '\r', '\0');
-                                RemoveStr(ref moduleInfo.NetworkType, '\n', '\0');
+                                ReplaceStr(ref moduleInfo.NetworkType, '\r', '\0');
+                                ReplaceStr(ref moduleInfo.NetworkType, '\n', '\0');
                             }
                         }
                         break;
@@ -1250,7 +1378,7 @@ namespace NBST
                             if (tmpStr.Contains("\r\nOK\r\n"))
                             {
                                 DoNext++;
-                                thisTick = Environment.TickCount;
+                                thisTick = Tick_Get();
                             }
                         }
                         break;
@@ -1456,40 +1584,66 @@ namespace NBST
                             WriteLogFile(rsrp, rsrq, rssi);
                             PlotData(rsrp, rsrq, rssi, TickStart++);
 
-                            int t = (Environment.TickCount - thisTick);
+                            UInt32 t = Tick_DifMs(thisTick);
 
-                            if (t > 0)
-                                Thread.Sleep(1000 - t);
+                            if ((t > 0) && (t < 1000))
+                                Thread.Sleep(1000 - (int)t);
 
-                            thisTick = Environment.TickCount;
+                            thisTick = Tick_Get();
                         }
                         else
                             DoNext++;
                         break;
 
                     case 13:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443,0,,,1,120,1", 5000);
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443,0,,,1,120,1\r", 5000);
 
                         if (tmpStr != null)
                         {
                             if (tmpStr.Contains("\r\nOK\r\n"))
                                 DoNext++;
+                            else if (tmpStr.Contains("\r\nERROR\r\n"))
+                            {
+                                DoNext = 17;
+                                InfoAppendText("\n\nCan not connect to host " + downloadCxt.Host, Color.Red);
+                            }
                         }
                         break;
 
                     case 14:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443,0,,,1,120,1", 10000, false);
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPQRY=0,0,\"" + downloadCxt.FilePath + "\"\r", 30000);
 
                         if (tmpStr != null)
                         {
+                            //PrintRxDebug("\n--> " + tmpStr);
+
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                                DoNext++;
+                            else
+                            {
+                                DoNext = 17;
+                                InfoAppendText("\n\nCan not download file " + downloadCxt.FileName, Color.Red);
+                            }
+                        }
+                        break;
+
+                    case 15:
+                        tmpStr = Get_ExtResp(ref cmdCxt, null, 30000);
+
+                        if (tmpStr != null)
+                        {
+                            DoNext++;
+
                             if (tmpStr.Contains("#HTTPRING:"))
                             {
-                                tmpStr = new string(SubArray(cmdCxt.buffer, ",\"", "\r\n"));
-                                RemoveStr(ref tmpStr, '\r', '\0');
-                                RemoveStr(ref tmpStr, '\n', '\0');
+                                tmpStr = new string(SubArray(cmdCxt.buffer, "\",", "\r\n", true));
+                                ReplaceStr(ref tmpStr, '\r', '\0');
+                                ReplaceStr(ref tmpStr, '\n', '\0');
 
                                 if (tmpStr != null)
                                 {
+                                    PrintDebug("\n\nFound: " + tmpStr);
+
                                     try
                                     {
                                         downloadCxt.FileSize = int.Parse(tmpStr);
@@ -1502,23 +1656,23 @@ namespace NBST
 
                                 if (downloadCxt.FileSize == 0)
                                 {
-                                    DoNext += 2;
-                                    InfoAppendText("\nFile size = 0, error");
+                                    DoNext++;
+                                    downloadCxt.sW = null;
+                                    InfoAppendText("\n\nFile size = 0, error", Color.Red); ;
                                 }
                                 else
                                 {
-                                    DoNext++;
                                     downloadCxt.DownloadedSize = 0;
                                     ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
                                     downloadCxt.sW = new StreamWriter(downloadCxt.FileName);
-                                    InfoAppendText("\nFile size = " + downloadCxt.FileSize + " byte(s)");
+                                    InfoAppendText("\n\nFile size = " + downloadCxt.FileSize + " byte(s)", Color.Blue);
                                 }
                             }
                         }
                         break;
 
-                    case 15:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPRCV=1500\r", 10000, false);
+                    case 16:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPRCV=1500\r", 30000, false);
 
                         if (tmpStr != null)
                         {
@@ -1531,12 +1685,20 @@ namespace NBST
                                 ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
 
                                 if (downloadCxt.DownloadedSize >= downloadCxt.FileSize)
+                                {
                                     DoNext++;
+                                    InfoAppendText("\n\nDownload complete", Color.Green);
+                                }
+                            }
+                            else if (tmpStr.Contains("\r\nERROR\r\n"))
+                            {
+                                DoNext++;
+                                InfoAppendText("\n\nDownload fail", Color.Red);
                             }
                         }
                         break;
 
-                    case 16:
+                    case 17:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SH=1\r");
 
                         if (tmpStr != null)
@@ -1547,7 +1709,9 @@ namespace NBST
                         break;
 
                     default:
-                        downloadCxt.sW.Close();
+                        if (downloadCxt.sW != null)
+                            downloadCxt.sW.Close();
+
                         Thread_Enbale = 0;
                         break;
                 }
@@ -1629,6 +1793,13 @@ namespace NBST
             {
                 downloadCxt.Host = myUri.Host;
                 downloadCxt.FilePath = myUri.AbsolutePath;
+                downloadCxt.FileName = Path.GetFileName(downloadCxt.FilePath);
+
+                if (downloadCxt.FileName == null)
+                    MessageBox.Show("No file name", "Error");
+
+                if (downloadCxt.FilePath == null)
+                    MessageBox.Show("No file path", "Error");
             }
             else
                 MessageBox.Show("Invalid HTTPS URL", "Error");
