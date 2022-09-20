@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.tabCtrl1 = new System.Windows.Forms.TabControl();
             this.tabGraph = new System.Windows.Forms.TabPage();
             this.cb_ViewMode = new System.Windows.Forms.ComboBox();
@@ -314,6 +315,7 @@
             this.Controls.Add(this.bt_Download);
             this.Controls.Add(this.bt_RFTest);
             this.Controls.Add(this.cb_Port1);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Form1";
             this.Text = "NB Test Tool";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);

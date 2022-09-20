@@ -16,6 +16,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 using System.Runtime.Remoting.Messaging;
 using System.Runtime.ConstrainedExecution;
 using System.Windows.Forms.VisualStyles;
+using System.Net;
 
 namespace NBST
 {
@@ -50,7 +51,7 @@ namespace NBST
             public string Md5;
             public int FileSize;
             public int DownloadedSize;
-            public StreamWriter sW;
+            public BinaryWriter sW;
         }
 
         private struct ModuleInfo
@@ -340,6 +341,21 @@ namespace NBST
             }
 
             PrintDebug(msg, Color.Red);
+        }
+
+        private void PrintData(string msg, char[] data, int len, Color color)
+        {
+            string s = msg + len.ToString() + "byte(s)\n";
+
+            for (int i = 0; i < len; i++)
+            {
+                if (isPrintable(data[i]))
+                    s += data[i].ToString();
+                else
+                    s += "<" + Convert.ToByte(data[i]).ToString("X2") + ">";
+            }
+
+            PrintDebug(s + "\n\n", color);
         }
 
         private string FileNameGenerate(string prefix)
@@ -890,7 +906,7 @@ namespace NBST
                         cmdCxt.buffer = new char[4096];
                         cmdCxt.tick = Tick_Get();
                         serialPort1.Write(cmd);
-                        PrintTxDebug("\nTX: " + cmd);
+                        //PrintTxDebug("\nTX: " + cmd);
                         break;
 
                     case 1:
@@ -899,12 +915,12 @@ namespace NBST
                             cmdCxt.donext++;
                             cmdCxt.len = 0;
                             cmdCxt.tick = Tick_Get();
-                            PrintRxDebug("\nRX: ");
+                            //PrintRxDebug("\nRX: ");
                         }
                         else if (Tick_IsOverMs(ref cmdCxt.tick, timeout))
                         {
                             cmdCxt.donext--;
-                            PrintDebug("\nRX Timeout");
+                            //PrintDebug("\nRX Timeout");
                         }
                         break;
 
@@ -980,12 +996,12 @@ namespace NBST
                             cmdCxt.donext++;
                             cmdCxt.len = 0;
                             cmdCxt.tick = Tick_Get();
-                            PrintRxDebug("\nRX: ");
+                            //PrintRxDebug("\nRX: ");
                         }
                         else if (Tick_IsOverMs(ref cmdCxt.tick, timeout))
                         {
                             cmdCxt.donext--;
-                            PrintDebug("\nRX Timeout");
+                            //PrintDebug("\nRX Timeout");
                         }
                         break;
 
@@ -1007,14 +1023,14 @@ namespace NBST
                                         cmdCxt.donext++;
                                 }
 
-                                
+                                /*
                                 //PrintRxDebug("\nIdx: " + cmdCxt.findIdx.ToString() + ", ");
-
+                                
                                 if (isPrintable(c))
                                     PrintRxDebug(c.ToString());
                                 else
                                     PrintRxDebug("<" + Convert.ToByte(c).ToString("X2") + ">");
-                                
+                                */
                             }
 
                             cmdCxt.tick = Tick_Get();
@@ -1177,24 +1193,25 @@ namespace NBST
 
         private char[] HttpRcv_GetData(in char[] datain, int lenin)
         {
-            int startIdx = Get_1stIndex(datain, "<<<:", HeadTail.tail) + 1;
+            char[] dataout = null;
+            int beginIdx = Get_1stIndex(datain, "<<<", HeadTail.tail) + 1;
+            int endIdx = Get_LastIndex(datain, "\r\nOK\r\n", HeadTail.head);
 
-            if (startIdx < 0)
-                return null;
+            //PrintDebug("\n\nFirst=" + beginIdx.ToString() + "\nLast=" + endIdx.ToString());
+            //PrintData("\nInput: ", datain, lenin, Color.Blue);
 
-            if ((datain[lenin - 6] != '\r')|| (datain[lenin - 5] != '\n'))
-                return null;
+            if ((lenin > 9) && (endIdx > beginIdx))
+            {
+                dataout = new char[endIdx - beginIdx];
 
-            if ((datain[lenin - 4] != 'O') || (datain[lenin - 3] != 'K'))
-                return null;
+                for (int i = beginIdx, j = 0; i < endIdx; i++)
+                {
+                    dataout[j] = datain[beginIdx + j];
+                    j++;
+                }
+            }
 
-            if ((datain[lenin - 2] != '\r') || (datain[lenin - 1] != '\n'))
-                return null;
-
-            char[] dataout = new char[lenin - 6 - startIdx];
-
-            for (int i = 0; i < dataout.Length; i++)
-                dataout[i] = datain[startIdx + i];
+            //PrintData("\nOutput: ", dataout, dataout.Length, Color.Red);
 
             return dataout;
         }
@@ -1414,185 +1431,193 @@ namespace NBST
                         break;
 
                     case 12:
-                        InfoWriteText("Module:          " + moduleInfo.Name);
-                        InfoAppendText("\nIMEI:            " + moduleInfo.Imei);
-                        InfoAppendText("\nCIMI:            " + moduleInfo.Cimi);
-                        InfoAppendText("\nCCID:            " + moduleInfo.Ccid);
-                        InfoAppendText("\nOperator:        " + moduleInfo.Operator);
-                        InfoAppendText("\nNetwork " + "(" + moduleInfo.NetworkType + "):     ");
-
-                        switch (int.Parse(moduleInfo.NetworkType))
+                        try
                         {
-                            case 0:
-                                InfoAppendText("GSM");
-                                break;
+                            InfoWriteText("Module:          " + moduleInfo.Name);
+                            InfoAppendText("\nIMEI:            " + moduleInfo.Imei);
+                            InfoAppendText("\nCIMI:            " + moduleInfo.Cimi);
+                            InfoAppendText("\nCCID:            " + moduleInfo.Ccid);
+                            InfoAppendText("\nOperator:        " + moduleInfo.Operator);
+                            InfoAppendText("\nNetwork " + "(" + moduleInfo.NetworkType + "):     ");
 
-                            case 1:
-                                InfoAppendText("GSM Compact");
-                                break;
+                            switch (int.Parse(moduleInfo.NetworkType))
+                            {
+                                case 0:
+                                    InfoAppendText("GSM");
+                                    break;
 
-                            case 2:
-                                InfoAppendText("UTRAN");
-                                break;
+                                case 1:
+                                    InfoAppendText("GSM Compact");
+                                    break;
 
-                            case 3:
-                                InfoAppendText("GSM w/EGPRS");
-                                break;
+                                case 2:
+                                    InfoAppendText("UTRAN");
+                                    break;
 
-                            case 4:
-                                InfoAppendText("UTRAN w/HSDPA");
-                                break;
+                                case 3:
+                                    InfoAppendText("GSM w/EGPRS");
+                                    break;
 
-                            case 5:
-                                InfoAppendText("UTRAN w/HSUPA");
-                                break;
+                                case 4:
+                                    InfoAppendText("UTRAN w/HSDPA");
+                                    break;
 
-                            case 6:
-                                InfoAppendText("UTRAN w/HSDPA and HSUPA");
-                                break;
+                                case 5:
+                                    InfoAppendText("UTRAN w/HSUPA");
+                                    break;
 
-                            case 7:
-                                InfoAppendText("E-UTRAN");
-                                break;
+                                case 6:
+                                    InfoAppendText("UTRAN w/HSDPA and HSUPA");
+                                    break;
 
-                            case 8:
-                                InfoAppendText("CAT M1");
-                                break;
+                                case 7:
+                                    InfoAppendText("E-UTRAN");
+                                    break;
 
-                            case 9:
-                                InfoAppendText("NB IoT");
-                                break;
+                                case 8:
+                                    InfoAppendText("CAT M1");
+                                    break;
 
-                            default:
-                                InfoAppendText("Unknown");
-                                break;
+                                case 9:
+                                    InfoAppendText("NB IoT");
+                                    break;
+
+                                default:
+                                    InfoAppendText("Unknown");
+                                    break;
+                            }
+
+                            InfoAppendText("\nIP:              " + moduleInfo.Ip);
+                            InfoAppendText("\nTAC(LAC):        " + moduleInfo.Tac + " (" + Convert.ToUInt32(moduleInfo.Tac, 16).ToString() + ")");
+                            InfoAppendText("\nCell ID:         " + moduleInfo.CellID + " (" + Convert.ToUInt32(moduleInfo.CellID, 16).ToString() + ")");
+                            //InfoAppendText("\nQuality" + " (" + moduleInfo.Csq + "):    ");
+                            csq = int.Parse(moduleInfo.Csq);
+                            InfoAppendText("\nQuality" + " (" + csq.ToString("D2") + "):    ");
+
+                            switch (csq)
+                            {
+                                case 0:
+                                    rssi = -113;
+                                    break;
+
+                                case 1:
+                                    rssi = -111;
+                                    break;
+
+                                case 31:
+                                    rssi = -51;
+                                    break;
+
+                                case 99:
+                                    rssi = -150;
+                                    break;
+
+                                default:
+                                    rssi = 2 * csq - 113;
+                                    break;
+                            }
+
+                            if (rssi > (-70))
+                                InfoAppendText(rssi.ToString() + "dBm (Excellent)", Color.Blue);
+                            else if (rssi > (-80))
+                                InfoAppendText(rssi.ToString() + "dBm (Good)", Color.Green);
+                            else if (rssi > (-90))
+                                InfoAppendText(rssi.ToString() + "dBm (Low)", Color.Green);
+                            else if (rssi > (-100))
+                                InfoAppendText(rssi.ToString() + "dBm (Very low)", Color.OrangeRed);
+                            else
+                                InfoAppendText(rssi.ToString() + "dBm (No signal)", Color.Red);
+
+                            ber = int.Parse(moduleInfo.BitErrRate);
+                            InfoAppendText("\nError rate " + "(" + ber.ToString("D2") + "): ");
+
+                            switch (ber)
+                            {
+                                case 0:
+                                    InfoAppendText("Less than 0.2%", Color.Blue);
+                                    break;
+
+                                case 1:
+                                    InfoAppendText("0.2% to 0.4%", Color.Blue);
+                                    break;
+
+                                case 2:
+                                    InfoAppendText("0.4% to 0.8%", Color.Green);
+                                    break;
+
+                                case 3:
+                                    InfoAppendText("0.8% to 1.6%", Color.Green);
+                                    break;
+
+                                case 4:
+                                    InfoAppendText("1.6% to 3.2%", Color.Orange);
+                                    break;
+
+                                case 5:
+                                    InfoAppendText("3.2% to 6.4%", Color.Orange);
+                                    break;
+
+                                case 6:
+                                    InfoAppendText("6.4% to 12.8%", Color.OrangeRed);
+                                    break;
+
+                                case 7:
+                                    InfoAppendText("More than 12.8%", Color.OrangeRed);
+                                    break;
+
+                                default:
+                                    InfoAppendText("Not known or not detectable", Color.Red);
+                                    break;
+                            }
+
+                            rsrp = int.Parse(moduleInfo.Rsrp);
+                            InfoAppendText("\nRSRP:            ");
+
+                            if (rsrp >= -80)
+                                InfoAppendText(moduleInfo.Rsrp, Color.Blue);
+                            else if (rsrp >= -90)
+                                InfoAppendText(moduleInfo.Rsrp, Color.Green);
+                            else if (rsrp >= -100)
+                                InfoAppendText(moduleInfo.Rsrp, Color.Orange);
+                            else if (rsrp >= -110)
+                                InfoAppendText(moduleInfo.Rsrp, Color.OrangeRed);
+                            else
+                                InfoAppendText(moduleInfo.Rsrp, Color.Red);
+
+                            rsrq = int.Parse(moduleInfo.Rsrq);
+                            InfoAppendText("\nRSRQ:            ");
+
+                            if (rsrq >= -10)
+                                InfoAppendText(moduleInfo.Rsrq, Color.Blue);
+                            else if (rsrq > -15)
+                                InfoAppendText(moduleInfo.Rsrq, Color.Green);
+                            else if (rsrq > -18)
+                                InfoAppendText(moduleInfo.Rsrq, Color.Orange);
+                            else if (rsrq > -20)
+                                InfoAppendText(moduleInfo.Rsrq, Color.OrangeRed);
+                            else
+                                InfoAppendText(moduleInfo.Rsrq, Color.Red);
+
+                            if (Thread_Mode == ThreadMode.RF_TEST)
+                            {
+                                DoNext = 10;
+                                WriteLogFile(rsrp, rsrq, rssi);
+                                PlotData(rsrp, rsrq, rssi, TickStart++);
+
+                                UInt32 t = Tick_DifMs(thisTick);
+
+                                if ((t > 0) && (t < 1000))
+                                    Thread.Sleep(1000 - (int)t);
+
+                                thisTick = Tick_Get();
+                            }
+                            else
+                                DoNext++;
                         }
-
-                        InfoAppendText("\nIP:              " + moduleInfo.Ip);
-                        InfoAppendText("\nTAC(LAC):        " + moduleInfo.Tac + " (" + Convert.ToUInt32(moduleInfo.Tac, 16).ToString() + ")");
-                        InfoAppendText("\nCell ID:         " + moduleInfo.CellID + " (" + Convert.ToUInt32(moduleInfo.CellID, 16).ToString() + ")");
-                        csq = int.Parse(moduleInfo.Csq);
-                        InfoAppendText("\nQuality" + " (" + csq.ToString("D2") + "):    ");
-
-                        switch(csq)
-                        {
-                            case 0:
-                                rssi = -113;
-                                break;
-
-                            case 1:
-                                rssi = -111;
-                                break;
-
-                            case 31:
-                                rssi = -51;
-                                break;
-
-                            case 99:
-                                rssi = -150;
-                                break;
-
-                            default:
-                                rssi = 2 * csq - 113;
-                                break;
-                        }
-
-                        if (rssi > (-60))
-                            InfoAppendText(rssi.ToString() + "dBm (Excellent)", Color.Blue);
-                        else if (rssi > (-70))
-                            InfoAppendText(rssi.ToString() + "dBm (Good)", Color.Green);
-                        else if (rssi > (-80))
-                            InfoAppendText(rssi.ToString() + "dBm (Low)", Color.Green);
-                        else if (rssi > (-90))
-                            InfoAppendText(rssi.ToString() + "dBm (Very low)", Color.OrangeRed);
-                        else
-                            InfoAppendText(rssi.ToString() + "dBm (No signal)", Color.Red);
-
-                        ber = int.Parse(moduleInfo.BitErrRate);
-                        InfoAppendText("\nError rate " + "(" + ber.ToString("D2") + "): ");
-
-                        switch (ber)
-                        {
-                            case 0:
-                                InfoAppendText("Less than 0.2%", Color.Blue);
-                                break;
-
-                            case 1:
-                                InfoAppendText("0.2% to 0.4%", Color.Blue);
-                                break;
-
-                            case 2:
-                                InfoAppendText("0.4% to 0.8%", Color.Green);
-                                break;
-
-                            case 3:
-                                InfoAppendText("0.8% to 1.6%", Color.Green);
-                                break;
-
-                            case 4:
-                                InfoAppendText("1.6% to 3.2%", Color.Orange);
-                                break;
-
-                            case 5:
-                                InfoAppendText("3.2% to 6.4%", Color.Orange);
-                                break;
-
-                            case 6:
-                                InfoAppendText("6.4% to 12.8%", Color.OrangeRed);
-                                break;
-
-                            case 7:
-                                InfoAppendText("More than 12.8%", Color.OrangeRed);
-                                break;
-
-                            default:
-                                InfoAppendText("Not known or not detectable", Color.Red);
-                                break;
-                        }
-
-                        rsrp = int.Parse(moduleInfo.Rsrp);
-                        InfoAppendText("\nRSRP:            ");
-
-                        if (rsrp >= -80)
-                            InfoAppendText(moduleInfo.Rsrp, Color.Blue);
-                        else if (rsrp >= -90)
-                            InfoAppendText(moduleInfo.Rsrp, Color.Green);
-                        else if (rsrp >= -100)
-                            InfoAppendText(moduleInfo.Rsrp, Color.Orange);
-                        else if (rsrp >= -110)
-                            InfoAppendText(moduleInfo.Rsrp, Color.OrangeRed);
-                        else
-                            InfoAppendText(moduleInfo.Rsrp, Color.Red);
-
-                        rsrq = int.Parse(moduleInfo.Rsrq);
-                        InfoAppendText("\nRSRQ:            ");
-
-                        if (rsrq >= -10)
-                            InfoAppendText(moduleInfo.Rsrq, Color.Blue);
-                        else if (rsrq > -15)
-                            InfoAppendText(moduleInfo.Rsrq, Color.Green);
-                        else if (rsrq > -18)
-                            InfoAppendText(moduleInfo.Rsrq, Color.Orange);
-                        else if (rsrq > -20)
-                            InfoAppendText(moduleInfo.Rsrq, Color.OrangeRed);
-                        else
-                            InfoAppendText(moduleInfo.Rsrq, Color.Red);
-
-                        if (Thread_Mode == ThreadMode.RF_TEST)
+                        catch
                         {
                             DoNext = 10;
-                            WriteLogFile(rsrp, rsrq, rssi);
-                            PlotData(rsrp, rsrq, rssi, TickStart++);
-
-                            UInt32 t = Tick_DifMs(thisTick);
-
-                            if ((t > 0) && (t < 1000))
-                                Thread.Sleep(1000 - (int)t);
-
-                            thisTick = Tick_Get();
                         }
-                        else
-                            DoNext++;
                         break;
 
                     case 13:
@@ -1601,7 +1626,10 @@ namespace NBST
                         if (tmpStr != null)
                         {
                             if (tmpStr.Contains("\r\nOK\r\n"))
+                            {
                                 DoNext++;
+                                InfoAppendText("\n\nConnected to host " + downloadCxt.Host, Color.Blue);
+                            }
                             else if (tmpStr.Contains("\r\nERROR\r\n"))
                             {
                                 DoNext = 17;
@@ -1618,7 +1646,10 @@ namespace NBST
                             //PrintRxDebug("\n--> " + tmpStr);
 
                             if (tmpStr.Contains("\r\nOK\r\n"))
+                            {
                                 DoNext++;
+                                InfoAppendText("\n\nStarting download file " + downloadCxt.FileName, Color.Blue);
+                            }
                             else
                             {
                                 DoNext = 17;
@@ -1642,8 +1673,6 @@ namespace NBST
 
                                 if (tmpStr != null)
                                 {
-                                    PrintDebug("\n\nFound: " + tmpStr);
-
                                     try
                                     {
                                         downloadCxt.FileSize = int.Parse(tmpStr);
@@ -1664,7 +1693,9 @@ namespace NBST
                                 {
                                     downloadCxt.DownloadedSize = 0;
                                     ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
-                                    downloadCxt.sW = new StreamWriter(downloadCxt.FileName);
+                                    //downloadCxt.sW = new StreamWriter(downloadCxt.FileName);
+                                    var stream = File.Open(downloadCxt.FileName, FileMode.Create);
+                                    downloadCxt.sW = new BinaryWriter(stream);
                                     InfoAppendText("\n\nFile size = " + downloadCxt.FileSize + " byte(s)", Color.Blue);
                                 }
                             }
@@ -1672,7 +1703,7 @@ namespace NBST
                         break;
 
                     case 16:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPRCV=1500\r", 30000, false);
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPRCV=0,1500\r", 30000, false);
 
                         if (tmpStr != null)
                         {
@@ -1680,14 +1711,42 @@ namespace NBST
 
                             if (tmpArr != null)
                             {
-                                downloadCxt.sW.WriteLine(new String(tmpArr));
+                                byte[] data = new byte[tmpArr.Length];
+
+                                for (int i = 0; i < tmpArr.Length; i++)
+                                    data[i] = Convert.ToByte(tmpArr[i]);
+
+                                downloadCxt.sW.Write(data);
+                                downloadCxt.sW.Flush();
                                 downloadCxt.DownloadedSize += tmpArr.Length;
                                 ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
 
                                 if (downloadCxt.DownloadedSize >= downloadCxt.FileSize)
                                 {
                                     DoNext++;
+                                    downloadCxt.sW.Close();
+                                    downloadCxt.sW = null;
                                     InfoAppendText("\n\nDownload complete", Color.Green);
+
+                                    MD5 md5 = MD5.Create();
+                                    var stream = File.OpenRead(downloadCxt.FileName);
+                                    var hash = md5.ComputeHash(stream);
+                                    stream.Close();
+
+                                    string md5_result = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
+
+                                    if (md5_result == downloadCxt.Md5.ToUpperInvariant())
+                                    {
+                                        md5_result = "MD5: " + md5_result + " correct";
+                                        InfoAppendText("\n" + md5_result, Color.Green);
+                                    }
+                                    else
+                                    {
+                                        md5_result = "MD5: " + md5_result + " incorrect";
+                                        InfoAppendText("\n" + md5_result, Color.Red);
+                                    }
+
+                                    MessageBox.Show(md5_result, "Info");
                                 }
                             }
                             else if (tmpStr.Contains("\r\nERROR\r\n"))
@@ -1706,6 +1765,11 @@ namespace NBST
                             if (tmpStr.Contains("\r\nOK\r\n"))
                                 DoNext++;
                         }
+                        break;
+
+                    case 18:
+                        DoNext++;
+                        SendCmd_GetRes(ref cmdCxt, "AT#REBOOT\r");
                         break;
 
                     default:
@@ -1796,10 +1860,39 @@ namespace NBST
                 downloadCxt.FileName = Path.GetFileName(downloadCxt.FilePath);
 
                 if (downloadCxt.FileName == null)
+                {
                     MessageBox.Show("No file name", "Error");
+                    return;
+                }
 
                 if (downloadCxt.FilePath == null)
+                {
                     MessageBox.Show("No file path", "Error");
+                    return;
+                }
+
+                try
+                {
+                    WebClient client = new WebClient();
+                    client.DownloadFile(tb_Url.Text, "Raw_" + downloadCxt.FileName);
+
+                    if (File.Exists("Raw_" + downloadCxt.FileName))
+                    {
+                        MD5 md5 = MD5.Create();
+                        var stream = File.OpenRead("Raw_" + downloadCxt.FileName);
+                        var hash = md5.ComputeHash(stream);
+                        stream.Close();
+
+                        string md5_result = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
+                        tb_Md5.Text = md5_result;
+                        MessageBox.Show("MD5: " + md5_result, "Info");
+                        return;
+                    }
+                }
+                catch
+                {
+                    MessageBox.Show("Can not calculate MD5", "Info");
+                }
             }
             else
                 MessageBox.Show("Invalid HTTPS URL", "Error");
