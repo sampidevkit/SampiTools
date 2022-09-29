@@ -41,15 +41,16 @@
             this.bt_RFTest = new System.Windows.Forms.Button();
             this.cb_Port1 = new System.Windows.Forms.ComboBox();
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
-            this.tb_Url = new System.Windows.Forms.TextBox();
             this.tb_Md5 = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.pgb_Percent = new System.Windows.Forms.ProgressBar();
             this.lb_Percent = new System.Windows.Forms.Label();
-            this.tb_Apn = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.bt_Download = new System.Windows.Forms.Button();
+            this.ckb_DebugEn = new System.Windows.Forms.CheckBox();
+            this.cb_Apn = new System.Windows.Forms.ComboBox();
+            this.cb_Url = new System.Windows.Forms.ComboBox();
             this.tabCtrl1.SuspendLayout();
             this.tabGraph.SuspendLayout();
             this.tabLog.SuspendLayout();
@@ -166,6 +167,7 @@
             // bt_RFTest
             // 
             this.bt_RFTest.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_RFTest.Enabled = false;
             this.bt_RFTest.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.bt_RFTest.Location = new System.Drawing.Point(910, 12);
             this.bt_RFTest.Name = "bt_RFTest";
@@ -183,8 +185,9 @@
             this.cb_Port1.Name = "cb_Port1";
             this.cb_Port1.Size = new System.Drawing.Size(86, 21);
             this.cb_Port1.TabIndex = 4;
-            this.cb_Port1.Text = "No COM Port";
+            this.cb_Port1.Text = "Empty";
             this.cb_Port1.SelectedIndexChanged += new System.EventHandler(this.cb_Port1_SelectedIndexChanged);
+            this.cb_Port1.TextChanged += new System.EventHandler(this.cb_Port1_TextChanged);
             // 
             // serialPort1
             // 
@@ -192,20 +195,6 @@
             this.serialPort1.DtrEnable = true;
             this.serialPort1.ReadBufferSize = 10240;
             this.serialPort1.WriteBufferSize = 10240;
-            // 
-            // tb_Url
-            // 
-            this.tb_Url.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.tb_Url.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.tb_Url.ForeColor = System.Drawing.Color.OrangeRed;
-            this.tb_Url.Location = new System.Drawing.Point(50, 419);
-            this.tb_Url.Name = "tb_Url";
-            this.tb_Url.Size = new System.Drawing.Size(660, 20);
-            this.tb_Url.TabIndex = 7;
-            this.tb_Url.Text = "https://raw.githubusercontent.com/MicrochipTech/XPRESS-Loader/master/utilities/Xp" +
-    "ressBL.hex";
-            this.tb_Url.TextChanged += new System.EventHandler(this.tb_Url_TextChanged);
             // 
             // tb_Md5
             // 
@@ -217,7 +206,7 @@
             this.tb_Md5.Name = "tb_Md5";
             this.tb_Md5.Size = new System.Drawing.Size(307, 20);
             this.tb_Md5.TabIndex = 7;
-            this.tb_Md5.Text = "7E0925717541AF545BA1EF8ABEEA4B69";
+            this.tb_Md5.Text = "834406D30F4F1FD20362A93CB3042696";
             this.tb_Md5.TextChanged += new System.EventHandler(this.tb_Md5_TextChanged);
             // 
             // label1
@@ -261,18 +250,6 @@
             this.lb_Percent.Text = "0 byte";
             this.lb_Percent.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
-            // tb_Apn
-            // 
-            this.tb_Apn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.tb_Apn.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.tb_Apn.ForeColor = System.Drawing.Color.OrangeRed;
-            this.tb_Apn.Location = new System.Drawing.Point(50, 448);
-            this.tb_Apn.Name = "tb_Apn";
-            this.tb_Apn.Size = new System.Drawing.Size(308, 20);
-            this.tb_Apn.TabIndex = 7;
-            this.tb_Apn.Text = "m-nbiot";
-            this.tb_Apn.TextChanged += new System.EventHandler(this.tb_Apn_TextChanged);
-            // 
             // label4
             // 
             this.label4.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
@@ -286,14 +263,66 @@
             // bt_Download
             // 
             this.bt_Download.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_Download.Enabled = false;
             this.bt_Download.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_Download.Location = new System.Drawing.Point(726, 447);
+            this.bt_Download.Location = new System.Drawing.Point(790, 447);
             this.bt_Download.Name = "bt_Download";
-            this.bt_Download.Size = new System.Drawing.Size(270, 23);
+            this.bt_Download.Size = new System.Drawing.Size(206, 23);
             this.bt_Download.TabIndex = 5;
             this.bt_Download.Text = "Download";
             this.bt_Download.UseVisualStyleBackColor = true;
             this.bt_Download.Click += new System.EventHandler(this.bt_Download_Click);
+            // 
+            // ckb_DebugEn
+            // 
+            this.ckb_DebugEn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.ckb_DebugEn.AutoSize = true;
+            this.ckb_DebugEn.Checked = true;
+            this.ckb_DebugEn.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ckb_DebugEn.Location = new System.Drawing.Point(726, 450);
+            this.ckb_DebugEn.Name = "ckb_DebugEn";
+            this.ckb_DebugEn.Size = new System.Drawing.Size(58, 17);
+            this.ckb_DebugEn.TabIndex = 12;
+            this.ckb_DebugEn.Text = "Debug";
+            this.ckb_DebugEn.UseVisualStyleBackColor = true;
+            this.ckb_DebugEn.CheckedChanged += new System.EventHandler(this.ckb_DebugEn_CheckedChanged);
+            // 
+            // cb_Apn
+            // 
+            this.cb_Apn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.cb_Apn.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cb_Apn.ForeColor = System.Drawing.Color.OrangeRed;
+            this.cb_Apn.FormattingEnabled = true;
+            this.cb_Apn.Items.AddRange(new object[] {
+            "m-nbiot",
+            "m-wap",
+            "v-internet"});
+            this.cb_Apn.Location = new System.Drawing.Point(50, 449);
+            this.cb_Apn.Name = "cb_Apn";
+            this.cb_Apn.Size = new System.Drawing.Size(308, 21);
+            this.cb_Apn.TabIndex = 13;
+            this.cb_Apn.Text = "m-nbiot";
+            this.cb_Apn.TextChanged += new System.EventHandler(this.cb_Apn_TextChanged);
+            // 
+            // cb_Url
+            // 
+            this.cb_Url.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.cb_Url.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cb_Url.ForeColor = System.Drawing.Color.OrangeRed;
+            this.cb_Url.FormattingEnabled = true;
+            this.cb_Url.Items.AddRange(new object[] {
+            "https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt",
+            "https://raw.githubusercontent.com/MicrochipTech/XPRESS-Loader/master/utilities/Xp" +
+                "ressBL.hex",
+            "https://raw.githubusercontent.com/MicrochipTech/AWS-Secure-Insight/master/documen" +
+                "ts/images/AWS-IoT.png"});
+            this.cb_Url.Location = new System.Drawing.Point(50, 420);
+            this.cb_Url.Name = "cb_Url";
+            this.cb_Url.Size = new System.Drawing.Size(660, 21);
+            this.cb_Url.TabIndex = 14;
+            this.cb_Url.Text = "https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt";
+            this.cb_Url.TextChanged += new System.EventHandler(this.cb_Url_TextChanged);
             // 
             // Form1
             // 
@@ -301,14 +330,15 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(1008, 473);
+            this.Controls.Add(this.cb_Url);
+            this.Controls.Add(this.cb_Apn);
+            this.Controls.Add(this.ckb_DebugEn);
             this.Controls.Add(this.lb_Percent);
             this.Controls.Add(this.pgb_Percent);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.tb_Apn);
             this.Controls.Add(this.tb_Md5);
-            this.Controls.Add(this.tb_Url);
             this.Controls.Add(this.rtb_Info);
             this.Controls.Add(this.bt_Scan);
             this.Controls.Add(this.tabCtrl1);
@@ -340,16 +370,17 @@
         private System.Windows.Forms.RichTextBox rtb_Info;
         private System.IO.Ports.SerialPort serialPort1;
         private System.Windows.Forms.Button bt_Scan;
-        private System.Windows.Forms.TextBox tb_Url;
         private System.Windows.Forms.TextBox tb_Md5;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.ProgressBar pgb_Percent;
         private System.Windows.Forms.Label lb_Percent;
         private System.Windows.Forms.ComboBox cb_ViewMode;
-        private System.Windows.Forms.TextBox tb_Apn;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Button bt_Download;
+        private System.Windows.Forms.CheckBox ckb_DebugEn;
+        private System.Windows.Forms.ComboBox cb_Apn;
+        private System.Windows.Forms.ComboBox cb_Url;
     }
 }
 
