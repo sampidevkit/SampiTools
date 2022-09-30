@@ -34,6 +34,34 @@ namespace NBST
             DOWNLOAD
         }
 
+        private enum ThreadTask
+        {
+            CMD_ECHO_OFF = 0,
+            CMD_DISPLAY_ERROR,
+            CMD_NO_FLOW_CONTROL,
+            CMD_SET_DNS,
+            CMD_GET_MODULE_NAME,
+            CMD_GET_MODULE_IMEI,
+            CMD_GET_CIMI,
+            CMD_GET_CCID,
+            CMD_GET_ALT_CCID,
+            CMD_GET_OPERATOR_INFO,
+            CMD_DEACT_PDP,
+            CMD_SET_APN,
+            CMD_ACT_PDP,
+            CMD_SETUP_CELL_INFO,
+            CMD_GET_SIGNAL_QUALITY,
+            CMD_GET_CELL_INFO,
+            PARSE_INFO,
+            CMD_CFG_HTTPS_HOST,
+            CMD_CFG_HTTPS_FILE,
+            HTTPS_GET_FILE_INFO,
+            CMD_GET_HTTPS_1500,
+            CMD_CLOSE_SOCKET,
+            CMD_MODULE_REBOOT,
+            CLOSE_APP
+        }
+
         private struct CmdCxt
         {
             public char[] buffer;
@@ -106,7 +134,7 @@ namespace NBST
         private static Thread Thread_Task = null;
         private volatile ThreadMode Thread_Mode = ThreadMode.RF_TEST;
         private volatile int Thread_Enbale = 0;
-        private volatile int DoNext = 0;
+        private volatile ThreadTask DoNext = ThreadTask.CMD_ECHO_OFF;
         private StreamWriter sW = null;
         private string logfileName = null;
         private long line = 0;
@@ -870,7 +898,7 @@ namespace NBST
 
         private char[] SubArray(char[] buffer, int headIdx, int tailIdx)
         {
-            if ((headIdx >= 0) && (tailIdx >= 0) && (headIdx < tailIdx))
+            if ((headIdx >= 0) && (tailIdx >= 0) && (headIdx <= tailIdx))
             {
                 char[] chr = new char[tailIdx - headIdx + 1];
                 int i;
@@ -889,7 +917,7 @@ namespace NBST
             int head = Get_1stIndex(buffer, str_head, HeadTail.tail) + 1;
             int tail = Get_1stIndex(buffer, str_tail, HeadTail.head) - 1;
 
-            //PrintDebug("\n--> head " + head.ToString()+ "tail " + tail.ToString());
+            //PrintDebug("\n--> head " + head.ToString()+ " tail " + tail.ToString());
 
             return SubArray(buffer, head, tail);
         }
@@ -909,7 +937,7 @@ namespace NBST
                 tail = Get_1stIndex(buffer, str_tail, HeadTail.head) - 1;
             }
 
-            //PrintDebug("\n--> head " + head.ToString() + "tail " + tail.ToString());
+            //PrintDebug("\n--> head " + head.ToString() + " tail " + tail.ToString());
 
             return SubArray(buffer, head, tail);
         }
@@ -1348,7 +1376,7 @@ namespace NBST
             int rsrq = -150;
             string tmpStr = null;
             char[] tmpArr = null;
-
+            UInt32 TickDownload = 0;
             CmdCxt cmdCxt = new CmdCxt();
 
             cmdCxt.buffer = new char[4096];
@@ -1397,7 +1425,7 @@ namespace NBST
                 return;
             }
 
-            DoNext = -4;
+            DoNext = ThreadTask.CMD_ECHO_OFF;
             InfoWriteText("Reading module info...");
 
             UInt32 thisTick = Tick_Get();
@@ -1406,7 +1434,7 @@ namespace NBST
             {
                 switch (DoNext)
                 {
-                    case (-4):
+                    case ThreadTask.CMD_ECHO_OFF:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "ATE0\r");
 
                         if (tmpStr != null)
@@ -1417,7 +1445,7 @@ namespace NBST
                         }
                         break;
 
-                    case (-3):
+                    case ThreadTask.CMD_DISPLAY_ERROR:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CMEE=2\r");
 
                         if (tmpStr != null)
@@ -1427,7 +1455,7 @@ namespace NBST
                         }
                         break;
 
-                    case (-2):
+                    case ThreadTask.CMD_NO_FLOW_CONTROL:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT&K0\r");
 
                         if (tmpStr != null)
@@ -1437,7 +1465,7 @@ namespace NBST
                         }
                         break;
 
-                    case (-1):
+                    case ThreadTask.CMD_SET_DNS:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#DNS=1,\"1.1.1.1\",\"8.8.8.8\"\r");
 
                         if (tmpStr != null)
@@ -1447,7 +1475,7 @@ namespace NBST
                         }
                         break;
 
-                    case 0:
+                    case ThreadTask.CMD_GET_MODULE_NAME:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "ATI4\r");
 
                         if (tmpStr != null)
@@ -1460,7 +1488,7 @@ namespace NBST
                         }
                         break;
 
-                    case 1:
+                    case ThreadTask.CMD_GET_MODULE_IMEI:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGSN\r");
 
                         if (tmpStr != null)
@@ -1473,7 +1501,7 @@ namespace NBST
                         }
                         break;
 
-                    case 2:
+                    case ThreadTask.CMD_GET_CIMI:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#CIMI\r");
 
                         if (tmpStr != null)
@@ -1489,7 +1517,7 @@ namespace NBST
                         }
                         break;
 
-                    case 3:
+                    case ThreadTask.CMD_GET_CCID:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CCID\r");
 
                         if (tmpStr != null)
@@ -1505,7 +1533,7 @@ namespace NBST
                         }
                         break;
 
-                    case 4:
+                    case ThreadTask.CMD_GET_ALT_CCID:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#CCID\r");
 
                         if (tmpStr != null)
@@ -1524,7 +1552,7 @@ namespace NBST
                         }
                         break;
 
-                    case 5:
+                    case ThreadTask.CMD_GET_OPERATOR_INFO:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+COPS?\r");
 
                         if (tmpStr != null)
@@ -1541,7 +1569,7 @@ namespace NBST
                         }
                         break;
 
-                    case 6:
+                    case ThreadTask.CMD_DEACT_PDP:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SGACT=1,0\r");
 
                         if (tmpStr != null)
@@ -1551,7 +1579,7 @@ namespace NBST
                         }
                         break;
 
-                    case 7:
+                    case ThreadTask.CMD_SET_APN:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGDCONT=1,\"IP\",\"" + moduleInfo.Apn + "\"\r");
 
                         if (tmpStr != null)
@@ -1561,8 +1589,8 @@ namespace NBST
                         }
                         break;
 
-                    case 8:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SGACT=1,1\r", 10000);
+                    case ThreadTask.CMD_ACT_PDP:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SGACT=1,1\r", 30000);
 
                         if (tmpStr != null)
                         {
@@ -1572,10 +1600,16 @@ namespace NBST
                                 tmpStr = new string(SubArray(cmdCxt.buffer, "#SGACT: ", "\r\nOK"));
                                 moduleInfo.Ip = RemoveAT(tmpStr);
                             }
+                            else if (tmpStr.Contains("ERROR"))
+                            {
+                                DoNext++;
+                                tmpStr = new string(SubArray(cmdCxt.buffer, "ERROR: ", "\r\n"));
+                                moduleInfo.Ip = RemoveAT(tmpStr);
+                            }
                         }
                         break;
 
-                    case 9:
+                    case ThreadTask.CMD_SETUP_CELL_INFO:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#MONI=0\r");
 
                         if (tmpStr != null)
@@ -1588,7 +1622,7 @@ namespace NBST
                         }
                         break;
 
-                    case 10:
+                    case ThreadTask.CMD_GET_SIGNAL_QUALITY:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CSQ\r");
 
                         if (tmpStr != null)
@@ -1602,7 +1636,7 @@ namespace NBST
                         }
                         break;
 
-                    case 11:
+                    case ThreadTask.CMD_GET_CELL_INFO:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#MONI\r");
 
                         if (tmpStr != null)
@@ -1614,156 +1648,200 @@ namespace NBST
                                 moduleInfo.Rsrq = new string(SubArray(cmdCxt.buffer, "RSRQ:", " TAC:"));
                                 moduleInfo.Tac = new string(SubArray(cmdCxt.buffer, "TAC:", " Id:"));
                                 moduleInfo.CellID = new string(SubArray(cmdCxt.buffer, " Id:", " EARFCN:"));
+                                //PrintDebug("\nRSRP: " + moduleInfo.Rsrp);
+                                //PrintDebug("\nRSRQ: " + moduleInfo.Rsrq);
                             }
                         }
                         break;
 
-                    case 12:
+                    case ThreadTask.PARSE_INFO:
+                        InfoWriteText("Module:          " + moduleInfo.Name);
+                        InfoAppendText("\nIMEI:            " + moduleInfo.Imei);
+                        InfoAppendText("\nCIMI:            " + moduleInfo.Cimi);
+                        InfoAppendText("\nCCID:            " + moduleInfo.Ccid);
+                        InfoAppendText("\nOperator:        " + moduleInfo.Operator);
+                        InfoAppendText("\nNetwork " + "(" + moduleInfo.NetworkType + "):     ");
+
+                        int netType;
+
                         try
                         {
-                            InfoWriteText("Module:          " + moduleInfo.Name);
-                            InfoAppendText("\nIMEI:            " + moduleInfo.Imei);
-                            InfoAppendText("\nCIMI:            " + moduleInfo.Cimi);
-                            InfoAppendText("\nCCID:            " + moduleInfo.Ccid);
-                            InfoAppendText("\nOperator:        " + moduleInfo.Operator);
-                            InfoAppendText("\nNetwork " + "(" + moduleInfo.NetworkType + "):     ");
+                            netType = int.Parse(moduleInfo.NetworkType);
+                        }
+                        catch
+                        {
+                            netType = (-1);
+                            moduleInfo.NetworkType = "-1";
+                        }
 
-                            switch (int.Parse(moduleInfo.NetworkType))
+                        switch (netType)
+                        {
+                            case 0:
+                                InfoAppendText("GSM");
+                                break;
+
+                            case 1:
+                                InfoAppendText("GSM Compact");
+                                break;
+
+                            case 2:
+                                InfoAppendText("UTRAN");
+                                break;
+
+                            case 3:
+                                InfoAppendText("GSM w/EGPRS");
+                                break;
+
+                            case 4:
+                                InfoAppendText("UTRAN w/HSDPA");
+                                break;
+
+                            case 5:
+                                InfoAppendText("UTRAN w/HSUPA");
+                                break;
+
+                            case 6:
+                                InfoAppendText("UTRAN w/HSDPA and HSUPA");
+                                break;
+
+                            case 7:
+                                InfoAppendText("E-UTRAN");
+                                break;
+
+                            case 8:
+                                InfoAppendText("CAT M1");
+                                break;
+
+                            case 9:
+                                InfoAppendText("NB IoT");
+                                break;
+
+                            default:
+                                InfoAppendText("Unknown");
+                                break;
+                        }
+
+                        InfoAppendText("\nIP:              " + moduleInfo.Ip);
+                        InfoAppendText("\nTAC(LAC):        ");
+
+                        try
+                        {
+                            InfoAppendText(moduleInfo.Tac + " (" + Convert.ToUInt32(moduleInfo.Tac, 16).ToString() + ")");
+                        }
+                        catch
+                        {
+                            InfoAppendText("Unknown", Color.Red);
+                        }
+
+                        InfoAppendText("\nCell ID:         ");
+
+                        try
+                        {
+                            InfoAppendText(moduleInfo.CellID + " (" + Convert.ToUInt32(moduleInfo.CellID, 16).ToString() + ")");
+                        }
+                        catch
+                        {
+                            InfoAppendText("Unknown");
+                        }
+
+                        //InfoAppendText("\nQuality" + " (" + moduleInfo.Csq + "):    ");
+
+                        try
+                        {
+                            csq = int.Parse(moduleInfo.Csq);
+                            InfoAppendText("\nQuality" + " (" + csq.ToString("D2") + "):    ");
+                        }
+                        catch
+                        {
+                            csq = 99;
+                            InfoAppendText("\nQuality: Unknown");
+                        }
+
+                        switch (csq)
+                        {
+                            case 0:
+                                rssi = -113;
+                                break;
+
+                            case 1:
+                                rssi = -111;
+                                break;
+
+                            case 31:
+                                rssi = -51;
+                                break;
+
+                            case 99:
+                                rssi = -150;
+                                break;
+
+                            default:
+                                rssi = 2 * csq - 113;
+                                break;
+                        }
+
+                        if (rssi > (-70))
+                            InfoAppendText(rssi.ToString() + "dBm (Excellent)", Color.Violet);
+                        else if (rssi > (-80))
+                            InfoAppendText(rssi.ToString() + "dBm (Good)", Color.Blue);
+                        else if (rssi > (-90))
+                            InfoAppendText(rssi.ToString() + "dBm (Low)", Color.Green);
+                        else if (rssi > (-100))
+                            InfoAppendText(rssi.ToString() + "dBm (Very low)", Color.OrangeRed);
+                        else
+                            InfoAppendText(rssi.ToString() + "dBm (No signal)", Color.Red);
+
+                        /*
+                        if (int.Parse(moduleInfo.NetworkType) == 0) // 2G network
+                        {
+                            ber = int.Parse(moduleInfo.BitErrRate);
+                            InfoAppendText("\nError rate " + "(" + ber.ToString("D2") + "): ");
+
+                            switch (ber)
                             {
                                 case 0:
-                                    InfoAppendText("GSM");
+                                    InfoAppendText("Less than 0.2%", Color.Blue);
                                     break;
 
                                 case 1:
-                                    InfoAppendText("GSM Compact");
+                                    InfoAppendText("0.2% to 0.4%", Color.Blue);
                                     break;
 
                                 case 2:
-                                    InfoAppendText("UTRAN");
+                                    InfoAppendText("0.4% to 0.8%", Color.Green);
                                     break;
 
                                 case 3:
-                                    InfoAppendText("GSM w/EGPRS");
+                                    InfoAppendText("0.8% to 1.6%", Color.Green);
                                     break;
 
                                 case 4:
-                                    InfoAppendText("UTRAN w/HSDPA");
+                                    InfoAppendText("1.6% to 3.2%", Color.Orange);
                                     break;
 
                                 case 5:
-                                    InfoAppendText("UTRAN w/HSUPA");
+                                    InfoAppendText("3.2% to 6.4%", Color.Orange);
                                     break;
 
                                 case 6:
-                                    InfoAppendText("UTRAN w/HSDPA and HSUPA");
+                                    InfoAppendText("6.4% to 12.8%", Color.OrangeRed);
                                     break;
 
                                 case 7:
-                                    InfoAppendText("E-UTRAN");
-                                    break;
-
-                                case 8:
-                                    InfoAppendText("CAT M1");
-                                    break;
-
-                                case 9:
-                                    InfoAppendText("NB IoT");
+                                    InfoAppendText("More than 12.8%", Color.OrangeRed);
                                     break;
 
                                 default:
-                                    InfoAppendText("Unknown");
+                                    InfoAppendText("Not known or not detectable", Color.Red);
                                     break;
                             }
+                        }*/
 
-                            InfoAppendText("\nIP:              " + moduleInfo.Ip);
-                            InfoAppendText("\nTAC(LAC):        " + moduleInfo.Tac + " (" + Convert.ToUInt32(moduleInfo.Tac, 16).ToString() + ")");
-                            InfoAppendText("\nCell ID:         " + moduleInfo.CellID + " (" + Convert.ToUInt32(moduleInfo.CellID, 16).ToString() + ")");
-                            //InfoAppendText("\nQuality" + " (" + moduleInfo.Csq + "):    ");
-                            csq = int.Parse(moduleInfo.Csq);
-                            InfoAppendText("\nQuality" + " (" + csq.ToString("D2") + "):    ");
+                        InfoAppendText("\nRSRP:            ");
 
-                            switch (csq)
-                            {
-                                case 0:
-                                    rssi = -113;
-                                    break;
-
-                                case 1:
-                                    rssi = -111;
-                                    break;
-
-                                case 31:
-                                    rssi = -51;
-                                    break;
-
-                                case 99:
-                                    rssi = -150;
-                                    break;
-
-                                default:
-                                    rssi = 2 * csq - 113;
-                                    break;
-                            }
-
-                            if (rssi > (-70))
-                                InfoAppendText(rssi.ToString() + "dBm (Excellent)", Color.Violet);
-                            else if (rssi > (-80))
-                                InfoAppendText(rssi.ToString() + "dBm (Good)", Color.Blue);
-                            else if (rssi > (-90))
-                                InfoAppendText(rssi.ToString() + "dBm (Low)", Color.Green);
-                            else if (rssi > (-100))
-                                InfoAppendText(rssi.ToString() + "dBm (Very low)", Color.OrangeRed);
-                            else
-                                InfoAppendText(rssi.ToString() + "dBm (No signal)", Color.Red);
-
-                            /*
-                            if (int.Parse(moduleInfo.NetworkType) == 0) // 2G network
-                            {
-                                ber = int.Parse(moduleInfo.BitErrRate);
-                                InfoAppendText("\nError rate " + "(" + ber.ToString("D2") + "): ");
-
-                                switch (ber)
-                                {
-                                    case 0:
-                                        InfoAppendText("Less than 0.2%", Color.Blue);
-                                        break;
-
-                                    case 1:
-                                        InfoAppendText("0.2% to 0.4%", Color.Blue);
-                                        break;
-
-                                    case 2:
-                                        InfoAppendText("0.4% to 0.8%", Color.Green);
-                                        break;
-
-                                    case 3:
-                                        InfoAppendText("0.8% to 1.6%", Color.Green);
-                                        break;
-
-                                    case 4:
-                                        InfoAppendText("1.6% to 3.2%", Color.Orange);
-                                        break;
-
-                                    case 5:
-                                        InfoAppendText("3.2% to 6.4%", Color.Orange);
-                                        break;
-
-                                    case 6:
-                                        InfoAppendText("6.4% to 12.8%", Color.OrangeRed);
-                                        break;
-
-                                    case 7:
-                                        InfoAppendText("More than 12.8%", Color.OrangeRed);
-                                        break;
-
-                                    default:
-                                        InfoAppendText("Not known or not detectable", Color.Red);
-                                        break;
-                                }
-                            }*/
-
+                        try
+                        {
                             rsrp = int.Parse(moduleInfo.Rsrp);
-                            InfoAppendText("\nRSRP:            ");
 
                             if (rsrp >= -70)
                                 InfoAppendText(moduleInfo.Rsrp, Color.Violet);
@@ -1777,9 +1855,17 @@ namespace NBST
                                 InfoAppendText(moduleInfo.Rsrp, Color.OrangeRed);
                             else
                                 InfoAppendText(moduleInfo.Rsrp, Color.Red);
+                        }
+                        catch
+                        {
+                            InfoAppendText("Unknown", Color.Red);
+                        }
 
+                        InfoAppendText("\nRSRQ:            ");
+
+                        try
+                        {
                             rsrq = int.Parse(moduleInfo.Rsrq);
-                            InfoAppendText("\nRSRQ:            ");
 
                             if (rsrq >= -8)
                                 InfoAppendText(moduleInfo.Rsrq, Color.Violet);
@@ -1793,31 +1879,30 @@ namespace NBST
                                 InfoAppendText(moduleInfo.Rsrq, Color.OrangeRed);
                             else
                                 InfoAppendText(moduleInfo.Rsrq, Color.Red);
-
-                            if (Thread_Mode == ThreadMode.RF_TEST)
-                            {
-                                DoNext = 10;
-                                WriteLogFile(rsrp, rsrq, rssi);
-                                PlotData(rsrp, rsrq, rssi, TickStart++);
-
-                                UInt32 t = Tick_DifMs(thisTick);
-
-                                if ((t > 0) && (t < 1000))
-                                    Thread.Sleep(1000 - (int)t);
-
-                                thisTick = Tick_Get();
-                            }
-                            else
-                                DoNext++;
                         }
                         catch
                         {
-                            DoNext = 10;
-                            Thread.Sleep(250);
+                            InfoAppendText("Unknown", Color.Red);
                         }
+
+                        if (Thread_Mode == ThreadMode.RF_TEST)
+                        {
+                            DoNext = ThreadTask.CMD_GET_SIGNAL_QUALITY;
+                            WriteLogFile(rsrp, rsrq, rssi);
+                            PlotData(rsrp, rsrq, rssi, TickStart++);
+
+                            UInt32 t = Tick_DifMs(thisTick);
+
+                            if ((t > 0) && (t < 1000))
+                                Thread.Sleep(1000 - (int)t);
+
+                            thisTick = Tick_Get();
+                        }
+                        else
+                            DoNext++;
                         break;
 
-                    case 13:
+                    case ThreadTask.CMD_CFG_HTTPS_HOST:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443,0,,,1,120,1\r", 30000);
 
                         if (tmpStr != null)
@@ -1829,13 +1914,13 @@ namespace NBST
                             }
                             else if (tmpStr.Contains("ERROR"))
                             {
-                                DoNext = 17;
+                                DoNext = ThreadTask.CMD_CLOSE_SOCKET;
                                 InfoAppendText("\n\nCan not connect to host " + downloadCxt.Host, Color.Red);
                             }
                         }
                         break;
 
-                    case 14:
+                    case ThreadTask.CMD_CFG_HTTPS_FILE:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPQRY=0,0,\"" + downloadCxt.FilePath + "\"\r", 60000);
 
                         if (tmpStr != null)
@@ -1849,13 +1934,13 @@ namespace NBST
                             }
                             else
                             {
-                                DoNext = 17;
+                                DoNext = ThreadTask.CMD_CLOSE_SOCKET;
                                 InfoAppendText("\n\nCan not download file " + downloadCxt.FileName, Color.Red);
                             }
                         }
                         break;
 
-                    case 15:
+                    case ThreadTask.HTTPS_GET_FILE_INFO:
                         tmpStr = Get_ExtResp(ref cmdCxt, null, 60000);
 
                         if (tmpStr != null)
@@ -1888,6 +1973,7 @@ namespace NBST
                                 }
                                 else
                                 {
+                                    TickDownload = Tick_Get();
                                     downloadCxt.DownloadedSize = 0;
                                     ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
                                     //downloadCxt.sW = new StreamWriter(downloadCxt.FileName);
@@ -1899,7 +1985,7 @@ namespace NBST
                         }
                         break;
 
-                    case 16:
+                    case ThreadTask.CMD_GET_HTTPS_1500:
                         tmpStr = SendCmd_GetData(ref cmdCxt, "AT#HTTPRCV=0,1500\r", 60000, 1000, false);
 
                         if (tmpStr != null)
@@ -1923,7 +2009,13 @@ namespace NBST
                                     DoNext++;
                                     downloadCxt.sW.Close();
                                     downloadCxt.sW = null;
-                                    InfoAppendText("\n\nDownload complete", Color.Green);
+
+                                    UInt32 dt = Tick_DifMs(TickDownload);
+
+                                    if (dt > 1000)
+                                        dt -= 1000;
+
+                                    InfoAppendText("\n\nDownload complete: " + dt.ToString() + "(ms)\nSpeed: " + (downloadCxt.FileSize * 1000 / dt).ToString() + "(Byte/s)", Color.Green);
 
                                     MD5 md5 = MD5.Create();
                                     var stream = File.OpenRead(downloadCxt.FileName);
@@ -1954,23 +2046,24 @@ namespace NBST
                         }
                         break;
 
-                    case 17:
+                    case ThreadTask.CMD_CLOSE_SOCKET:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SH=1\r", 3000);
 
                         if (tmpStr != null)
                         {
                             if (tmpStr.Contains("\r\nOK\r\n"))
-                                DoNext += 2;
+                                DoNext = ThreadTask.CLOSE_APP;
                             else
                                 DoNext++;
                         }
                         break;
 
-                    case 18:
+                    case ThreadTask.CMD_MODULE_REBOOT:
                         DoNext++;
                         SendCmd_GetRes(ref cmdCxt, "AT#REBOOT\r", 3000);
                         break;
 
+                    case ThreadTask.CLOSE_APP:
                     default:
                         if (downloadCxt.sW != null)
                             downloadCxt.sW.Close();
