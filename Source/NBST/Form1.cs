@@ -143,11 +143,12 @@ namespace NBST
         private UInt32 TickStart = 0;
         private volatile string portName = null;
 
-        private string[] UsbPid = new string[3]
+        private string[] UsbPid = new string[4]
         { 
-        /* xE866 */ "VID_1BC7&PID_0021", 
-        /* MEx10G1 */ "VID_1BC7&PID_110A",
-        /* LE910 */ "VID_1BC7&PID_1201"
+        /* MICROCHIP USB CDC */ "VID_04D8&PID_000A",
+        /* xE866 */             "VID_1BC7&PID_0021", 
+        /* MEx10G1 */           "VID_1BC7&PID_110A",
+        /* LE910 */             "VID_1BC7&PID_1201"
         };
 
         private UInt32 Tick_Get()
@@ -579,6 +580,13 @@ namespace NBST
             string port = null;
             string portlist = null;
 
+            PrintDebug("\nSupport device: ");
+
+            foreach (string Pid in UsbPid)
+            {
+                PrintDebug("\n" + Pid);
+            }
+
             try
             {
                 cb_Port1.Items.Clear();
@@ -682,6 +690,34 @@ namespace NBST
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            if (File.Exists("SupportedDevices.txt"))
+            {
+                StreamReader sRUsbDevice = new StreamReader("SupportedDevices.txt");
+                int lineCount = 0;
+
+                while (sRUsbDevice.ReadLine() != null)
+                    lineCount++;
+
+                sRUsbDevice.Close();
+                UsbPid = new string[lineCount];
+                lineCount = 0;
+                sRUsbDevice = new StreamReader("SupportedDevices.txt");
+
+                for (int i = 0; i < lineCount; i++)
+                {
+                    UsbPid[i] = sRUsbDevice.ReadLine();
+                    ReplaceStr(ref UsbPid[i], '\r', (char)0x00);
+                    ReplaceStr(ref UsbPid[i], '\n', (char)0x00);
+                    //PrintDebug("\nLoad device: " + UsbPid[i]);
+                }
+
+                sRUsbDevice.Close();
+            }
+            else
+            {
+                MessageBox.Show("SupportedDevices.txt not found, use default supported devices", "Warning");
+            }
+
             string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
             this.Text += " v." + $"{version}";
