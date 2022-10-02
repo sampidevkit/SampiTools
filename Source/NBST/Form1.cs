@@ -17,6 +17,7 @@ using System.Runtime.Remoting.Messaging;
 using System.Runtime.ConstrainedExecution;
 using System.Windows.Forms.VisualStyles;
 using System.Net;
+using System.Device.Location;
 
 namespace NBST
 {
@@ -50,6 +51,7 @@ namespace NBST
             CMD_SET_APN,
             CMD_ACT_PDP,
             CMD_SETUP_CELL_INFO,
+            GET_LOCATION,
             CMD_GET_SIGNAL_QUALITY,
             CMD_GET_CELL_INFO,
             PARSE_INFO,
@@ -128,9 +130,9 @@ namespace NBST
             Apn = null,
             Ip = null
         };
-
+        
         private volatile bool debugEn = true;
-        private volatile bool viewMode = true;
+        private volatile bool viewMode = false;
         private static Thread Thread_Task = null;
         private volatile ThreadMode Thread_Mode = ThreadMode.RF_TEST;
         private volatile int Thread_Enbale = 0;
@@ -412,18 +414,20 @@ namespace NBST
             return s;
         }
 
-        private void WriteLogFile(int rsrp, int rsrq, int rssi)
+        private void WriteLogFile(int rsrp, int rsrq, int rssi, double lat, double lon)
         {
             if (sW != null)
             {
                 line++;
 
-                string s = line.ToString() + " " + rsrp.ToString() + " " + rsrq.ToString() + " " + rssi.ToString();
-
+                string s = "\n% https://maps.google.com/maps?hl=en&q=" + lat.ToString() + "," + lon.ToString() + "\n";
+                s += line.ToString() + " " + rsrp.ToString() + " " + rsrq.ToString() + " " + rssi.ToString();
                 sW.WriteLine(s);
-                PrintDebug("\n" + line.ToString("D4") + " ");
-                PrintDebug(DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString() + ": ");
-                PrintDebug("RSRP=" + rsrp.ToString() + "dBm, RSRQ=" + rsrq.ToString() + "dB, RSSI=" + rssi.ToString() + "dB");
+                s = "\n" + line.ToString("D4") + " ";
+                s += DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString() + ": ";
+                s += lat.ToString() + ", " + lon.ToString();
+                s += ", RSRP=" + rsrp.ToString() + "dBm, RSRQ=" + rsrq.ToString() + "dB, RSSI=" + rssi.ToString() + "dB";
+                PrintDebug(s);
             }
         }
 
@@ -1374,6 +1378,7 @@ namespace NBST
             int rssi = -150;
             int rsrp = -150;
             int rsrq = -150;
+            double lon = 0, lat = 0;
             string tmpStr = null;
             char[] tmpArr = null;
             UInt32 TickDownload = 0;
@@ -1426,6 +1431,7 @@ namespace NBST
             }
 
             DoNext = ThreadTask.CMD_ECHO_OFF;
+            GeoCoordinateWatcher watcher = new GeoCoordinateWatcher();
             InfoWriteText("Reading module info...");
 
             UInt32 thisTick = Tick_Get();
@@ -1620,6 +1626,24 @@ namespace NBST
                                 thisTick = Tick_Get();
                             }
                         }
+                        break;
+
+                    case ThreadTask.GET_LOCATION:
+                        // Do not suppress prompt, and wait 1000 milliseconds to start.
+                        watcher.TryStart(false, TimeSpan.FromMilliseconds(1000));
+
+                        GeoCoordinate coord = watcher.Position.Location;
+
+                        if (coord.IsUnknown != true)
+                        {
+                            //PrintDebug("\nLat: " + coord.Latitude.ToString() + ", Long: " + coord.Longitude.ToString());
+                            lon= coord.Longitude;
+                            lat= coord.Latitude;
+                        }
+                        //else
+                            //PrintDebug("\nUnknown latitude and longitude.");
+
+                        DoNext++;
                         break;
 
                     case ThreadTask.CMD_GET_SIGNAL_QUALITY:
@@ -1885,10 +1909,13 @@ namespace NBST
                             InfoAppendText("Unknown", Color.Red);
                         }
 
+                        tmpStr = "\nLocation:\nhttps://maps.google.com/maps?hl=en&q=" + lat.ToString() + "," + lon.ToString();
+                        InfoAppendText(tmpStr);
+
                         if (Thread_Mode == ThreadMode.RF_TEST)
                         {
-                            DoNext = ThreadTask.CMD_GET_SIGNAL_QUALITY;
-                            WriteLogFile(rsrp, rsrq, rssi);
+                            DoNext = ThreadTask.GET_LOCATION;
+                            WriteLogFile(rsrp, rsrq, rssi, lat, lon);
                             PlotData(rsrp, rsrq, rssi, TickStart++);
 
                             UInt32 t = Tick_DifMs(thisTick);
