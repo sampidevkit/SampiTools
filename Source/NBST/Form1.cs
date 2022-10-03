@@ -44,6 +44,7 @@ namespace NBST
             CMD_GET_MODULE_NAME,
             CMD_GET_MODULE_IMEI,
             CMD_GET_CIMI,
+            CMD_GET_ALT_CIMI,
             CMD_GET_CCID,
             CMD_GET_ALT_CCID,
             CMD_GET_OPERATOR_INFO,
@@ -690,7 +691,7 @@ namespace NBST
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            if (File.Exists("SupportedDevices.txt"))
+            if (File.Exists("SupportedDevices.txt")) // <-----------------------------------------------------------------------
             {
                 StreamReader sRUsbDevice = new StreamReader("SupportedDevices.txt");
                 int lineCount = 0;
@@ -816,6 +817,8 @@ namespace NBST
             {
                 if (bt_RFTest.Text == "RF Test")
                 {
+                    tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabGraph"];
+
                     zedGraphControl1.GraphPane.CurveList.Clear();
                     zedGraphControl1.GraphPane.GraphObjList.Clear();
                     zedGraphControl1.Refresh();
@@ -1027,7 +1030,7 @@ namespace NBST
                                 if ((AT_Track == true) && FindString(c, ref cmdCxt.findIdx, "\r\nOK\r\n"))
                                 {
                                     cmdCxt.donext++;
-                                    PrintRxDebug("\n-->OK\n");
+                                    //PrintRxDebug("\n-->OK\n");
                                 }
 
                                 //PrintRxDebug("\nIdx: " + cmdCxt.findIdx.ToString() + ", ");
@@ -1544,6 +1547,22 @@ namespace NBST
                         break;
 
                     case ThreadTask.CMD_GET_CIMI:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CIMI\r");
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            {
+                                DoNext = ThreadTask.CMD_GET_CCID;
+                                tmpStr = new string(SubArray(cmdCxt.buffer, "+CIMI: ", "\r\nOK"));
+                                moduleInfo.Cimi = RemoveAT(tmpStr);
+                            }
+                            else if (tmpStr.Contains("ERROR"))
+                                DoNext++;
+                        }
+                        break;
+
+                    case ThreadTask.CMD_GET_ALT_CIMI:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#CIMI\r");
 
                         if (tmpStr != null)
@@ -1618,6 +1637,8 @@ namespace NBST
                         {
                             if (tmpStr.Contains("\r\nOK\r\n"))
                                 DoNext++;
+                            else if (tmpStr.Contains("ERROR"))
+                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
                         }
                         break;
 
@@ -1840,12 +1861,14 @@ namespace NBST
                                 break;
                         }
 
-                        if (rssi > (-70))
+                        if (rssi > (-60))
                             InfoAppendText(rssi.ToString() + "dBm (Excellent)", Color.Violet);
-                        else if (rssi > (-80))
+                        else if (rssi > (-70))
                             InfoAppendText(rssi.ToString() + "dBm (Good)", Color.Blue);
+                        else if (rssi > (-80))
+                            InfoAppendText(rssi.ToString() + "dBm (Normal)", Color.Green);
                         else if (rssi > (-90))
-                            InfoAppendText(rssi.ToString() + "dBm (Low)", Color.Green);
+                            InfoAppendText(rssi.ToString() + "dBm (Low)", Color.Orange);
                         else if (rssi > (-100))
                             InfoAppendText(rssi.ToString() + "dBm (Very low)", Color.OrangeRed);
                         else
@@ -1904,17 +1927,17 @@ namespace NBST
                             rsrp = int.Parse(moduleInfo.Rsrp);
 
                             if (rsrp >= -70)
-                                InfoAppendText(moduleInfo.Rsrp, Color.Violet);
+                                InfoAppendText(moduleInfo.Rsrp + "dBm (Excellent)", Color.Violet);
                             else if (rsrp >= -80)
-                                InfoAppendText(moduleInfo.Rsrp, Color.Blue);
+                                InfoAppendText(moduleInfo.Rsrp + "dBm (Good)", Color.Blue);
                             else if (rsrp >= -90)
-                                InfoAppendText(moduleInfo.Rsrp, Color.Green);
+                                InfoAppendText(moduleInfo.Rsrp + "dBm (Normal)", Color.Green);
                             else if (rsrp >= -100)
-                                InfoAppendText(moduleInfo.Rsrp, Color.Orange);
+                                InfoAppendText(moduleInfo.Rsrp + "dBm (Low)", Color.Orange);
                             else if (rsrp >= -110)
-                                InfoAppendText(moduleInfo.Rsrp, Color.OrangeRed);
+                                InfoAppendText(moduleInfo.Rsrp + "dBm (Very low)", Color.OrangeRed);
                             else
-                                InfoAppendText(moduleInfo.Rsrp, Color.Red);
+                                InfoAppendText(moduleInfo.Rsrp + "dBm (No signal)", Color.Red);
                         }
                         catch
                         {
@@ -1928,24 +1951,24 @@ namespace NBST
                             rsrq = int.Parse(moduleInfo.Rsrq);
 
                             if (rsrq >= -8)
-                                InfoAppendText(moduleInfo.Rsrq, Color.Violet);
+                                InfoAppendText(moduleInfo.Rsrq + "dB (Excellent)", Color.Violet);
                             else if (rsrq > -10)
-                                InfoAppendText(moduleInfo.Rsrq, Color.Blue);
+                                InfoAppendText(moduleInfo.Rsrq + "dB (Good)", Color.Blue);
                             else if (rsrq > -15)
-                                InfoAppendText(moduleInfo.Rsrq, Color.Green);
+                                InfoAppendText(moduleInfo.Rsrq + "dB (Normal)", Color.Green);
                             else if (rsrq > -18)
-                                InfoAppendText(moduleInfo.Rsrq, Color.Orange);
+                                InfoAppendText(moduleInfo.Rsrq + "dB (Low)", Color.Orange);
                             else if (rsrq > -20)
-                                InfoAppendText(moduleInfo.Rsrq, Color.OrangeRed);
+                                InfoAppendText(moduleInfo.Rsrq + "dB (Very low)", Color.OrangeRed);
                             else
-                                InfoAppendText(moduleInfo.Rsrq, Color.Red);
+                                InfoAppendText(moduleInfo.Rsrq + "dB (No signal)", Color.Red);
                         }
                         catch
                         {
                             InfoAppendText("Unknown", Color.Red);
                         }
 
-                        tmpStr = "\nLocation:\nhttps://maps.google.com/maps?hl=en&q=" + lat.ToString() + "," + lon.ToString();
+                        tmpStr = "\nLocation:        " + lat.ToString() + "," + lon.ToString();
                         InfoAppendText(tmpStr);
 
                         if (Thread_Mode == ThreadMode.RF_TEST)
@@ -1966,7 +1989,8 @@ namespace NBST
                         break;
 
                     case ThreadTask.CMD_CFG_HTTPS_HOST:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443,0,,,1,120,1\r", 30000);
+                        //tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443,0,,,1,120,1\r", 60000);
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443\r", 60000);
 
                         if (tmpStr != null)
                         {
@@ -1977,7 +2001,7 @@ namespace NBST
                             }
                             else if (tmpStr.Contains("ERROR"))
                             {
-                                DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
                                 InfoAppendText("\n\nCan not connect to host " + downloadCxt.Host, Color.Red);
                             }
                         }
@@ -1993,12 +2017,12 @@ namespace NBST
                             if (tmpStr.Contains("\r\nOK\r\n"))
                             {
                                 DoNext++;
-                                InfoAppendText("\n\nStarting download file " + downloadCxt.FileName, Color.Blue);
+                                InfoAppendText("\n\nGet info of file " + downloadCxt.FileName, Color.Blue);
                             }
                             else
                             {
-                                DoNext = ThreadTask.CMD_CLOSE_SOCKET;
-                                InfoAppendText("\n\nCan not download file " + downloadCxt.FileName, Color.Red);
+                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
+                                InfoAppendText("\n\nCan not get info of file " + downloadCxt.FileName, Color.Red);
                             }
                         }
                         break;
@@ -2008,7 +2032,7 @@ namespace NBST
 
                         if (tmpStr != null)
                         {
-                            DoNext++;
+                            DoNext = ThreadTask.CMD_CLOSE_SOCKET;
 
                             if (tmpStr.Contains("#HTTPRING:"))
                             {
@@ -2030,19 +2054,19 @@ namespace NBST
 
                                 if (downloadCxt.FileSize == 0)
                                 {
-                                    DoNext++;
                                     downloadCxt.sW = null;
-                                    InfoAppendText("\n\nFile size = 0, error", Color.Red); ;
+                                    InfoAppendText("\nFile size = 0, error", Color.Red); ;
                                 }
                                 else
                                 {
+                                    DoNext = ThreadTask.CMD_GET_HTTPS_1500;
                                     TickDownload = Tick_Get();
                                     downloadCxt.DownloadedSize = 0;
                                     ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
                                     //downloadCxt.sW = new StreamWriter(downloadCxt.FileName);
                                     var stream = File.Open(downloadCxt.FileName, FileMode.Create);
                                     downloadCxt.sW = new BinaryWriter(stream);
-                                    InfoAppendText("\n\nFile size = " + downloadCxt.FileSize + " byte(s)", Color.Blue);
+                                    InfoAppendText("\nFile size = " + downloadCxt.FileSize + " byte(s)", Color.Blue);
                                 }
                             }
                         }
@@ -2122,8 +2146,23 @@ namespace NBST
                         break;
 
                     case ThreadTask.CMD_MODULE_REBOOT:
-                        DoNext++;
-                        SendCmd_GetRes(ref cmdCxt, "AT#REBOOT\r", 3000);
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#REBOOT\r", 3000);
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            {
+                                PrintDebug("\n\nModule is rebooting...\n\n");
+                                InfoAppendText("\n\nModule is rebooting...\n\n");
+                            }
+                            else
+                            {
+                                PrintDebug("\n\nCan not reboot\n\n", Color.Red);
+                                InfoAppendText("\n\nCan not reboot\n\n", Color.Red);
+                            }
+
+                            DoNext++;
+                        }
                         break;
 
                     case ThreadTask.CLOSE_APP:
@@ -2166,6 +2205,7 @@ namespace NBST
             {
                 if (bt_Download.Text == "Download")
                 {
+                    tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
                     Thread_Mode = ThreadMode.DOWNLOAD;
                     Thread_Enbale = 1;
                     bt_RFTest.Enabled = false;
