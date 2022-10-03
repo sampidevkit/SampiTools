@@ -58,6 +58,8 @@ namespace NBST
             PARSE_INFO,
             CMD_CFG_HTTPS_HOST,
             CMD_CFG_HTTPS_FILE,
+            CMD_GET_CURRENT_IP,
+            CMD_GET_CURRENT_DNS,
             HTTPS_GET_FILE_INFO,
             CMD_GET_HTTPS_1500,
             CMD_CLOSE_SOCKET,
@@ -2016,14 +2018,32 @@ namespace NBST
 
                             if (tmpStr.Contains("\r\nOK\r\n"))
                             {
-                                DoNext++;
+                                DoNext = ThreadTask.HTTPS_GET_FILE_INFO;
                                 InfoAppendText("\n\nGet info of file " + downloadCxt.FileName, Color.Blue);
                             }
                             else
                             {
-                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
+                                DoNext++;
                                 InfoAppendText("\n\nCan not get info of file " + downloadCxt.FileName, Color.Red);
                             }
+                        }
+                        break;
+
+                    case ThreadTask.CMD_GET_CURRENT_IP:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGCONTRDP\r", 10000);
+
+                        if (tmpStr != null)
+                        {
+                                DoNext++;
+                        }
+                        break;
+
+                    case ThreadTask.CMD_GET_CURRENT_DNS:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#NWDNS=\r", 10000);
+
+                        if (tmpStr != null)
+                        {
+                            DoNext = ThreadTask.CMD_MODULE_REBOOT;
                         }
                         break;
 
