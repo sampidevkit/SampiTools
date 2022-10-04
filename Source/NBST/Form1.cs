@@ -51,6 +51,7 @@ namespace NBST
             CMD_DEACT_PDP,
             CMD_SET_APN,
             CMD_ACT_PDP,
+            CMD_GET_CURRENT_PDP,
             CMD_SETUP_CELL_INFO,
             GET_LOCATION,
             CMD_GET_SIGNAL_QUALITY,
@@ -101,8 +102,11 @@ namespace NBST
             public string CellID;
             public string Csq;
             public string BitErrRate;
-            public string Apn;
+            public string Apn; // user's APN
             public string Ip;
+            public string OpApn; // operator's APN
+            public string OpDns; // operator DNS
+            public string OpAltDns; // operator alternator DNS
         }
 
         private DownloadCxt downloadCxt = new DownloadCxt
@@ -131,7 +135,10 @@ namespace NBST
             Csq = null,
             BitErrRate = null,
             Apn = null,
-            Ip = null
+            Ip = null,
+            OpApn = null,
+            OpDns = null,
+            OpAltDns = null
         };
         
         private volatile bool debugEn = true;
@@ -873,12 +880,31 @@ namespace NBST
             return false;
         }
 
-        private int Get_1stIndex(char[] buffer, string para, HeadTail head_tail)
+        private int Get_Index(char[] buffer, int offset, char chr, int chr_count)
+        {
+            if (chr_count == 0)
+                return (-1);
+
+            int len = buffer.Length - offset;
+
+            for (int i = offset; i < len; i++)
+            {
+                if(chr == buffer[i])
+                {
+                    if (--chr_count == 0)
+                        return i;
+                }
+            }
+
+            return (-1);
+        }
+
+        private int Get_1stIndex(char[] buffer, int offset, string para, HeadTail head_tail)
         {
             int i, j;
             char[] p = para.ToCharArray();
 
-            for (i = 0, j = 0; i < buffer.Length; i++)
+            for (i = offset, j = 0; i < (buffer.Length - offset); i++)
             {
                 if (buffer[i] == p[j])
                 {
@@ -959,12 +985,30 @@ namespace NBST
 
         private char[] SubArray(char[] buffer, string str_head, string str_tail)
         {
-            int head = Get_1stIndex(buffer, str_head, HeadTail.tail) + 1;
-            int tail = Get_1stIndex(buffer, str_tail, HeadTail.head) - 1;
+            int head = Get_1stIndex(buffer, 0, str_head, HeadTail.tail) + 1;
+            int tail = Get_1stIndex(buffer, 0, str_tail, HeadTail.head) - 1;
 
             //PrintDebug("\n--> head " + head.ToString()+ " tail " + tail.ToString());
 
             return SubArray(buffer, head, tail);
+        }
+
+        private char[] SubArray(char[] buffer, char begin, int beginCount, char end, int endCount)
+        {
+            int beginIdx = Get_Index(buffer, 0, begin, beginCount) + 1;
+            int endIdx = Get_Index(buffer, 0, end, endCount) - 1;
+
+            if (endIdx >= beginIdx)
+            {
+                char[] chars = new char[endIdx - beginIdx + 1];
+
+                for (int i = 0; i < chars.Length; i++)
+                    chars[i] = buffer[beginIdx + i];
+
+                return chars;
+            }
+
+            return null;
         }
 
         private char[] SubArray(char[] buffer, string str_head, string str_tail, bool last)
@@ -978,8 +1022,8 @@ namespace NBST
             }
             else
             {
-                head = Get_1stIndex(buffer, str_head, HeadTail.tail) + 1;
-                tail = Get_1stIndex(buffer, str_tail, HeadTail.head) - 1;
+                head = Get_1stIndex(buffer, 0, str_head, HeadTail.tail) + 1;
+                tail = Get_1stIndex(buffer, 0, str_tail, HeadTail.head) - 1;
             }
 
             //PrintDebug("\n--> head " + head.ToString() + " tail " + tail.ToString());
@@ -1326,7 +1370,7 @@ namespace NBST
         private string RemoveAT(string atResp)
         {
             char[] arr = atResp.ToCharArray();
-            int head = Get_1stIndex(arr, "\r\nOK\r\n", HeadTail.head);
+            int head = Get_1stIndex(arr, 0, "\r\nOK\r\n", HeadTail.head);
 
             if (head >= 0)
             {
@@ -1390,7 +1434,7 @@ namespace NBST
         private char[] HttpRcv_GetData(in char[] datain, int lenin)
         {
             char[] dataout = null;
-            int beginIdx = Get_1stIndex(datain, "<<<", HeadTail.tail) + 1;
+            int beginIdx = Get_1stIndex(datain, 0, "<<<", HeadTail.tail) + 1;
             int endIdx = Get_LastIndex(datain, "\r\nOK\r\n", HeadTail.head);
 
             //PrintDebug("\n\nFirst=" + beginIdx.ToString() + "\nLast=" + endIdx.ToString());
@@ -1442,6 +1486,9 @@ namespace NBST
             moduleInfo.Csq = null;
             moduleInfo.BitErrRate = null;
             moduleInfo.Ip = null;
+            moduleInfo.OpApn = null;
+            moduleInfo.OpDns = null;
+            moduleInfo.OpAltDns = null;
 
             try
             {
@@ -1639,8 +1686,8 @@ namespace NBST
                         {
                             if (tmpStr.Contains("\r\nOK\r\n"))
                                 DoNext++;
-                            else if (tmpStr.Contains("ERROR"))
-                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
+                            else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
+                                DoNext = ThreadTask.CMD_SET_APN;
                         }
                         break;
 
@@ -1665,11 +1712,45 @@ namespace NBST
                                 tmpStr = new string(SubArray(cmdCxt.buffer, "#SGACT: ", "\r\nOK"));
                                 moduleInfo.Ip = RemoveAT(tmpStr);
                             }
+                            else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
+                            {
+                                DoNext = ThreadTask.CMD_GET_CURRENT_PDP;
+                            }
+                        }
+                        break;
+
+                    case ThreadTask.CMD_GET_CURRENT_PDP:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGCONTRDP=1\r", 10000);
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            {
+                                DoNext++;
+                                tmpStr = new string(SubArray(cmdCxt.buffer, ",\"", "\","));
+                                moduleInfo.OpApn = RemoveAT(tmpStr);
+
+                                if (moduleInfo.Ip == null)
+                                {
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, ',', 3, ',', 4));
+                                    ReplaceStr(ref tmpStr, '\"', '\0');
+                                    ReplaceStr(ref tmpStr, ',', '\0');
+                                    moduleInfo.Ip = tmpStr;
+                                }
+
+                                tmpStr = new string(SubArray(cmdCxt.buffer, ',', 5, ',', 6));
+                                ReplaceStr(ref tmpStr, '\"', '\0');
+                                ReplaceStr(ref tmpStr, ',', '\0');
+                                moduleInfo.OpDns = tmpStr;
+
+                                tmpStr = new string(SubArray(cmdCxt.buffer, ',', 6, '\r', 2));
+                                ReplaceStr(ref tmpStr, '\"', '\0');
+                                ReplaceStr(ref tmpStr, ',', '\0');
+                                moduleInfo.OpAltDns = tmpStr;
+                            }
                             else if (tmpStr.Contains("ERROR"))
                             {
                                 DoNext++;
-                                tmpStr = new string(SubArray(cmdCxt.buffer, "ERROR: ", "\r\n"));
-                                moduleInfo.Ip = RemoveAT(tmpStr);
                             }
                         }
                         break;
@@ -1696,8 +1777,8 @@ namespace NBST
                         if (coord.IsUnknown != true)
                         {
                             //PrintDebug("\nLat: " + coord.Latitude.ToString() + ", Long: " + coord.Longitude.ToString());
-                            lon= coord.Longitude;
-                            lat= coord.Latitude;
+                            lon = coord.Longitude;
+                            lat = coord.Latitude;
                         }
                         //else
                             //PrintDebug("\nUnknown latitude and longitude.");
@@ -1805,6 +1886,9 @@ namespace NBST
                         }
 
                         InfoAppendText("\nIP:              " + moduleInfo.Ip);
+                        InfoAppendText("\nDNS:             " + moduleInfo.OpDns);
+                        InfoAppendText("\nALT DNS:         " + moduleInfo.OpAltDns);
+                        InfoAppendText("\nAPN:             " + moduleInfo.OpApn);
                         InfoAppendText("\nTAC(LAC):        ");
 
                         try
@@ -2145,7 +2229,7 @@ namespace NBST
                                     MessageBox.Show(md5_result, "Info");
                                 }
                             }
-                            else if (tmpStr.Contains("ERROR"))
+                            else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
                             {
                                 DoNext++;
                                 InfoAppendText("\n\nDownload fail", Color.Red);
