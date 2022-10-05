@@ -51,6 +51,8 @@
             this.ckb_DebugEn = new System.Windows.Forms.CheckBox();
             this.cb_Apn = new System.Windows.Forms.ComboBox();
             this.cb_Url = new System.Windows.Forms.ComboBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.cb_Dns = new System.Windows.Forms.ComboBox();
             this.tabCtrl1.SuspendLayout();
             this.tabGraph.SuspendLayout();
             this.tabLog.SuspendLayout();
@@ -198,13 +200,12 @@
             // 
             // tb_Md5
             // 
-            this.tb_Md5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+            this.tb_Md5.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.tb_Md5.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_Md5.ForeColor = System.Drawing.Color.OrangeRed;
-            this.tb_Md5.Location = new System.Drawing.Point(403, 448);
+            this.tb_Md5.Location = new System.Drawing.Point(500, 448);
             this.tb_Md5.Name = "tb_Md5";
-            this.tb_Md5.Size = new System.Drawing.Size(307, 20);
+            this.tb_Md5.Size = new System.Drawing.Size(210, 20);
             this.tb_Md5.TabIndex = 7;
             this.tb_Md5.Text = "834406D30F4F1FD20362A93CB3042696";
             this.tb_Md5.TextChanged += new System.EventHandler(this.tb_Md5_TextChanged);
@@ -221,9 +222,9 @@
             // 
             // label2
             // 
-            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(364, 452);
+            this.label2.Location = new System.Drawing.Point(461, 452);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(33, 13);
             this.label2.TabIndex = 8;
@@ -299,7 +300,7 @@
             "v-internet"});
             this.cb_Apn.Location = new System.Drawing.Point(50, 449);
             this.cb_Apn.Name = "cb_Apn";
-            this.cb_Apn.Size = new System.Drawing.Size(308, 21);
+            this.cb_Apn.Size = new System.Drawing.Size(115, 21);
             this.cb_Apn.TabIndex = 13;
             this.cb_Apn.Text = "m-nbiot";
             this.cb_Apn.TextChanged += new System.EventHandler(this.cb_Apn_TextChanged);
@@ -324,12 +325,41 @@
             this.cb_Url.Text = "https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt";
             this.cb_Url.TextChanged += new System.EventHandler(this.cb_Url_TextChanged);
             // 
+            // label3
+            // 
+            this.label3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(171, 452);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(33, 13);
+            this.label3.TabIndex = 15;
+            this.label3.Text = "DNS:";
+            // 
+            // cb_Dns
+            // 
+            this.cb_Dns.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.cb_Dns.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cb_Dns.ForeColor = System.Drawing.Color.OrangeRed;
+            this.cb_Dns.FormattingEnabled = true;
+            this.cb_Dns.Items.AddRange(new object[] {
+            "\"0.0.0.0\",\"0.0.0.0\"",
+            "\"1.1.1.1\",\"8.8.8.8\"",
+            "\"8.8.8.8\",\"8.8.4.4\""});
+            this.cb_Dns.Location = new System.Drawing.Point(210, 449);
+            this.cb_Dns.Name = "cb_Dns";
+            this.cb_Dns.Size = new System.Drawing.Size(245, 21);
+            this.cb_Dns.TabIndex = 16;
+            this.cb_Dns.Text = "\"0.0.0.0\",\"0.0.0.0\"";
+            this.cb_Dns.TextChanged += new System.EventHandler(this.cb_Dns_TextChanged);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(1008, 473);
+            this.Controls.Add(this.cb_Dns);
+            this.Controls.Add(this.label3);
             this.Controls.Add(this.cb_Url);
             this.Controls.Add(this.cb_Apn);
             this.Controls.Add(this.ckb_DebugEn);
@@ -381,6 +411,8 @@
         private System.Windows.Forms.CheckBox ckb_DebugEn;
         private System.Windows.Forms.ComboBox cb_Apn;
         private System.Windows.Forms.ComboBox cb_Url;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.ComboBox cb_Dns;
     }
 }
 

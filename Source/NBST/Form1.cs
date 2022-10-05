@@ -40,7 +40,6 @@ namespace NBST
             CMD_ECHO_OFF = 0,
             CMD_DISPLAY_ERROR,
             CMD_NO_FLOW_CONTROL,
-            CMD_SET_DNS,
             CMD_GET_MODULE_NAME,
             CMD_GET_MODULE_IMEI,
             CMD_GET_CIMI,
@@ -50,6 +49,7 @@ namespace NBST
             CMD_GET_OPERATOR_INFO,
             CMD_DEACT_PDP,
             CMD_SET_APN,
+            CMD_SET_DNS,
             CMD_ACT_PDP,
             CMD_GET_CURRENT_PDP,
             CMD_SETUP_CELL_INFO,
@@ -107,6 +107,7 @@ namespace NBST
             public string OpApn; // operator's APN
             public string OpDns; // operator DNS
             public string OpAltDns; // operator alternator DNS
+            public string UserDns;
         }
 
         private DownloadCxt downloadCxt = new DownloadCxt
@@ -138,7 +139,8 @@ namespace NBST
             Ip = null,
             OpApn = null,
             OpDns = null,
-            OpAltDns = null
+            OpAltDns = null,
+            UserDns = null
         };
         
         private volatile bool debugEn = true;
@@ -735,6 +737,7 @@ namespace NBST
 
             downloadCxt.Md5 = tb_Md5.Text;
             moduleInfo.Apn = cb_Apn.Text;
+            moduleInfo.UserDns = cb_Dns.Text;
 
             Uri myUri;
             bool result = Uri.TryCreate(cb_Url.Text, UriKind.Absolute, out myUri) && myUri.Scheme == Uri.UriSchemeHttps;
@@ -801,6 +804,7 @@ namespace NBST
             bt_Download.Enabled = true;
             bt_Scan.Enabled = true;
             cb_Apn.Enabled = true;
+            cb_Dns.Enabled = true;
             bt_RFTest.Text = "RF Test";
         }
 
@@ -815,6 +819,7 @@ namespace NBST
             bt_RFTest.Enabled = true;
             bt_Scan.Enabled = true;
             cb_Apn.Enabled = true;
+            cb_Dns.Enabled=true;
             cb_Url.Enabled = true;
             tb_Md5.Enabled = true;
             bt_Download.Text = "Download";
@@ -860,6 +865,7 @@ namespace NBST
                     bt_Download.Enabled = false;
                     bt_Scan.Enabled = false;
                     cb_Apn.Enabled = false;
+                    cb_Dns.Enabled = false;
                     Thread_Task = new Thread(() => Thread_Tasks()); // Create new app tasks
                     Thread_Task.Start();
                     bt_RFTest.Text = "Stop";
@@ -1559,16 +1565,6 @@ namespace NBST
                         }
                         break;
 
-                    case ThreadTask.CMD_SET_DNS:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#DNS=1,\"1.1.1.1\",\"8.8.8.8\"\r");
-
-                        if (tmpStr != null)
-                        {
-                            if (tmpStr.Contains("\r\nOK\r\n") || tmpStr.Contains("ERROR"))
-                                DoNext++;
-                        }
-                        break;
-
                     case ThreadTask.CMD_GET_MODULE_NAME:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "ATI4\r");
 
@@ -1701,6 +1697,16 @@ namespace NBST
                         }
                         break;
 
+                    case ThreadTask.CMD_SET_DNS:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#DNS=1," + moduleInfo.UserDns + "\r");
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n") || tmpStr.Contains("ERROR"))
+                                DoNext++;
+                        }
+                        break;
+
                     case ThreadTask.CMD_ACT_PDP:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SGACT=1,1\r", 30000);
 
@@ -1808,6 +1814,10 @@ namespace NBST
                             if (tmpStr.Contains("\r\nOK\r\n"))
                             {
                                 DoNext++;
+
+                                if (moduleInfo.Operator == null)
+                                    moduleInfo.Operator = new string(SubArray(cmdCxt.buffer, "#MONI: ", " RSRP:"));
+
                                 moduleInfo.Rsrp = new string(SubArray(cmdCxt.buffer, "RSRP:", " RSRQ:"));
                                 moduleInfo.Rsrq = new string(SubArray(cmdCxt.buffer, "RSRQ:", " TAC:"));
                                 moduleInfo.Tac = new string(SubArray(cmdCxt.buffer, "TAC:", " Id:"));
@@ -2087,7 +2097,7 @@ namespace NBST
                             }
                             else if (tmpStr.Contains("ERROR"))
                             {
-                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
+                                DoNext = ThreadTask.CMD_CLOSE_SOCKET;
                                 InfoAppendText("\n\nCan not connect to host " + downloadCxt.Host, Color.Red);
                             }
                         }
@@ -2127,7 +2137,7 @@ namespace NBST
 
                         if (tmpStr != null)
                         {
-                            DoNext = ThreadTask.CMD_MODULE_REBOOT;
+                            DoNext = ThreadTask.CMD_CLOSE_SOCKET;
                         }
                         break;
 
@@ -2315,6 +2325,7 @@ namespace NBST
                     bt_RFTest.Enabled = false;
                     bt_Scan.Enabled = false;
                     cb_Apn.Enabled = false;
+                    cb_Dns.Enabled = false;
                     cb_Url.Enabled = false;
                     tb_Md5.Enabled = false;
                     pgb_Percent.Value = 0;
@@ -2426,6 +2437,11 @@ namespace NBST
         private void cb_Apn_TextChanged(object sender, EventArgs e)
         {
             moduleInfo.Apn = cb_Apn.Text;
+        }
+
+        private void cb_Dns_TextChanged(object sender, EventArgs e)
+        {
+            moduleInfo.UserDns = cb_Dns.Text;
         }
     }
 }
