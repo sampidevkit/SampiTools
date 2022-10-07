@@ -64,8 +64,19 @@ namespace NBST
             HTTPS_GET_FILE_INFO,
             CMD_GET_HTTPS_1500,
             CMD_CLOSE_SOCKET,
+            CMD_RF_OFF,
+            CMD_RF_ON,
             CMD_MODULE_REBOOT,
             CLOSE_APP
+        }
+
+        private struct FileParseCxt
+        {
+            public byte[] Data;
+            public int Size;
+            public int Index;
+            public int Count;
+            public int DoNext;
         }
 
         private struct CmdCxt
@@ -79,7 +90,9 @@ namespace NBST
 
         private struct DownloadCxt
         {
+            public bool SslEn;
             public string Host;
+            public string Port;
             public string FilePath;
             public string FileName;
             public string Md5;
@@ -112,7 +125,9 @@ namespace NBST
 
         private DownloadCxt downloadCxt = new DownloadCxt
         {
+            SslEn = false,
             Host = null,
+            Port = null,
             FilePath = null,
             FileName = null,
             Md5 = null,
@@ -142,13 +157,15 @@ namespace NBST
             OpAltDns = null,
             UserDns = null
         };
-        
+
+        private volatile bool autoReboot = false;
         private volatile bool debugEn = true;
         private volatile bool viewMode = false;
         private static Thread Thread_Task = null;
         private volatile ThreadMode Thread_Mode = ThreadMode.RF_TEST;
         private volatile int Thread_Enbale = 0;
         private volatile ThreadTask DoNext = ThreadTask.CMD_ECHO_OFF;
+        private volatile ThreadTask ToDo = ThreadTask.CMD_ECHO_OFF;
         private StreamWriter sW = null;
         private string logfileName = null;
         private long line = 0;
@@ -418,6 +435,61 @@ namespace NBST
             }
 
             PrintDebug(s + "\n\n", color);
+        }
+
+        private void FileParseInit(ref FileParseCxt FpCxt, int BufferSize)
+        {
+            FpCxt.DoNext = 0;
+            FpCxt.Count = 0;
+            FpCxt.Data = new byte[BufferSize];
+        }
+
+        private int FileParse(ref FileParseCxt FpCxt, byte b)
+        {
+            switch(FpCxt.DoNext)
+            {
+                case 0: // header \r
+                    if (b == '\r')
+                        FpCxt.DoNext++;
+                    else
+                        FpCxt.DoNext = 0;
+                    break;
+
+                case 1: // header \n
+                    if (b == '\n')
+                    {
+                        FpCxt.DoNext++;
+                        FpCxt.Count = 0;
+                    }
+                    else
+                        FpCxt.DoNext = 0;
+                    break;
+
+                case 2: // >>>
+                    if (b == '>')
+                    {
+                        FpCxt.Count++;
+
+                        if (FpCxt.Count == 3)
+                        {
+                            FpCxt.DoNext++;
+                            FpCxt.Count = 0;
+                            FpCxt.Index = 0;
+                        }
+                    }
+                    else
+                        FpCxt.DoNext = 0;
+                    break;
+
+                case 3: // data
+                    FpCxt.Data[FpCxt.Index++] = b;
+                    break;
+
+                default:
+                    break;
+            }
+
+            return 0;
         }
 
         private string FileNameGenerate(string prefix)
@@ -738,25 +810,7 @@ namespace NBST
             downloadCxt.Md5 = tb_Md5.Text;
             moduleInfo.Apn = cb_Apn.Text;
             moduleInfo.UserDns = cb_Dns.Text;
-
-            Uri myUri;
-            bool result = Uri.TryCreate(cb_Url.Text, UriKind.Absolute, out myUri) && myUri.Scheme == Uri.UriSchemeHttps;
-
-            if (result)
-            {
-                downloadCxt.Host = myUri.Host;
-                downloadCxt.FilePath = myUri.AbsolutePath;
-                downloadCxt.FileName = Path.GetFileName(downloadCxt.FilePath);
-
-                if (downloadCxt.FileName == null)
-                    MessageBox.Show("No file name", "Error");
-
-                if (downloadCxt.FilePath == null)
-                    MessageBox.Show("No file path", "Error");
-            }
-            else
-                MessageBox.Show("Invalid HTTPS URL", "Error");
-
+            LoadUrl(false);
             Scan_AT_Port();
         }
 
@@ -2085,8 +2139,14 @@ namespace NBST
                         break;
 
                     case ThreadTask.CMD_CFG_HTTPS_HOST:
-                        //tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443,0,,,1,120,1\r", 60000);
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443\r", 60000);
+
+                        if (downloadCxt.SslEn == true)
+                        {
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\"," + downloadCxt.Port + ",0,,,1,30,1\r", 60000);
+                            //tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443\r", 60000);
+                        }
+                        else
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\"," + downloadCxt.Port + ",0,,,0,30,1\r", 60000);
 
                         if (tmpStr != null)
                         {
@@ -2098,6 +2158,7 @@ namespace NBST
                             else if (tmpStr.Contains("ERROR"))
                             {
                                 DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                                ToDo = ThreadTask.CMD_RF_OFF;
                                 InfoAppendText("\n\nCan not connect to host " + downloadCxt.Host, Color.Red);
                             }
                         }
@@ -2137,7 +2198,13 @@ namespace NBST
 
                         if (tmpStr != null)
                         {
-                            DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                            if (autoReboot)
+                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
+                            else
+                            {
+                                DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                                ToDo = ThreadTask.CMD_RF_OFF;
+                            }
                         }
                         break;
 
@@ -2147,6 +2214,7 @@ namespace NBST
                         if (tmpStr != null)
                         {
                             DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                            ToDo = ThreadTask.CMD_RF_OFF;
 
                             if (tmpStr.Contains("#HTTPRING:"))
                             {
@@ -2207,7 +2275,8 @@ namespace NBST
 
                                 if (downloadCxt.DownloadedSize >= downloadCxt.FileSize)
                                 {
-                                    DoNext++;
+                                    DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                                    ToDo = ThreadTask.CLOSE_APP;
                                     downloadCxt.sW.Close();
                                     downloadCxt.sW = null;
 
@@ -2241,7 +2310,14 @@ namespace NBST
                             }
                             else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
                             {
-                                DoNext++;
+                                if (autoReboot)
+                                    DoNext = ThreadTask.CMD_MODULE_REBOOT;
+                                else
+                                {
+                                    DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                                    ToDo = ThreadTask.CMD_RF_OFF;
+                                }
+
                                 InfoAppendText("\n\nDownload fail", Color.Red);
                             }
                         }
@@ -2253,9 +2329,33 @@ namespace NBST
                         if (tmpStr != null)
                         {
                             if (tmpStr.Contains("\r\nOK\r\n"))
-                                DoNext = ThreadTask.CLOSE_APP;
+                                DoNext = ToDo;
                             else
                                 DoNext++;
+                        }
+                        break;
+
+                    case ThreadTask.CMD_RF_OFF:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CFUN=4\r", 30000);
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                                DoNext++;
+                            else
+                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
+                        }
+                        break;
+
+                    case ThreadTask.CMD_RF_ON:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CFUN=1\r", 30000);
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                                DoNext = ThreadTask.CLOSE_APP;
+                            else
+                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
                         }
                         break;
 
@@ -2360,13 +2460,31 @@ namespace NBST
             portName = cb_Port1.Text;
         }
 
-        private void cb_Url_TextChanged(object sender, EventArgs e)
+        private void LoadUrl(bool online)
         {
             Uri myUri;
-            bool result = Uri.TryCreate(cb_Url.Text, UriKind.Absolute, out myUri) && myUri.Scheme == Uri.UriSchemeHttps;
+            bool result = Uri.TryCreate(cb_Url.Text, UriKind.Absolute, out myUri);
 
             if (result)
             {
+                if (myUri.Scheme == Uri.UriSchemeHttps)
+                {
+                    downloadCxt.SslEn = true;
+                    //downloadCxt.Port = "443";
+                    downloadCxt.Port = myUri.Port.ToString();
+                }
+                else if (myUri.Scheme == Uri.UriSchemeHttp)
+                {
+                    downloadCxt.SslEn = false;
+                    downloadCxt.Port = myUri.Port.ToString();
+                }
+                else
+                {
+                    MessageBox.Show("Invalid URL", "Error");
+                    return;
+                }
+
+                //MessageBox.Show("Port: " + downloadCxt.Port, "Info");
                 downloadCxt.Host = myUri.Host;
                 downloadCxt.FilePath = myUri.AbsolutePath;
                 downloadCxt.FileName = Path.GetFileName(downloadCxt.FilePath);
@@ -2383,31 +2501,39 @@ namespace NBST
                     return;
                 }
 
-                try
+                if (online)
                 {
-                    WebClient client = new WebClient();
-                    client.DownloadFile(cb_Url.Text, "Raw_" + downloadCxt.FileName);
-
-                    if (File.Exists("Raw_" + downloadCxt.FileName))
+                    try
                     {
-                        MD5 md5 = MD5.Create();
-                        var stream = File.OpenRead("Raw_" + downloadCxt.FileName);
-                        var hash = md5.ComputeHash(stream);
-                        stream.Close();
+                        WebClient client = new WebClient();
+                        client.DownloadFile(cb_Url.Text, "Raw_" + downloadCxt.FileName);
 
-                        string md5_result = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
-                        tb_Md5.Text = md5_result;
-                        MessageBox.Show("MD5: " + md5_result, "Info");
-                        return;
+                        if (File.Exists("Raw_" + downloadCxt.FileName))
+                        {
+                            MD5 md5 = MD5.Create();
+                            var stream = File.OpenRead("Raw_" + downloadCxt.FileName);
+                            var hash = md5.ComputeHash(stream);
+                            stream.Close();
+
+                            string md5_result = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
+                            tb_Md5.Text = md5_result;
+                            MessageBox.Show("MD5: " + md5_result, "Info");
+                            return;
+                        }
                     }
-                }
-                catch
-                {
-                    MessageBox.Show("Can not calculate MD5", "Info");
+                    catch
+                    {
+                        MessageBox.Show("Can not calculate MD5", "Info");
+                    }
                 }
             }
             else
-                MessageBox.Show("Invalid HTTPS URL", "Error");
+                MessageBox.Show("Invalid URL", "Error");
+        }
+
+        private void cb_Url_TextChanged(object sender, EventArgs e)
+        {
+            LoadUrl(true);
         }
 
         private void tb_Md5_TextChanged(object sender, EventArgs e)
@@ -2442,6 +2568,11 @@ namespace NBST
         private void cb_Dns_TextChanged(object sender, EventArgs e)
         {
             moduleInfo.UserDns = cb_Dns.Text;
+        }
+
+        private void ckb_Reboot_CheckedChanged(object sender, EventArgs e)
+        {
+            autoReboot = ckb_Reboot.Checked;
         }
     }
 }

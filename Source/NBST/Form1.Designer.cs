@@ -53,6 +53,7 @@
             this.cb_Url = new System.Windows.Forms.ComboBox();
             this.label3 = new System.Windows.Forms.Label();
             this.cb_Dns = new System.Windows.Forms.ComboBox();
+            this.ckb_Reboot = new System.Windows.Forms.CheckBox();
             this.tabCtrl1.SuspendLayout();
             this.tabGraph.SuspendLayout();
             this.tabLog.SuspendLayout();
@@ -266,9 +267,9 @@
             this.bt_Download.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.bt_Download.Enabled = false;
             this.bt_Download.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_Download.Location = new System.Drawing.Point(790, 447);
+            this.bt_Download.Location = new System.Drawing.Point(882, 447);
             this.bt_Download.Name = "bt_Download";
-            this.bt_Download.Size = new System.Drawing.Size(206, 23);
+            this.bt_Download.Size = new System.Drawing.Size(114, 23);
             this.bt_Download.TabIndex = 5;
             this.bt_Download.Text = "Download";
             this.bt_Download.UseVisualStyleBackColor = true;
@@ -298,7 +299,7 @@
             "m-nbiot",
             "m-wap",
             "v-internet"});
-            this.cb_Apn.Location = new System.Drawing.Point(50, 449);
+            this.cb_Apn.Location = new System.Drawing.Point(50, 448);
             this.cb_Apn.Name = "cb_Apn";
             this.cb_Apn.Size = new System.Drawing.Size(115, 21);
             this.cb_Apn.TabIndex = 13;
@@ -313,16 +314,15 @@
             this.cb_Url.ForeColor = System.Drawing.Color.OrangeRed;
             this.cb_Url.FormattingEnabled = true;
             this.cb_Url.Items.AddRange(new object[] {
+            "http://103.156.0.37:8081/Test.txt",
             "https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt",
             "https://raw.githubusercontent.com/MicrochipTech/XPRESS-Loader/master/utilities/Xp" +
-                "ressBL.hex",
-            "https://raw.githubusercontent.com/MicrochipTech/AWS-Secure-Insight/master/documen" +
-                "ts/images/AWS-IoT.png"});
+                "ressBL.hex"});
             this.cb_Url.Location = new System.Drawing.Point(50, 420);
             this.cb_Url.Name = "cb_Url";
             this.cb_Url.Size = new System.Drawing.Size(660, 21);
             this.cb_Url.TabIndex = 14;
-            this.cb_Url.Text = "https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt";
+            this.cb_Url.Text = "http://103.156.0.37:8081/Test.txt";
             this.cb_Url.TextChanged += new System.EventHandler(this.cb_Url_TextChanged);
             // 
             // label3
@@ -345,12 +345,24 @@
             "\"0.0.0.0\",\"0.0.0.0\"",
             "\"1.1.1.1\",\"8.8.8.8\"",
             "\"8.8.8.8\",\"8.8.4.4\""});
-            this.cb_Dns.Location = new System.Drawing.Point(210, 449);
+            this.cb_Dns.Location = new System.Drawing.Point(210, 448);
             this.cb_Dns.Name = "cb_Dns";
             this.cb_Dns.Size = new System.Drawing.Size(245, 21);
             this.cb_Dns.TabIndex = 16;
             this.cb_Dns.Text = "\"0.0.0.0\",\"0.0.0.0\"";
             this.cb_Dns.TextChanged += new System.EventHandler(this.cb_Dns_TextChanged);
+            // 
+            // ckb_Reboot
+            // 
+            this.ckb_Reboot.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.ckb_Reboot.AutoSize = true;
+            this.ckb_Reboot.Location = new System.Drawing.Point(790, 450);
+            this.ckb_Reboot.Name = "ckb_Reboot";
+            this.ckb_Reboot.Size = new System.Drawing.Size(86, 17);
+            this.ckb_Reboot.TabIndex = 17;
+            this.ckb_Reboot.Text = "Auto Reboot";
+            this.ckb_Reboot.UseVisualStyleBackColor = true;
+            this.ckb_Reboot.CheckedChanged += new System.EventHandler(this.ckb_Reboot_CheckedChanged);
             // 
             // Form1
             // 
@@ -358,6 +370,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(1008, 473);
+            this.Controls.Add(this.ckb_Reboot);
             this.Controls.Add(this.cb_Dns);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.cb_Url);
@@ -413,6 +426,7 @@
         private System.Windows.Forms.ComboBox cb_Url;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox cb_Dns;
+        private System.Windows.Forms.CheckBox ckb_Reboot;
     }
 }
 
