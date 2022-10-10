@@ -86,6 +86,7 @@ namespace NBST
             public int findIdx;
             public int donext;
             public UInt32 tick;
+            public UInt32 proctime;
         }
 
         private struct DownloadCxt
@@ -158,7 +159,7 @@ namespace NBST
             UserDns = null
         };
 
-        private volatile bool autoReboot = false;
+        private volatile int tryCount = 0;
         private volatile bool debugEn = true;
         private volatile bool viewMode = false;
         private static Thread Thread_Task = null;
@@ -595,7 +596,7 @@ namespace NBST
             return s;
         }
 
-        private bool TestATPort(string portName)
+        private bool TestATPort(string portName, string cmd)
         {
             int loop = 0;
             bool found = false;
@@ -622,7 +623,7 @@ namespace NBST
 
                 do
                 {
-                    resp = SendCmd_GetRes(ref cmdCxt, "ATE0\r");
+                    resp = SendCmd_GetRes(ref cmdCxt, cmd);
 
                     if (resp != null)
                     {
@@ -664,12 +665,14 @@ namespace NBST
             string port = null;
             string portlist = null;
 
+            
             PrintDebug("\nSupport device: ");
 
             foreach (string Pid in UsbPid)
             {
                 PrintDebug("\n" + Pid);
             }
+            
 
             try
             {
@@ -694,7 +697,7 @@ namespace NBST
                                     portlist += port;
                                     //PrintDebug("\nFound: " + port);
 
-                                    if (TestATPort(port))
+                                    if (TestATPort(port, "ATE0\r"))
                                     {
                                         found++;
                                         cb_Port1.Items.Add(port);
@@ -705,7 +708,7 @@ namespace NBST
                                     portlist += port;
                                     //PrintDebug("\nFound: " + port);
 
-                                    if (TestATPort(port))
+                                    if (TestATPort(port, "ATE0\r"))
                                     {
                                         found++;
                                         cb_Port1.Items.Add(port);
@@ -730,7 +733,7 @@ namespace NBST
                             portlist += port;
                             //PrintDebug("\nFound: " + port);
 
-                            if (TestATPort(port))
+                            if (TestATPort(port, "ATE0\r"))
                             {
                                 found++;
                                 cb_Port1.Items.Add(port);
@@ -741,7 +744,7 @@ namespace NBST
                             portlist += port;
                             //PrintDebug("\nFound: " + port);
 
-                            if (TestATPort(port))
+                            if (TestATPort(port, "ATE0\r"))
                             {
                                 found++;
                                 cb_Port1.Items.Add(port);
@@ -774,31 +777,62 @@ namespace NBST
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            if (File.Exists("SupportedDevices.txt")) // <-----------------------------------------------------------------------
+            if (File.Exists("SupportedDevices.txt"))
             {
                 StreamReader sRUsbDevice = new StreamReader("SupportedDevices.txt");
-                int lineCount = 0;
-
-                while (sRUsbDevice.ReadLine() != null)
-                    lineCount++;
-
+                string deviceStr = sRUsbDevice.ReadToEnd();
+                
                 sRUsbDevice.Close();
-                UsbPid = new string[lineCount];
-                lineCount = 0;
-                sRUsbDevice = new StreamReader("SupportedDevices.txt");
+                ReplaceStr(ref deviceStr, '\r', (char)0x00);
 
-                for (int i = 0; i < lineCount; i++)
+                char[] deviceArr = deviceStr.ToCharArray();
+                int lineCount = 1;
+
+                foreach(char c in deviceArr)
                 {
-                    UsbPid[i] = sRUsbDevice.ReadLine();
-                    ReplaceStr(ref UsbPid[i], '\r', (char)0x00);
-                    ReplaceStr(ref UsbPid[i], '\n', (char)0x00);
-                    //PrintDebug("\nLoad device: " + UsbPid[i]);
+                    if (c == '\n')
+                        lineCount++;
                 }
 
-                sRUsbDevice.Close();
+                UsbPid = new string[lineCount];
+                int lineIdx = 0;
+                UsbPid[lineIdx] = null;
+
+                foreach (char c in deviceArr)
+                {
+                    switch (c)
+                    {
+                        case '\n':
+                            lineIdx++;
+
+                            if (lineIdx < lineCount)
+                                UsbPid[lineIdx] = null;
+                            break;
+
+                        default:
+                            if (lineIdx < lineCount)
+                                UsbPid[lineIdx] += c.ToString();
+                            break;
+                    }
+                }
             }
             else
             {
+                StreamWriter sW = new StreamWriter("SupportedDevices.txt");
+                bool _1st = true;
+
+                foreach (string s in UsbPid)
+                {
+                    if (_1st)
+                    {
+                        _1st = false;
+                        sW.Write(s);
+                    }
+                    else
+                        sW.Write("\n" + s);
+                }
+
+                sW.Close();
                 MessageBox.Show("SupportedDevices.txt not found, use default supported devices", "Warning");
             }
 
@@ -856,6 +890,7 @@ namespace NBST
 
             CloseLogFile();
             bt_Download.Enabled = true;
+            bt_Reboot.Enabled = true;
             bt_Scan.Enabled = true;
             cb_Apn.Enabled = true;
             cb_Dns.Enabled = true;
@@ -917,6 +952,7 @@ namespace NBST
                     Thread_Enbale = 1;
                     OpenLogFile();
                     bt_Download.Enabled = false;
+                    bt_Reboot.Enabled = false;
                     bt_Scan.Enabled = false;
                     cb_Apn.Enabled = false;
                     cb_Dns.Enabled = false;
@@ -1177,7 +1213,7 @@ namespace NBST
             return null;
         }
 
-        private string SendCmd_GetData(ref CmdCxt cmdCxt, string cmd, UInt32 timeout, UInt32 wait, bool AT_Track)
+        private string SendCmd_GetData(ref CmdCxt cmdCxt, string cmd, UInt32 timeout, UInt32 wait, int datasize, bool AT_Track)
         {
             try
             {
@@ -1187,6 +1223,7 @@ namespace NBST
                         cmdCxt.donext++;
                         cmdCxt.buffer = new char[4096];
                         cmdCxt.tick = Tick_Get();
+                        cmdCxt.proctime = Tick_Get();
                         serialPort1.Write(cmd);
                         PrintTxDebug("\nTX: " + cmd);
                         break;
@@ -1202,6 +1239,7 @@ namespace NBST
                         else if (Tick_IsOverMs(ref cmdCxt.tick, timeout))
                         {
                             cmdCxt.donext--;
+                            cmdCxt.proctime = Tick_DifMs(cmdCxt.proctime) - timeout;
                             PrintDebug("\nRX Timeout");
                             return "RX TIMEOUT";
                         }
@@ -1222,22 +1260,27 @@ namespace NBST
                                 if ((AT_Track == true) && FindString(c, ref cmdCxt.findIdx, "\r\nOK\r\n"))
                                 {
                                     cmdCxt.donext++;
+                                    cmdCxt.proctime = Tick_DifMs(cmdCxt.proctime);
                                     PrintRxDebug("\n-->OK\n");
                                 }
 
                                 //PrintRxDebug("\nIdx: " + cmdCxt.findIdx.ToString() + ", ");
                             }
 
-                            if (cmdCxt.len >= 1511)
+                            if (/*cmdCxt.len >= 1511*/cmdCxt.len >= (datasize + 11))
                             {
                                 cmdCxt.donext++;
+                                cmdCxt.proctime = Tick_DifMs(cmdCxt.proctime);
                                 PrintRxDebug("\nDownload " + cmdCxt.len.ToString() + " byte(s)");
                             }
 
                             cmdCxt.tick = Tick_Get();
                         }
                         else if (Tick_IsOverMs(ref cmdCxt.tick, wait))
+                        {
                             cmdCxt.donext++;
+                            cmdCxt.proctime = Tick_DifMs(cmdCxt.proctime) - wait;
+                        }
                         break;
 
                     default:
@@ -1526,7 +1569,7 @@ namespace NBST
             double lon = 0, lat = 0;
             string tmpStr = null;
             char[] tmpArr = null;
-            UInt32 TickDownload = 0;
+            UInt32 DownloadTime = 0;
             CmdCxt cmdCxt = new CmdCxt();
 
             cmdCxt.buffer = new char[4096];
@@ -1620,13 +1663,14 @@ namespace NBST
                         break;
 
                     case ThreadTask.CMD_GET_MODULE_NAME:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "ATI4\r");
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGMM\r");
 
                         if (tmpStr != null)
                         {
                             if (tmpStr.Contains("\r\nOK\r\n"))
                             {
                                 DoNext++;
+                                tmpStr = new string(SubArray(cmdCxt.buffer, "+CGMM: ", "\r\nOK"));
                                 moduleInfo.Name = RemoveAT(tmpStr);
                             }
                         }
@@ -1704,6 +1748,8 @@ namespace NBST
                                 tmpStr = new string(SubArray(cmdCxt.buffer, "#CCID: ", "\r\nOK"));
                                 moduleInfo.Ccid = RemoveAT(tmpStr);
                             }
+                            else if (tmpStr.Contains("ERROR"))
+                                DoNext++;
                             else
                             {
                                 DoNext--;
@@ -1723,6 +1769,7 @@ namespace NBST
                                 TickStart = 0;
                                 moduleInfo.Operator = new string(SubArray(cmdCxt.buffer, ",\"", "\","));
                                 moduleInfo.NetworkType = new string(SubArray(cmdCxt.buffer, "\",", "\r\nOK"));
+                                ReplaceStr(ref moduleInfo.NetworkType, ' ', '\0');
                                 ReplaceStr(ref moduleInfo.NetworkType, '\r', '\0');
                                 ReplaceStr(ref moduleInfo.NetworkType, '\n', '\0');
                             }
@@ -1825,6 +1872,10 @@ namespace NBST
                                 DoNext++;
                                 thisTick = Tick_Get();
                             }
+                            else if (tmpStr.Contains("ERROR"))
+                            {
+                                DoNext++;
+                            }
                         }
                         break;
 
@@ -1879,103 +1930,132 @@ namespace NBST
                                 //PrintDebug("\nRSRP: " + moduleInfo.Rsrp);
                                 //PrintDebug("\nRSRQ: " + moduleInfo.Rsrq);
                             }
+                            else if (tmpStr.Contains("ERROR"))
+                            {
+                                DoNext++;
+                            }
                         }
                         break;
 
                     case ThreadTask.PARSE_INFO:
-                        InfoWriteText("Module:          " + moduleInfo.Name);
-                        InfoAppendText("\nIMEI:            " + moduleInfo.Imei);
-                        InfoAppendText("\nCIMI:            " + moduleInfo.Cimi);
-                        InfoAppendText("\nCCID:            " + moduleInfo.Ccid);
-                        InfoAppendText("\nOperator:        " + moduleInfo.Operator);
-                        InfoAppendText("\nNetwork " + "(" + moduleInfo.NetworkType + "):     ");
+                        if (moduleInfo.Name != null)
+                            InfoWriteText("Module:          " + moduleInfo.Name);
 
-                        int netType;
+                        if (moduleInfo.Imei != null)
+                            InfoAppendText("\nIMEI:            " + moduleInfo.Imei);
 
-                        try
+                        if (moduleInfo.Cimi != null)
+                            InfoAppendText("\nCIMI:            " + moduleInfo.Cimi);
+
+                        if (moduleInfo.Ccid != null)
+                            InfoAppendText("\nCCID:            " + moduleInfo.Ccid);
+
+                        if (moduleInfo.Operator != null)
+                            InfoAppendText("\nOperator:        " + moduleInfo.Operator);
+
+                        if (moduleInfo.NetworkType != null)
                         {
-                            netType = int.Parse(moduleInfo.NetworkType);
+                            InfoAppendText("\nNetwork " + "(" + moduleInfo.NetworkType + "):     ");
+
+                            int netType;
+
+                            try
+                            {
+                                netType = int.Parse(moduleInfo.NetworkType);
+                            }
+                            catch
+                            {
+                                netType = (-1);
+                                moduleInfo.NetworkType = "-1";
+                            }
+
+                            switch (netType)
+                            {
+                                case 0:
+                                    InfoAppendText("GSM");
+                                    break;
+
+                                case 1:
+                                    InfoAppendText("GSM Compact");
+                                    break;
+
+                                case 2:
+                                    InfoAppendText("UTRAN");
+                                    break;
+
+                                case 3:
+                                    InfoAppendText("GSM/EGPRS");
+                                    break;
+
+                                case 4:
+                                    InfoAppendText("UTRAN/HSDPA");
+                                    break;
+
+                                case 5:
+                                    InfoAppendText("UTRAN/HSUPA");
+                                    break;
+
+                                case 6:
+                                    InfoAppendText("UTRAN/HSDPA&HSUPA");
+                                    break;
+
+                                case 7:
+                                    InfoAppendText("E-UTRAN");
+                                    break;
+
+                                case 8:
+                                    InfoAppendText("CAT M1");
+                                    break;
+
+                                case 9:
+                                    InfoAppendText("NB IoT");
+                                    break;
+
+                                default:
+                                    InfoAppendText("Unknown");
+                                    break;
+                            }
                         }
-                        catch
+
+                        if (moduleInfo.Ip != null)
+                            InfoAppendText("\nIP:              " + moduleInfo.Ip);
+
+                        if (moduleInfo.OpDns != null)
+                            InfoAppendText("\nDNS:             " + moduleInfo.OpDns);
+
+                        if (moduleInfo.OpAltDns != null)
+                            InfoAppendText("\nALT DNS:         " + moduleInfo.OpAltDns);
+
+                        if (moduleInfo.OpApn != null)
+                            InfoAppendText("\nAPN:             " + moduleInfo.OpApn);
+
+                        if (moduleInfo.Tac != null)
                         {
-                            netType = (-1);
-                            moduleInfo.NetworkType = "-1";
+                            InfoAppendText("\nTAC(LAC):        ");
+
+                            try
+                            {
+                                InfoAppendText(moduleInfo.Tac + " (" + Convert.ToUInt32(moduleInfo.Tac, 16).ToString() + ")");
+                            }
+                            catch
+                            {
+                                InfoAppendText("Unknown", Color.Red);
+                            }
                         }
 
-                        switch (netType)
+                        if (moduleInfo.CellID != null)
                         {
-                            case 0:
-                                InfoAppendText("GSM");
-                                break;
+                            InfoAppendText("\nCell ID:         ");
 
-                            case 1:
-                                InfoAppendText("GSM Compact");
-                                break;
-
-                            case 2:
-                                InfoAppendText("UTRAN");
-                                break;
-
-                            case 3:
-                                InfoAppendText("GSM w/EGPRS");
-                                break;
-
-                            case 4:
-                                InfoAppendText("UTRAN w/HSDPA");
-                                break;
-
-                            case 5:
-                                InfoAppendText("UTRAN w/HSUPA");
-                                break;
-
-                            case 6:
-                                InfoAppendText("UTRAN w/HSDPA and HSUPA");
-                                break;
-
-                            case 7:
-                                InfoAppendText("E-UTRAN");
-                                break;
-
-                            case 8:
-                                InfoAppendText("CAT M1");
-                                break;
-
-                            case 9:
-                                InfoAppendText("NB IoT");
-                                break;
-
-                            default:
+                            try
+                            {
+                                InfoAppendText(moduleInfo.CellID + " (" + Convert.ToUInt32(moduleInfo.CellID, 16).ToString() + ")");
+                            }
+                            catch
+                            {
                                 InfoAppendText("Unknown");
-                                break;
+                            }
                         }
-
-                        InfoAppendText("\nIP:              " + moduleInfo.Ip);
-                        InfoAppendText("\nDNS:             " + moduleInfo.OpDns);
-                        InfoAppendText("\nALT DNS:         " + moduleInfo.OpAltDns);
-                        InfoAppendText("\nAPN:             " + moduleInfo.OpApn);
-                        InfoAppendText("\nTAC(LAC):        ");
-
-                        try
-                        {
-                            InfoAppendText(moduleInfo.Tac + " (" + Convert.ToUInt32(moduleInfo.Tac, 16).ToString() + ")");
-                        }
-                        catch
-                        {
-                            InfoAppendText("Unknown", Color.Red);
-                        }
-
-                        InfoAppendText("\nCell ID:         ");
-
-                        try
-                        {
-                            InfoAppendText(moduleInfo.CellID + " (" + Convert.ToUInt32(moduleInfo.CellID, 16).ToString() + ")");
-                        }
-                        catch
-                        {
-                            InfoAppendText("Unknown");
-                        }
-
-                        //InfoAppendText("\nQuality" + " (" + moduleInfo.Csq + "):    ");
 
                         try
                         {
@@ -2118,8 +2198,11 @@ namespace NBST
                             InfoAppendText("Unknown", Color.Red);
                         }
 
-                        tmpStr = "\nLocation:        " + lat.ToString() + "," + lon.ToString();
-                        InfoAppendText(tmpStr);
+                        if ((lat > (double)0) || (lon > (double)0))
+                        {
+                            tmpStr = "\nLocation:        " + lat.ToString() + "," + lon.ToString();
+                            InfoAppendText(tmpStr);
+                        }
 
                         if (Thread_Mode == ThreadMode.RF_TEST)
                         {
@@ -2139,6 +2222,11 @@ namespace NBST
                         break;
 
                     case ThreadTask.CMD_CFG_HTTPS_HOST:
+                        if (moduleInfo.Ip == null)
+                        {
+                            DoNext = ThreadTask.CLOSE_APP;
+                            InfoAppendText("\n\nCan not access the internet", Color.Red);
+                        }
 
                         if (downloadCxt.SslEn == true)
                         {
@@ -2198,13 +2286,8 @@ namespace NBST
 
                         if (tmpStr != null)
                         {
-                            if (autoReboot)
-                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
-                            else
-                            {
-                                DoNext = ThreadTask.CMD_CLOSE_SOCKET;
-                                ToDo = ThreadTask.CMD_RF_OFF;
-                            }
+                            DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                            ToDo = ThreadTask.CMD_RF_OFF;
                         }
                         break;
 
@@ -2242,7 +2325,7 @@ namespace NBST
                                 else
                                 {
                                     DoNext = ThreadTask.CMD_GET_HTTPS_1500;
-                                    TickDownload = Tick_Get();
+                                    DownloadTime = 0;// Tick_Get();
                                     downloadCxt.DownloadedSize = 0;
                                     ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
                                     //downloadCxt.sW = new StreamWriter(downloadCxt.FileName);
@@ -2255,11 +2338,17 @@ namespace NBST
                         break;
 
                     case ThreadTask.CMD_GET_HTTPS_1500:
-                        tmpStr = SendCmd_GetData(ref cmdCxt, "AT#HTTPRCV=0,1500\r", 60000, 1000, false);
+                        int dlsize = downloadCxt.FileSize - downloadCxt.DownloadedSize;
+
+                        if (dlsize > 1500)
+                            dlsize = 1500;
+
+                        tmpStr = SendCmd_GetData(ref cmdCxt, "AT#HTTPRCV=0,1500\r", 60000, 3000, dlsize, false);
 
                         if (tmpStr != null)
                         {
                             tmpArr = HttpRcv_GetData(cmdCxt.buffer, cmdCxt.len);
+                            DownloadTime += cmdCxt.proctime;
 
                             if (tmpArr != null)
                             {
@@ -2280,12 +2369,10 @@ namespace NBST
                                     downloadCxt.sW.Close();
                                     downloadCxt.sW = null;
 
-                                    UInt32 dt = Tick_DifMs(TickDownload);
+                                    double speed = (((double)downloadCxt.FileSize * 1000.0f / (double)DownloadTime) * 8.0f) / 1024.0f;
 
-                                    if (dt > 1000)
-                                        dt -= 1000;
-
-                                    InfoAppendText("\n\nDownload complete: " + dt.ToString() + "(ms)\nSpeed: " + (downloadCxt.FileSize * 1000 / dt).ToString() + "(Byte/s)", Color.Green);
+                                    InfoAppendText("\n\nDownload complete: " + DownloadTime.ToString() + "(ms)", Color.Green);
+                                    InfoAppendText("\nSpeed: " + speed.ToString("0.00") + "(kbps)", Color.Green);
 
                                     MD5 md5 = MD5.Create();
                                     var stream = File.OpenRead(downloadCxt.FileName);
@@ -2310,14 +2397,8 @@ namespace NBST
                             }
                             else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
                             {
-                                if (autoReboot)
-                                    DoNext = ThreadTask.CMD_MODULE_REBOOT;
-                                else
-                                {
-                                    DoNext = ThreadTask.CMD_CLOSE_SOCKET;
-                                    ToDo = ThreadTask.CMD_RF_OFF;
-                                }
-
+                                DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                                ToDo = ThreadTask.CMD_RF_OFF;
                                 InfoAppendText("\n\nDownload fail", Color.Red);
                             }
                         }
@@ -2336,6 +2417,8 @@ namespace NBST
                         break;
 
                     case ThreadTask.CMD_RF_OFF:
+                        DoNext++;
+                        /*
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CFUN=4\r", 30000);
 
                         if (tmpStr != null)
@@ -2345,9 +2428,12 @@ namespace NBST
                             else
                                 DoNext = ThreadTask.CMD_MODULE_REBOOT;
                         }
+                        */
                         break;
 
                     case ThreadTask.CMD_RF_ON:
+                        DoNext = ThreadTask.CLOSE_APP;
+                        /*
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CFUN=1\r", 30000);
 
                         if (tmpStr != null)
@@ -2357,6 +2443,7 @@ namespace NBST
                             else
                                 DoNext = ThreadTask.CMD_MODULE_REBOOT;
                         }
+                        */
                         break;
 
                     case ThreadTask.CMD_MODULE_REBOOT:
@@ -2546,11 +2633,13 @@ namespace NBST
             if (cb_Port1.Text != "Empty")
             {
                 bt_Download.Enabled = true;
+                bt_Reboot.Enabled = true;
                 bt_RFTest.Enabled = true;
             }
             else
             {
                 bt_Download.Enabled = false;
+                bt_Reboot.Enabled = false;
                 bt_RFTest.Enabled = false;
             }
         }
@@ -2570,9 +2659,60 @@ namespace NBST
             moduleInfo.UserDns = cb_Dns.Text;
         }
 
-        private void ckb_Reboot_CheckedChanged(object sender, EventArgs e)
+        private void bt_Reboot_Click(object sender, EventArgs e)
         {
-            autoReboot = ckb_Reboot.Checked;
+            bt_Download.Enabled = false;
+            bt_Reboot.Enabled = false;
+            bt_Scan.Enabled = false;
+            cb_Apn.Enabled = false;
+            cb_Dns.Enabled = false;
+
+            if (TestATPort(cb_Port1.Text, "AT#REBOOT\r"))
+            {
+                PrintDebug("\n\nModule is rebooting...\n\n");
+                InfoAppendText("\n\nModule is rebooting...\n\n");
+                tryCount = 0;
+                timer1.Interval = 5000;
+                timer1.Start();
+            }
+            else
+            {
+                bt_Download.Enabled = true;
+                bt_Scan.Enabled = true;
+                cb_Apn.Enabled = true;
+                cb_Dns.Enabled = true;
+                PrintDebug("\n\nCan not reboot\n\n", Color.Red);
+                InfoAppendText("\n\nCan not reboot\n\n", Color.Red);
+            }
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            tryCount += 5;
+
+            if (TestATPort(cb_Port1.Text, "ATE0\r"))
+            {
+                timer1.Stop();
+                bt_Reboot.Enabled = true;
+                bt_Download.Enabled = true;
+                bt_Scan.Enabled = true;
+                cb_Apn.Enabled = true;
+                cb_Dns.Enabled = true;
+                PrintDebug(" Done\n");
+                InfoAppendText("Done\n");
+            }
+            else if(tryCount>=60)
+            {
+                timer1.Stop();
+                bt_Reboot.Enabled = true;
+                bt_Download.Enabled = true;
+                bt_Scan.Enabled = true;
+                cb_Apn.Enabled = true;
+                cb_Dns.Enabled = true;
+                Scan_AT_Port();
+                PrintDebug("Failed\n", Color.Red);
+                InfoAppendText("Failed\n", Color.Red);
+            }
         }
     }
 }

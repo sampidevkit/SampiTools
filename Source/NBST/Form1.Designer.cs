@@ -53,7 +53,8 @@
             this.cb_Url = new System.Windows.Forms.ComboBox();
             this.label3 = new System.Windows.Forms.Label();
             this.cb_Dns = new System.Windows.Forms.ComboBox();
-            this.ckb_Reboot = new System.Windows.Forms.CheckBox();
+            this.bt_Reboot = new System.Windows.Forms.Button();
+            this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.tabCtrl1.SuspendLayout();
             this.tabGraph.SuspendLayout();
             this.tabLog.SuspendLayout();
@@ -314,15 +315,15 @@
             this.cb_Url.ForeColor = System.Drawing.Color.OrangeRed;
             this.cb_Url.FormattingEnabled = true;
             this.cb_Url.Items.AddRange(new object[] {
-            "http://103.156.0.37:8081/Test.txt",
             "https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt",
+            "http://103.156.0.37:8081/Test.txt",
             "https://raw.githubusercontent.com/MicrochipTech/XPRESS-Loader/master/utilities/Xp" +
                 "ressBL.hex"});
             this.cb_Url.Location = new System.Drawing.Point(50, 420);
             this.cb_Url.Name = "cb_Url";
             this.cb_Url.Size = new System.Drawing.Size(660, 21);
             this.cb_Url.TabIndex = 14;
-            this.cb_Url.Text = "http://103.156.0.37:8081/Test.txt";
+            this.cb_Url.Text = "https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt";
             this.cb_Url.TextChanged += new System.EventHandler(this.cb_Url_TextChanged);
             // 
             // label3
@@ -352,17 +353,19 @@
             this.cb_Dns.Text = "\"0.0.0.0\",\"0.0.0.0\"";
             this.cb_Dns.TextChanged += new System.EventHandler(this.cb_Dns_TextChanged);
             // 
-            // ckb_Reboot
+            // bt_Reboot
             // 
-            this.ckb_Reboot.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.ckb_Reboot.AutoSize = true;
-            this.ckb_Reboot.Location = new System.Drawing.Point(790, 450);
-            this.ckb_Reboot.Name = "ckb_Reboot";
-            this.ckb_Reboot.Size = new System.Drawing.Size(86, 17);
-            this.ckb_Reboot.TabIndex = 17;
-            this.ckb_Reboot.Text = "Auto Reboot";
-            this.ckb_Reboot.UseVisualStyleBackColor = true;
-            this.ckb_Reboot.CheckedChanged += new System.EventHandler(this.ckb_Reboot_CheckedChanged);
+            this.bt_Reboot.Location = new System.Drawing.Point(790, 447);
+            this.bt_Reboot.Name = "bt_Reboot";
+            this.bt_Reboot.Size = new System.Drawing.Size(86, 23);
+            this.bt_Reboot.TabIndex = 17;
+            this.bt_Reboot.Text = "Reboot";
+            this.bt_Reboot.UseVisualStyleBackColor = true;
+            this.bt_Reboot.Click += new System.EventHandler(this.bt_Reboot_Click);
+            // 
+            // timer1
+            // 
+            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
             // 
             // Form1
             // 
@@ -370,7 +373,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(1008, 473);
-            this.Controls.Add(this.ckb_Reboot);
+            this.Controls.Add(this.bt_Reboot);
             this.Controls.Add(this.cb_Dns);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.cb_Url);
@@ -426,7 +429,8 @@
         private System.Windows.Forms.ComboBox cb_Url;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox cb_Dns;
-        private System.Windows.Forms.CheckBox ckb_Reboot;
+        private System.Windows.Forms.Button bt_Reboot;
+        private System.Windows.Forms.Timer timer1;
     }
 }
 
