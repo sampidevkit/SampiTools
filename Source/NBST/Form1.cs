@@ -445,54 +445,6 @@ namespace NBST
             FpCxt.Data = new byte[BufferSize];
         }
 
-        private int FileParse(ref FileParseCxt FpCxt, byte b)
-        {
-            switch(FpCxt.DoNext)
-            {
-                case 0: // header \r
-                    if (b == '\r')
-                        FpCxt.DoNext++;
-                    else
-                        FpCxt.DoNext = 0;
-                    break;
-
-                case 1: // header \n
-                    if (b == '\n')
-                    {
-                        FpCxt.DoNext++;
-                        FpCxt.Count = 0;
-                    }
-                    else
-                        FpCxt.DoNext = 0;
-                    break;
-
-                case 2: // >>>
-                    if (b == '>')
-                    {
-                        FpCxt.Count++;
-
-                        if (FpCxt.Count == 3)
-                        {
-                            FpCxt.DoNext++;
-                            FpCxt.Count = 0;
-                            FpCxt.Index = 0;
-                        }
-                    }
-                    else
-                        FpCxt.DoNext = 0;
-                    break;
-
-                case 3: // data
-                    FpCxt.Data[FpCxt.Index++] = b;
-                    break;
-
-                default:
-                    break;
-            }
-
-            return 0;
-        }
-
         private string FileNameGenerate(string prefix)
         {
             string s = RemoveInvalidName(prefix + DateTime.Now.ToShortDateString() + DateTime.Now.ToLongTimeString());
@@ -1310,6 +1262,74 @@ namespace NBST
             }
 
             return null;
+        }
+
+        private int GetData1500(ref CmdCxt cmdCxt, ref FileParseCxt FpCxt)
+        {
+            switch (cmdCxt.donext)
+            {
+                case 0:
+                    cmdCxt.donext++;
+                    cmdCxt.tick = Tick_Get();
+                    cmdCxt.proctime = Tick_Get();
+                    serialPort1.Write("AT#HTTPRCV=0,1500\r");
+                    PrintTxDebug("\nTX: AT#HTTPRCV=0,1500\r");
+                    break;
+
+                case 1: // wait for responding
+                    if (serialPort1.BytesToRead > 0)
+                    {
+
+                    }
+                    else if (Tick_IsOverMs(ref cmdCxt.tick, 60000))
+                    {
+
+                    }
+
+                    break;
+
+                case 1: // header \r
+                    if (b == '\r')
+                        FpCxt.DoNext++;
+                    else
+                        FpCxt.DoNext = 0;
+                    break;
+
+                case 1: // header \n
+                    if (b == '\n')
+                    {
+                        FpCxt.DoNext++;
+                        FpCxt.Count = 0;
+                    }
+                    else
+                        FpCxt.DoNext = 0;
+                    break;
+
+                case 2: // >>>
+                    if (b == '>')
+                    {
+                        FpCxt.Count++;
+
+                        if (FpCxt.Count == 3)
+                        {
+                            FpCxt.DoNext++;
+                            FpCxt.Count = 0;
+                            FpCxt.Index = 0;
+                        }
+                    }
+                    else
+                        FpCxt.DoNext = 0;
+                    break;
+
+                case 3: // data
+                    FpCxt.Data[FpCxt.Index++] = b;
+                    break;
+
+                default:
+                    break;
+            }
+
+            return 0; // busy
         }
 
         private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd, UInt32 timeout, bool AT_Track)

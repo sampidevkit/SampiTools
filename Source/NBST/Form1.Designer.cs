@@ -318,7 +318,14 @@
             "https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt",
             "http://103.156.0.37:8081/Test.txt",
             "https://raw.githubusercontent.com/MicrochipTech/XPRESS-Loader/master/utilities/Xp" +
-                "ressBL.hex"});
+                "ressBL.hex",
+            "https://www.mobifone.vn/assets/source/image/logo.png",
+            "https://vietteltelecom.vn/images/logo.png",
+            "https://www.telit.com/wp-content/uploads/2021/11/Telit_logo.svg",
+            "https://s1.vnecdn.net/vnexpress/restruct/i/v658/v2_2019/pc/graphics/logo.svg",
+            "https://www.microchip.com/content/experience-fragments/mchp/en_us/site/header/mas" +
+                "ter/_jcr_content/root/responsivegrid/header/logo.coreimg.100.300.png/16058280814" +
+                "63/microchip.png"});
             this.cb_Url.Location = new System.Drawing.Point(50, 420);
             this.cb_Url.Name = "cb_Url";
             this.cb_Url.Size = new System.Drawing.Size(660, 21);
@@ -355,6 +362,7 @@
             // 
             // bt_Reboot
             // 
+            this.bt_Reboot.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.bt_Reboot.Location = new System.Drawing.Point(790, 447);
             this.bt_Reboot.Name = "bt_Reboot";
             this.bt_Reboot.Size = new System.Drawing.Size(86, 23);
