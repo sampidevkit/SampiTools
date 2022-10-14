@@ -57,6 +57,7 @@ namespace NBST
             CMD_GET_SIGNAL_QUALITY,
             CMD_GET_CELL_INFO,
             PARSE_INFO,
+            CMD_PING,
             CMD_CFG_HTTPS_HOST,
             CMD_CFG_HTTPS_FILE,
             CMD_GET_CURRENT_IP,
@@ -159,9 +160,12 @@ namespace NBST
             UserDns = null
         };
 
+        static ASCIIEncoding encoding = new ASCIIEncoding();
+        private volatile string[] historyCmd = new string[10];
         private volatile int tryCount = 0;
         private volatile bool debugEn = true;
         private volatile bool viewMode = false;
+        private volatile bool printableMode = true;
         private static Thread Thread_Task = null;
         private volatile ThreadMode Thread_Mode = ThreadMode.RF_TEST;
         private volatile int Thread_Enbale = 0;
@@ -172,6 +176,8 @@ namespace NBST
         private long line = 0;
         private UInt32 TickStart = 0;
         private volatile string portName = null;
+        private int sysStart = 0;
+
 
         private string[] UsbPid = new string[4]
         { 
@@ -180,6 +186,11 @@ namespace NBST
         /* MEx10G1 */           "VID_1BC7&PID_110A",
         /* LE910 */             "VID_1BC7&PID_1201"
         };
+
+        private double Get_RealTime()
+        {
+            return 0;
+        }
 
         private UInt32 Tick_Get()
         {
@@ -365,17 +376,26 @@ namespace NBST
             if (debugEn == false)
                 return;
 
-            PrintDebug(prefix + "Char len=" + chr.Length.ToString() + ": ");
+            string s = prefix + "Char len=" + chr.Length.ToString() + ": ";
+            //PrintDebug(prefix + "Char len=" + chr.Length.ToString() + ": ");
 
             foreach (char c in chr)
             {
                 if (isPrintable(c))
-                    PrintDebug(c.ToString());
+                    s += c.ToString(); //PrintDebug(c.ToString());
+                else if (printableMode == true)
+                {
+                    if ((c == '\r') || (c == '\n'))
+                        s += c.ToString();
+                    else
+                        s += ".";
+                }
                 else
-                    PrintDebug("<" + Convert.ToByte(c).ToString("X2") + ">");
+                    s += "<" + Convert.ToByte(c).ToString("X2") + ">"; //PrintDebug("<" + Convert.ToByte(c).ToString("X2") + ">");
             }
 
-            PrintDebug(subfix);
+            s += subfix; //PrintDebug(subfix);
+            PrintDebug(s);
         }
 
         private void PrintDebug(string msg)
@@ -431,6 +451,13 @@ namespace NBST
             {
                 if (isPrintable(data[i]))
                     s += data[i].ToString();
+                else if (printableMode == true)
+                {
+                    if ((data[i] == '\r') || (data[i] == '\n'))
+                        s += data[i].ToString();
+                    else
+                        s += ".";
+                }
                 else
                     s += "<" + Convert.ToByte(data[i]).ToString("X2") + ">";
             }
@@ -548,7 +575,7 @@ namespace NBST
             return s;
         }
 
-        private bool TestATPort(string portName, string cmd)
+        private bool SendAT(string pName, string cmd)
         {
             int loop = 0;
             bool found = false;
@@ -565,13 +592,13 @@ namespace NBST
                 if (serialPort1.IsOpen)
                     return false;
 
-                serialPort1.PortName = portName;
+                serialPort1.PortName = pName;
                 serialPort1.BaudRate = 115200;
                 serialPort1.WriteTimeout = 10;
                 serialPort1.DtrEnable = true;
                 serialPort1.RtsEnable = true;
                 serialPort1.Open();
-                //PrintDebug("\nOpen " + portName);
+                //PrintDebug("\nOpen " + pName);
 
                 do
                 {
@@ -649,7 +676,7 @@ namespace NBST
                                     portlist += port;
                                     //PrintDebug("\nFound: " + port);
 
-                                    if (TestATPort(port, "ATE0\r"))
+                                    if (SendAT(port, "ATE0\r"))
                                     {
                                         found++;
                                         cb_Port1.Items.Add(port);
@@ -660,7 +687,7 @@ namespace NBST
                                     portlist += port;
                                     //PrintDebug("\nFound: " + port);
 
-                                    if (TestATPort(port, "ATE0\r"))
+                                    if (SendAT(port, "ATE0\r"))
                                     {
                                         found++;
                                         cb_Port1.Items.Add(port);
@@ -685,7 +712,7 @@ namespace NBST
                             portlist += port;
                             //PrintDebug("\nFound: " + port);
 
-                            if (TestATPort(port, "ATE0\r"))
+                            if (SendAT(port, "ATE0\r"))
                             {
                                 found++;
                                 cb_Port1.Items.Add(port);
@@ -696,7 +723,7 @@ namespace NBST
                             portlist += port;
                             //PrintDebug("\nFound: " + port);
 
-                            if (TestATPort(port, "ATE0\r"))
+                            if (SendAT(port, "ATE0\r"))
                             {
                                 found++;
                                 cb_Port1.Items.Add(port);
@@ -725,10 +752,58 @@ namespace NBST
         public Form1()
         {
             InitializeComponent();
+            sysStart = Environment.TickCount;
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            if (File.Exists("HistoryCMD.txt"))
+            {
+                StreamReader sRUsbDevice = new StreamReader("HistoryCMD.txt");
+                string deviceStr = sRUsbDevice.ReadToEnd();
+
+                sRUsbDevice.Close();
+                ReplaceStr(ref deviceStr, '\r', (char)0x00);
+
+                char[] deviceArr = deviceStr.ToCharArray();
+                int lineCount = 1;
+
+                foreach (char c in deviceArr)
+                {
+                    if (c == '\n')
+                        lineCount++;
+                }
+
+                int lineIdx = 0;
+                historyCmd[lineIdx] = null;
+
+                foreach (char c in deviceArr)
+                {
+                    switch (c)
+                    {
+                        case '\n':
+                            lineIdx++;
+
+                            if (lineIdx < lineCount)
+                                historyCmd[lineIdx] = null;
+                            break;
+
+                        default:
+                            if (lineIdx < lineCount)
+                                historyCmd[lineIdx] += c.ToString();
+                            break;
+                    }
+                }
+
+                foreach(string s in historyCmd)
+                {
+                    if (s != null)
+                        cb_CMD.Items.Add(s);
+                }
+
+                cb_CMD.SelectedIndex = 0;
+            }
+
             if (File.Exists("SupportedDevices.txt"))
             {
                 StreamReader sRUsbDevice = new StreamReader("SupportedDevices.txt");
@@ -815,6 +890,24 @@ namespace NBST
                 }
             }
 
+            StreamWriter sW=new StreamWriter("HistoryCMD.txt");
+            bool _1st = true;
+
+            foreach (string s in historyCmd)
+            {
+                if (s != null)
+                {
+                    if (_1st)
+                    {
+                        _1st = false;
+                        sW.Write(s);
+                    }
+                    else
+                        sW.Write("\n" + s);
+                }
+            }
+
+            sW.Close();
             CloseLogFile();
         }
 
@@ -844,6 +937,7 @@ namespace NBST
             bt_Download.Enabled = true;
             bt_Reboot.Enabled = true;
             bt_Scan.Enabled = true;
+            bt_CMD.Enabled = true;
             cb_Apn.Enabled = true;
             cb_Dns.Enabled = true;
             bt_RFTest.Text = "RF Test";
@@ -859,8 +953,10 @@ namespace NBST
 
             bt_RFTest.Enabled = true;
             bt_Scan.Enabled = true;
+            bt_CMD.Enabled = true;
+            bt_Reboot.Enabled = true;
             cb_Apn.Enabled = true;
-            cb_Dns.Enabled=true;
+            cb_Dns.Enabled = true;
             cb_Url.Enabled = true;
             tb_Md5.Enabled = true;
             bt_Download.Text = "Download";
@@ -906,6 +1002,7 @@ namespace NBST
                     bt_Download.Enabled = false;
                     bt_Reboot.Enabled = false;
                     bt_Scan.Enabled = false;
+                    bt_CMD.Enabled = false;
                     cb_Apn.Enabled = false;
                     cb_Dns.Enabled = false;
                     Thread_Task = new Thread(() => Thread_Tasks()); // Create new app tasks
@@ -1146,6 +1243,13 @@ namespace NBST
 
                             if (isPrintable(chr[i]))
                                 s += chr[i].ToString();
+                            else if (printableMode == true)
+                            {
+                                if ((chr[i] == '\r') || (chr[i] == '\n'))
+                                    s += chr[i].ToString();
+                                else
+                                    s += ".";
+                            }
                             else
                                 s += "<" + Convert.ToByte(chr[i]).ToString("X2") + ">";
                         }
@@ -1245,6 +1349,13 @@ namespace NBST
 
                             if (isPrintable(chr[i]))
                                 s += chr[i].ToString();
+                            else if (printableMode == true)
+                            {
+                                if ((chr[i] == '\r') || (chr[i] == '\n'))
+                                    s += chr[i].ToString();
+                                else
+                                    s += ".";
+                            }
                             else
                                 s += "<" + Convert.ToByte(chr[i]).ToString("X2") + ">";
                         }
@@ -1264,6 +1375,7 @@ namespace NBST
             return null;
         }
 
+        /*
         private int GetData1500(ref CmdCxt cmdCxt, ref FileParseCxt FpCxt)
         {
             switch (cmdCxt.donext)
@@ -1331,7 +1443,7 @@ namespace NBST
 
             return 0; // busy
         }
-
+        */
         private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd, UInt32 timeout, bool AT_Track)
         {
             return SendCmd_GetRes(ref cmdCxt, cmd, timeout, 100, AT_Track);
@@ -1402,6 +1514,13 @@ namespace NBST
 
                             if (isPrintable(chr[i]))
                                 s += chr[i].ToString();
+                            else if (printableMode == true)
+                            {
+                                if ((chr[i] == '\r') || (chr[i] == '\n'))
+                                    s += chr[i].ToString();
+                                else
+                                    s += ".";
+                            }
                             else
                                 s += "<" + Convert.ToByte(chr[i]).ToString("X2") + ">";
                         }
@@ -2238,16 +2357,37 @@ namespace NBST
                             thisTick = Tick_Get();
                         }
                         else
-                            DoNext++;
+                        {
+                            if (moduleInfo.Ip != null)
+                                DoNext++;
+                            else
+                            {
+                                DoNext = ThreadTask.CLOSE_APP;
+                                InfoAppendText("\n\nCan not access the internet", Color.Red);
+                            }
+                        }
+                        break;
+
+                    case ThreadTask.CMD_PING:
+                        DoNext++;
+                        /*
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#PING=\"" + moduleInfo.OpDns + "\",1\r", 10000);
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                                DoNext++;
+                            else
+                            { 
+                                string s = "\n\nPing to " + moduleInfo.OpDns + " error";
+                                InfoAppendText(s, Color.Red);
+                                PrintDebug(s);
+                            }
+                        }
+                        */
                         break;
 
                     case ThreadTask.CMD_CFG_HTTPS_HOST:
-                        if (moduleInfo.Ip == null)
-                        {
-                            DoNext = ThreadTask.CLOSE_APP;
-                            InfoAppendText("\n\nCan not access the internet", Color.Red);
-                        }
-
                         if (downloadCxt.SslEn == true)
                         {
                             tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\"," + downloadCxt.Port + ",0,,,1,30,1\r", 60000);
@@ -2282,26 +2422,32 @@ namespace NBST
                             if (tmpStr.Contains("\r\nOK\r\n"))
                             {
                                 DoNext = ThreadTask.HTTPS_GET_FILE_INFO;
-                                InfoAppendText("\n\nGet info of file " + downloadCxt.FileName, Color.Blue);
+                                InfoAppendText("\nGet info of file " + downloadCxt.FileName, Color.Blue);
                             }
                             else
                             {
                                 DoNext++;
-                                InfoAppendText("\n\nCan not get info of file " + downloadCxt.FileName, Color.Red);
+                                InfoAppendText("\nCan not get info of file " + downloadCxt.FileName, Color.Red);
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_GET_CURRENT_IP:
+                        DoNext++;
+                        /*
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGCONTRDP\r", 10000);
 
                         if (tmpStr != null)
                         {
                                 DoNext++;
                         }
+                        */
                         break;
 
                     case ThreadTask.CMD_GET_CURRENT_DNS:
+                        DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                        ToDo = ThreadTask.CMD_RF_OFF;
+                        /*
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#NWDNS=\r", 10000);
 
                         if (tmpStr != null)
@@ -2309,6 +2455,7 @@ namespace NBST
                             DoNext = ThreadTask.CMD_CLOSE_SOCKET;
                             ToDo = ThreadTask.CMD_RF_OFF;
                         }
+                        */
                         break;
 
                     case ThreadTask.HTTPS_GET_FILE_INFO:
@@ -2353,6 +2500,10 @@ namespace NBST
                                     downloadCxt.sW = new BinaryWriter(stream);
                                     InfoAppendText("\nFile size = " + downloadCxt.FileSize + " byte(s)", Color.Blue);
                                 }
+                            }
+                            else
+                            {
+                                InfoAppendText("\nResponse error: " + tmpStr, Color.Red);
                             }
                         }
                         break;
@@ -2531,6 +2682,8 @@ namespace NBST
                     Thread_Enbale = 1;
                     bt_RFTest.Enabled = false;
                     bt_Scan.Enabled = false;
+                    bt_Reboot.Enabled = false;
+                    bt_CMD.Enabled = false;
                     cb_Apn.Enabled = false;
                     cb_Dns.Enabled = false;
                     cb_Url.Enabled = false;
@@ -2655,12 +2808,14 @@ namespace NBST
                 bt_Download.Enabled = true;
                 bt_Reboot.Enabled = true;
                 bt_RFTest.Enabled = true;
+                bt_CMD.Enabled = true;
             }
             else
             {
                 bt_Download.Enabled = false;
                 bt_Reboot.Enabled = false;
                 bt_RFTest.Enabled = false;
+                bt_CMD.Enabled = false;
             }
         }
 
@@ -2681,13 +2836,15 @@ namespace NBST
 
         private void bt_Reboot_Click(object sender, EventArgs e)
         {
+            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
             bt_Download.Enabled = false;
             bt_Reboot.Enabled = false;
             bt_Scan.Enabled = false;
+            bt_CMD.Enabled = false;
             cb_Apn.Enabled = false;
             cb_Dns.Enabled = false;
 
-            if (TestATPort(cb_Port1.Text, "AT#REBOOT\r"))
+            if (SendAT(cb_Port1.Text, "AT#REBOOT\r"))
             {
                 PrintDebug("\n\nModule is rebooting...\n\n");
                 InfoAppendText("\n\nModule is rebooting...\n\n");
@@ -2699,6 +2856,7 @@ namespace NBST
             {
                 bt_Download.Enabled = true;
                 bt_Scan.Enabled = true;
+                bt_CMD.Enabled= true;
                 cb_Apn.Enabled = true;
                 cb_Dns.Enabled = true;
                 PrintDebug("\n\nCan not reboot\n\n", Color.Red);
@@ -2710,12 +2868,13 @@ namespace NBST
         {
             tryCount += 5;
 
-            if (TestATPort(cb_Port1.Text, "ATE0\r"))
+            if (SendAT(cb_Port1.Text, "ATE0\r"))
             {
                 timer1.Stop();
                 bt_Reboot.Enabled = true;
                 bt_Download.Enabled = true;
                 bt_Scan.Enabled = true;
+                bt_CMD.Enabled = true;
                 cb_Apn.Enabled = true;
                 cb_Dns.Enabled = true;
                 PrintDebug(" Done\n");
@@ -2727,12 +2886,157 @@ namespace NBST
                 bt_Reboot.Enabled = true;
                 bt_Download.Enabled = true;
                 bt_Scan.Enabled = true;
+                bt_CMD.Enabled = true;
                 cb_Apn.Enabled = true;
                 cb_Dns.Enabled = true;
                 Scan_AT_Port();
                 PrintDebug("Failed\n", Color.Red);
                 InfoAppendText("Failed\n", Color.Red);
             }
+        }
+
+        private string ChangeSpecialByte(string s)
+        {
+            byte[] BIn = encoding.GetBytes(s);
+            byte[] BOut = new byte[BIn.Length];
+            int i, j;
+
+            for (i = 0, j = 0; i < BIn.Length; i++)
+            {
+                if (BIn[i] == '\\')
+                {
+                    try
+                    {
+                        switch (BIn[i + 1])
+                        {
+                            case (byte)'r':
+                                BOut[j++] = (byte)'\r';
+                                i++;
+                                break;
+
+                            case (byte)'n':
+                                BOut[j++] = (byte)'\n';
+                                i++;
+                                break;
+
+                            default:
+                                if ((BIn[i + 1] >= (byte)'0') && (BIn[i + 1] <= (byte)'9'))
+                                {
+                                    BOut[j++] = (byte)(BIn[i + 1] - '0');
+                                    i++;
+                                }
+                                else 
+                                    BOut[j++] = BIn[i];
+                                break;
+                        }
+                    }
+                    catch
+                    {
+                        BOut[j++] = BIn[i];
+                    }
+                }
+                else 
+                    BOut[j++] = BIn[i];
+            }
+
+            if (j > 0)
+            {
+                char[] Arr = new char[j];
+
+                for (i = 0; i < j; i++)
+                    Arr[i] = (char)BOut[i];
+
+                return new string(Arr);
+            }
+
+            return null;
+        }
+
+        private void bt_CMD_Click(object sender, EventArgs e)
+        {
+            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
+            bt_RFTest.Enabled = false;
+            bt_Download.Enabled = false;
+            bt_Reboot.Enabled = false;
+            bt_Scan.Enabled = false;
+            bt_CMD.Enabled = false;
+            cb_Apn.Enabled = false;
+            cb_Dns.Enabled = false;
+
+            string cmdStr = cb_CMD.Text;
+
+            if (cmdStr != null)
+            {
+                bool found = false;
+
+                foreach(string s in historyCmd)
+                {
+                    if (s == cmdStr)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found == false)
+                {
+                    for (int i = 9; i > 0; i--)
+                        historyCmd[i] = historyCmd[i - 1];
+
+                    historyCmd[0] = cmdStr;
+                }
+
+                cb_CMD.Items.Clear();
+
+                foreach(string s in historyCmd)
+                {
+                    if (s != null)
+                        cb_CMD.Items.Add(s);
+                }
+
+                cmdStr = ChangeSpecialByte(cmdStr);
+                CmdCxt cmdCxt = new CmdCxt();
+                cmdCxt.buffer = new char[4096];
+                cmdCxt.donext = 0;
+                cmdCxt.findIdx = 0;
+
+                try
+                {
+                    if (serialPort1.IsOpen == false)
+                    {
+                        serialPort1.PortName = portName;
+                        serialPort1.BaudRate = 115200;
+                        serialPort1.WriteTimeout = 10;
+                        serialPort1.DtrEnable = true;
+                        serialPort1.RtsEnable = true;
+                        serialPort1.Open();
+
+                        while (SendCmd_GetRes(ref cmdCxt, cmdStr, 250) == null) ;
+
+                        serialPort1.DtrEnable = false;
+                        serialPort1.RtsEnable = false;
+                        serialPort1.Close();
+                        serialPort1.Dispose();
+                    }
+                }
+                catch
+                {
+                    PrintDebug("\nSend CMD error");
+                }
+            }
+
+            bt_RFTest.Enabled = true;
+            bt_Download.Enabled = true;
+            bt_Scan.Enabled = true;
+            bt_Reboot.Enabled = true;
+            bt_CMD.Enabled = true;
+            cb_Apn.Enabled = true;
+            cb_Dns.Enabled = true;
+        }
+
+        private void ckb_Printable_CheckedChanged(object sender, EventArgs e)
+        {
+            printableMode = ckb_Printable.Checked;
         }
     }
 }

@@ -55,6 +55,10 @@
             this.cb_Dns = new System.Windows.Forms.ComboBox();
             this.bt_Reboot = new System.Windows.Forms.Button();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
+            this.label5 = new System.Windows.Forms.Label();
+            this.bt_CMD = new System.Windows.Forms.Button();
+            this.cb_CMD = new System.Windows.Forms.ComboBox();
+            this.ckb_Printable = new System.Windows.Forms.CheckBox();
             this.tabCtrl1.SuspendLayout();
             this.tabGraph.SuspendLayout();
             this.tabLog.SuspendLayout();
@@ -70,7 +74,7 @@
             this.tabCtrl1.Location = new System.Drawing.Point(12, 12);
             this.tabCtrl1.Name = "tabCtrl1";
             this.tabCtrl1.SelectedIndex = 0;
-            this.tabCtrl1.Size = new System.Drawing.Size(708, 404);
+            this.tabCtrl1.Size = new System.Drawing.Size(708, 497);
             this.tabCtrl1.TabIndex = 3;
             // 
             // tabGraph
@@ -81,7 +85,7 @@
             this.tabGraph.Location = new System.Drawing.Point(4, 22);
             this.tabGraph.Name = "tabGraph";
             this.tabGraph.Padding = new System.Windows.Forms.Padding(3);
-            this.tabGraph.Size = new System.Drawing.Size(700, 378);
+            this.tabGraph.Size = new System.Drawing.Size(700, 471);
             this.tabGraph.TabIndex = 0;
             this.tabGraph.Text = "Graph";
             // 
@@ -92,7 +96,7 @@
             this.cb_ViewMode.Items.AddRange(new object[] {
             "Compact",
             "Scroll"});
-            this.cb_ViewMode.Location = new System.Drawing.Point(12, 345);
+            this.cb_ViewMode.Location = new System.Drawing.Point(9, 441);
             this.cb_ViewMode.Name = "cb_ViewMode";
             this.cb_ViewMode.Size = new System.Drawing.Size(81, 21);
             this.cb_ViewMode.TabIndex = 4;
@@ -114,7 +118,7 @@
             this.zedGraphControl1.ScrollMinX = 0D;
             this.zedGraphControl1.ScrollMinY = 0D;
             this.zedGraphControl1.ScrollMinY2 = 0D;
-            this.zedGraphControl1.Size = new System.Drawing.Size(688, 366);
+            this.zedGraphControl1.Size = new System.Drawing.Size(688, 459);
             this.zedGraphControl1.TabIndex = 3;
             this.zedGraphControl1.UseExtendedPrintDialog = true;
             // 
@@ -125,7 +129,7 @@
             this.tabLog.Location = new System.Drawing.Point(4, 22);
             this.tabLog.Name = "tabLog";
             this.tabLog.Padding = new System.Windows.Forms.Padding(3);
-            this.tabLog.Size = new System.Drawing.Size(700, 378);
+            this.tabLog.Size = new System.Drawing.Size(700, 471);
             this.tabLog.TabIndex = 1;
             this.tabLog.Text = "Log";
             // 
@@ -138,7 +142,7 @@
             this.rtb_Log.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.rtb_Log.Location = new System.Drawing.Point(6, 6);
             this.rtb_Log.Name = "rtb_Log";
-            this.rtb_Log.Size = new System.Drawing.Size(780, 366);
+            this.rtb_Log.Size = new System.Drawing.Size(688, 459);
             this.rtb_Log.TabIndex = 0;
             this.rtb_Log.Text = "";
             this.rtb_Log.TextChanged += new System.EventHandler(this.rtb_Log_TextChanged);
@@ -153,7 +157,7 @@
             this.rtb_Info.ForeColor = System.Drawing.Color.Black;
             this.rtb_Info.Location = new System.Drawing.Point(726, 40);
             this.rtb_Info.Name = "rtb_Info";
-            this.rtb_Info.Size = new System.Drawing.Size(270, 365);
+            this.rtb_Info.Size = new System.Drawing.Size(270, 459);
             this.rtb_Info.TabIndex = 6;
             this.rtb_Info.Text = "";
             // 
@@ -202,10 +206,11 @@
             // 
             // tb_Md5
             // 
-            this.tb_Md5.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.tb_Md5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.tb_Md5.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_Md5.ForeColor = System.Drawing.Color.OrangeRed;
-            this.tb_Md5.Location = new System.Drawing.Point(500, 448);
+            this.tb_Md5.Location = new System.Drawing.Point(422, 542);
             this.tb_Md5.Name = "tb_Md5";
             this.tb_Md5.Size = new System.Drawing.Size(210, 20);
             this.tb_Md5.TabIndex = 7;
@@ -216,7 +221,7 @@
             // 
             this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 423);
+            this.label1.Location = new System.Drawing.Point(7, 518);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(32, 13);
             this.label1.TabIndex = 8;
@@ -224,9 +229,9 @@
             // 
             // label2
             // 
-            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(461, 452);
+            this.label2.Location = new System.Drawing.Point(383, 546);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(33, 13);
             this.label2.TabIndex = 8;
@@ -235,7 +240,7 @@
             // pgb_Percent
             // 
             this.pgb_Percent.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.pgb_Percent.Location = new System.Drawing.Point(726, 418);
+            this.pgb_Percent.Location = new System.Drawing.Point(726, 513);
             this.pgb_Percent.Name = "pgb_Percent";
             this.pgb_Percent.Size = new System.Drawing.Size(270, 23);
             this.pgb_Percent.TabIndex = 10;
@@ -246,7 +251,7 @@
             this.lb_Percent.AutoSize = true;
             this.lb_Percent.BackColor = System.Drawing.Color.Transparent;
             this.lb_Percent.ForeColor = System.Drawing.Color.OrangeRed;
-            this.lb_Percent.Location = new System.Drawing.Point(732, 423);
+            this.lb_Percent.Location = new System.Drawing.Point(732, 518);
             this.lb_Percent.Name = "lb_Percent";
             this.lb_Percent.Size = new System.Drawing.Size(36, 13);
             this.lb_Percent.TabIndex = 11;
@@ -257,7 +262,7 @@
             // 
             this.label4.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(9, 452);
+            this.label4.Location = new System.Drawing.Point(8, 546);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(32, 13);
             this.label4.TabIndex = 8;
@@ -268,9 +273,9 @@
             this.bt_Download.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.bt_Download.Enabled = false;
             this.bt_Download.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_Download.Location = new System.Drawing.Point(882, 447);
+            this.bt_Download.Location = new System.Drawing.Point(818, 542);
             this.bt_Download.Name = "bt_Download";
-            this.bt_Download.Size = new System.Drawing.Size(114, 23);
+            this.bt_Download.Size = new System.Drawing.Size(178, 48);
             this.bt_Download.TabIndex = 5;
             this.bt_Download.Text = "Download";
             this.bt_Download.UseVisualStyleBackColor = true;
@@ -282,7 +287,7 @@
             this.ckb_DebugEn.AutoSize = true;
             this.ckb_DebugEn.Checked = true;
             this.ckb_DebugEn.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ckb_DebugEn.Location = new System.Drawing.Point(726, 450);
+            this.ckb_DebugEn.Location = new System.Drawing.Point(639, 516);
             this.ckb_DebugEn.Name = "ckb_DebugEn";
             this.ckb_DebugEn.Size = new System.Drawing.Size(58, 17);
             this.ckb_DebugEn.TabIndex = 12;
@@ -300,7 +305,7 @@
             "m-nbiot",
             "m-wap",
             "v-internet"});
-            this.cb_Apn.Location = new System.Drawing.Point(50, 448);
+            this.cb_Apn.Location = new System.Drawing.Point(49, 542);
             this.cb_Apn.Name = "cb_Apn";
             this.cb_Apn.Size = new System.Drawing.Size(115, 21);
             this.cb_Apn.TabIndex = 13;
@@ -326,9 +331,9 @@
             "https://www.microchip.com/content/experience-fragments/mchp/en_us/site/header/mas" +
                 "ter/_jcr_content/root/responsivegrid/header/logo.coreimg.100.300.png/16058280814" +
                 "63/microchip.png"});
-            this.cb_Url.Location = new System.Drawing.Point(50, 420);
+            this.cb_Url.Location = new System.Drawing.Point(50, 515);
             this.cb_Url.Name = "cb_Url";
-            this.cb_Url.Size = new System.Drawing.Size(660, 21);
+            this.cb_Url.Size = new System.Drawing.Size(583, 21);
             this.cb_Url.TabIndex = 14;
             this.cb_Url.Text = "https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt";
             this.cb_Url.TextChanged += new System.EventHandler(this.cb_Url_TextChanged);
@@ -337,7 +342,7 @@
             // 
             this.label3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(171, 452);
+            this.label3.Location = new System.Drawing.Point(170, 546);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(33, 13);
             this.label3.TabIndex = 15;
@@ -353,9 +358,9 @@
             "\"0.0.0.0\",\"0.0.0.0\"",
             "\"1.1.1.1\",\"8.8.8.8\"",
             "\"8.8.8.8\",\"8.8.4.4\""});
-            this.cb_Dns.Location = new System.Drawing.Point(210, 448);
+            this.cb_Dns.Location = new System.Drawing.Point(209, 542);
             this.cb_Dns.Name = "cb_Dns";
-            this.cb_Dns.Size = new System.Drawing.Size(245, 21);
+            this.cb_Dns.Size = new System.Drawing.Size(168, 21);
             this.cb_Dns.TabIndex = 16;
             this.cb_Dns.Text = "\"0.0.0.0\",\"0.0.0.0\"";
             this.cb_Dns.TextChanged += new System.EventHandler(this.cb_Dns_TextChanged);
@@ -363,9 +368,9 @@
             // bt_Reboot
             // 
             this.bt_Reboot.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_Reboot.Location = new System.Drawing.Point(790, 447);
+            this.bt_Reboot.Location = new System.Drawing.Point(726, 543);
             this.bt_Reboot.Name = "bt_Reboot";
-            this.bt_Reboot.Size = new System.Drawing.Size(86, 23);
+            this.bt_Reboot.Size = new System.Drawing.Size(86, 47);
             this.bt_Reboot.TabIndex = 17;
             this.bt_Reboot.Text = "Reboot";
             this.bt_Reboot.UseVisualStyleBackColor = true;
@@ -375,12 +380,65 @@
             // 
             this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
             // 
+            // label5
+            // 
+            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(8, 572);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(34, 13);
+            this.label5.TabIndex = 19;
+            this.label5.Text = "CMD:";
+            // 
+            // bt_CMD
+            // 
+            this.bt_CMD.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.bt_CMD.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_CMD.Location = new System.Drawing.Point(638, 567);
+            this.bt_CMD.Name = "bt_CMD";
+            this.bt_CMD.Size = new System.Drawing.Size(81, 23);
+            this.bt_CMD.TabIndex = 20;
+            this.bt_CMD.Text = "Send CMD";
+            this.bt_CMD.UseVisualStyleBackColor = true;
+            this.bt_CMD.Click += new System.EventHandler(this.bt_CMD_Click);
+            // 
+            // cb_CMD
+            // 
+            this.cb_CMD.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.cb_CMD.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cb_CMD.ForeColor = System.Drawing.Color.Blue;
+            this.cb_CMD.FormattingEnabled = true;
+            this.cb_CMD.Location = new System.Drawing.Point(48, 568);
+            this.cb_CMD.Name = "cb_CMD";
+            this.cb_CMD.Size = new System.Drawing.Size(584, 21);
+            this.cb_CMD.TabIndex = 21;
+            this.cb_CMD.Text = "AT\\r";
+            // 
+            // ckb_Printable
+            // 
+            this.ckb_Printable.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.ckb_Printable.AutoSize = true;
+            this.ckb_Printable.Checked = true;
+            this.ckb_Printable.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ckb_Printable.Location = new System.Drawing.Point(638, 544);
+            this.ckb_Printable.Name = "ckb_Printable";
+            this.ckb_Printable.Size = new System.Drawing.Size(67, 17);
+            this.ckb_Printable.TabIndex = 22;
+            this.ckb_Printable.Text = "Printable";
+            this.ckb_Printable.UseVisualStyleBackColor = true;
+            this.ckb_Printable.CheckedChanged += new System.EventHandler(this.ckb_Printable_CheckedChanged);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.ClientSize = new System.Drawing.Size(1008, 473);
+            this.ClientSize = new System.Drawing.Size(1008, 601);
+            this.Controls.Add(this.ckb_Printable);
+            this.Controls.Add(this.cb_CMD);
+            this.Controls.Add(this.bt_CMD);
+            this.Controls.Add(this.label5);
             this.Controls.Add(this.bt_Reboot);
             this.Controls.Add(this.cb_Dns);
             this.Controls.Add(this.label3);
@@ -439,6 +497,10 @@
         private System.Windows.Forms.ComboBox cb_Dns;
         private System.Windows.Forms.Button bt_Reboot;
         private System.Windows.Forms.Timer timer1;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Button bt_CMD;
+        private System.Windows.Forms.ComboBox cb_CMD;
+        private System.Windows.Forms.CheckBox ckb_Printable;
     }
 }
 
