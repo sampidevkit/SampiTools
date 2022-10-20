@@ -1,0 +1,9 @@
+834406D30F4F1FD20362A93CB3042696
+https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt
+http://elsa.rpc.vn/assets/images/logo-rp.png
+https://raw.githubusercontent.com/MicrochipTech/XPRESS-Loader/master/utilities/XpressBL.hex
+https://www.mobifone.vn/assets/source/image/logo.png
+https://vietteltelecom.vn/images/logo.png
+https://www.telit.com/wp-content/uploads/2021/11/Telit_logo.svg
+https://s1.vnecdn.net/vnexpress/restruct/i/v658/v2_2019/pc/graphics/logo.svg
+https://www.microchip.com/content/experience-fragments/mchp/en_us/site/header/master/_jcr_content/root/responsivegrid/header/logo.coreimg.100.300.png/1605828081463/microchip.png

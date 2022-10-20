@@ -37,7 +37,8 @@ namespace NBST
 
         private enum ThreadTask
         {
-            CMD_ECHO_OFF = 0,
+            INIT_APP = 0,
+            CMD_ECHO_OFF,
             CMD_DISPLAY_ERROR,
             CMD_NO_FLOW_CONTROL,
             CMD_GET_MODULE_NAME,
@@ -46,6 +47,7 @@ namespace NBST
             CMD_GET_ALT_CIMI,
             CMD_GET_CCID,
             CMD_GET_ALT_CCID,
+            CMD_GET_NETWORK_REGIS,
             CMD_GET_OPERATOR_INFO,
             CMD_DEACT_PDP,
             CMD_SET_APN,
@@ -162,6 +164,7 @@ namespace NBST
 
         static ASCIIEncoding encoding = new ASCIIEncoding();
         private volatile string[] historyCmd = new string[10];
+        private volatile string[] historyUrl = new string[10];
         private volatile int tryCount = 0;
         private volatile bool debugEn = true;
         private volatile bool viewMode = false;
@@ -177,7 +180,9 @@ namespace NBST
         private UInt32 TickStart = 0;
         private volatile string portName = null;
         private int sysStart = 0;
-
+        private volatile int downloadCount = 0;
+        private volatile bool downloadLoop = false;
+        private volatile UInt32 rebootWait = 5000;
 
         private string[] UsbPid = new string[4]
         { 
@@ -759,10 +764,10 @@ namespace NBST
         {
             if (File.Exists("HistoryCMD.txt"))
             {
-                StreamReader sRUsbDevice = new StreamReader("HistoryCMD.txt");
-                string deviceStr = sRUsbDevice.ReadToEnd();
+                StreamReader sR = new StreamReader("HistoryCMD.txt");
+                string deviceStr = sR.ReadToEnd();
 
-                sRUsbDevice.Close();
+                sR.Close();
                 ReplaceStr(ref deviceStr, '\r', (char)0x00);
 
                 char[] deviceArr = deviceStr.ToCharArray();
@@ -795,13 +800,73 @@ namespace NBST
                     }
                 }
 
-                foreach(string s in historyCmd)
+                cb_CMD.Items.Clear();
+
+                foreach (string s in historyCmd)
                 {
                     if (s != null)
                         cb_CMD.Items.Add(s);
                 }
 
                 cb_CMD.SelectedIndex = 0;
+            }
+
+            if (File.Exists("HistoryUrl.txt"))
+            {
+                StreamReader sR = new StreamReader("HistoryUrl.txt");
+                string deviceStr = sR.ReadToEnd();
+
+                sR.Close();
+                ReplaceStr(ref deviceStr, '\r', (char)0x00);
+
+                char[] deviceArr = deviceStr.ToCharArray();
+                int lineCount = 1;
+
+                foreach (char c in deviceArr)
+                {
+                    if (c == '\n')
+                        lineCount++;
+                }
+
+                int lineIdx = 0;
+                historyUrl[lineIdx] = null;
+
+                foreach (char c in deviceArr)
+                {
+                    switch (c)
+                    {
+                        case '\n':
+                            lineIdx++;
+
+                            if (lineIdx < lineCount)
+                                historyUrl[lineIdx] = null;
+                            break;
+
+                        default:
+                            if (lineIdx < lineCount)
+                                historyUrl[lineIdx] += c.ToString();
+                            break;
+                    }
+                }
+
+                cb_Url.Items.Clear();
+                bool _1st = true;
+
+                foreach (string s in historyUrl)
+                {
+                    if (s != null)
+                    {
+                        if (_1st == true)
+                        {
+                            _1st = false;
+                            tb_Md5.Text = s;
+                        }
+                        else
+                            cb_Url.Items.Add(s);
+                    }
+                }
+
+                cb_Url.SelectedIndex = 0;
             }
 
             if (File.Exists("SupportedDevices.txt"))
@@ -890,7 +955,7 @@ namespace NBST
                 }
             }
 
-            StreamWriter sW=new StreamWriter("HistoryCMD.txt");
+            StreamWriter sW = new StreamWriter("HistoryCMD.txt");
             bool _1st = true;
 
             foreach (string s in historyCmd)
@@ -908,6 +973,26 @@ namespace NBST
             }
 
             sW.Close();
+            /*
+            sW = new StreamWriter("HistoryUrl.txt");
+            _1st = true;
+
+            foreach (string s in historyUrl)
+            {
+                if (s != null)
+                {
+                    if (_1st == true)
+                    {
+                        _1st = false;
+                        sW.Write(s);
+                    }
+                    else
+                        sW.Write("\n" + s);
+                }
+            }
+
+            sW.Close();
+            */
             CloseLogFile();
         }
 
@@ -1701,7 +1786,7 @@ namespace NBST
         private void Thread_Tasks()
         {
             int csq = 99;
-            int ber = 99;
+            //int ber = 99;
             int rssi = -150;
             int rsrp = -150;
             int rsrq = -150;
@@ -1710,6 +1795,10 @@ namespace NBST
             char[] tmpArr = null;
             UInt32 DownloadTime = 0;
             CmdCxt cmdCxt = new CmdCxt();
+            int failCount = 0;
+            int tryCount = 0;
+            
+            downloadCount = 0;
 
             cmdCxt.buffer = new char[4096];
             cmdCxt.donext = 0;
@@ -1732,44 +1821,46 @@ namespace NBST
             moduleInfo.OpDns = null;
             moduleInfo.OpAltDns = null;
 
-            try
-            {
-                if (serialPort1.IsOpen)
-                    serialPort1.Close();
-
-                serialPort1.PortName = portName;
-                serialPort1.BaudRate = 115200;
-                serialPort1.WriteTimeout = 10;
-                serialPort1.DtrEnable = true;
-                serialPort1.RtsEnable = true;
-                serialPort1.Open();
-            }
-            catch
-            {
-                Thread_Enbale = 0;
-
-                if (Thread_Mode == ThreadMode.RF_TEST)
-                    bt_RFTest_Update(null);
-                else
-                    bt_Download_Update(null);
-
-                Thread_Task.Abort();
-                Thread_Task.Interrupt();
-                Thread_Task.Abort();
-                Thread_Task.Join();
-                return;
-            }
-
-            DoNext = ThreadTask.CMD_ECHO_OFF;
+            DoNext = ThreadTask.INIT_APP;
             GeoCoordinateWatcher watcher = new GeoCoordinateWatcher();
-            InfoWriteText("Reading module info...");
+            InfoWriteText("Reading module info... ");
 
-            UInt32 thisTick = Tick_Get();
+            UInt32 thisTick = rebootWait + Tick_Get();
 
             while (Thread_Enbale == 1)
             {
                 switch (DoNext)
                 {
+                    case ThreadTask.INIT_APP:
+                        if (Tick_IsOverMs(ref thisTick, rebootWait))
+                        {
+                            try
+                            {
+                                if (serialPort1.IsOpen)
+                                    serialPort1.Close();
+
+                                serialPort1.PortName = portName;
+                                serialPort1.BaudRate = 115200;
+                                serialPort1.WriteTimeout = 10;
+                                serialPort1.DtrEnable = true;
+                                serialPort1.RtsEnable = true;
+                                serialPort1.Open();
+
+                                PrintDebug(" Done\n");
+                                InfoAppendText("Done\n");
+                                thisTick = Tick_Get();
+                                DoNext++;
+                            }
+                            catch
+                            {
+                                if (++tryCount > 4)
+                                    Thread_Enbale = 0;
+                            }
+                        }
+                        else
+                            Thread.Sleep(250);
+                        break;
+
                     case ThreadTask.CMD_ECHO_OFF:
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "ATE0\r");
 
@@ -1777,7 +1868,10 @@ namespace NBST
                         {
                             if (tmpStr.Contains("\r\nOK\r\n"))
                                 DoNext++;
-
+                            else
+                            {
+                                DoNext = ThreadTask.INIT_APP;
+                            }
                         }
                         break;
 
@@ -1894,6 +1988,27 @@ namespace NBST
                                 DoNext--;
                                 Thread.Sleep(250);
                             }
+                        }
+                        break;
+
+                    case ThreadTask.CMD_GET_NETWORK_REGIS:
+                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CEREG?\r");
+
+                        if (tmpStr != null)
+                        {
+                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            {
+                                tmpStr = new string(SubArray(cmdCxt.buffer, ",", "\r\nOK"));
+                                tmpStr = RemoveAT(tmpStr);
+
+                                if (tmpStr == "1")
+                                {
+                                    DoNext++;
+                                    break;
+                                }
+                            }
+
+                            Thread.Sleep(250);
                         }
                         break;
 
@@ -2370,6 +2485,15 @@ namespace NBST
 
                     case ThreadTask.CMD_PING:
                         DoNext++;
+                        downloadCount++;
+
+                        string s = "\n\nDownload: " + downloadCount.ToString();
+
+                        if (downloadCount > 1)
+                            s += "\nPass: " + (downloadCount - failCount - 1).ToString();
+
+                        InfoAppendText(s);
+                        PrintDebug(s);
                         /*
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#PING=\"" + moduleInfo.OpDns + "\",1\r", 10000);
 
@@ -2405,8 +2529,14 @@ namespace NBST
                             }
                             else if (tmpStr.Contains("ERROR"))
                             {
+                                failCount++;
                                 DoNext = ThreadTask.CMD_CLOSE_SOCKET;
-                                ToDo = ThreadTask.CMD_RF_OFF;
+
+                                if (downloadLoop == true)
+                                    ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                                else
+                                    ToDo = ThreadTask.CMD_RF_OFF;
+
                                 InfoAppendText("\n\nCan not connect to host " + downloadCxt.Host, Color.Red);
                             }
                         }
@@ -2427,6 +2557,7 @@ namespace NBST
                             else
                             {
                                 DoNext++;
+                                failCount++;
                                 InfoAppendText("\nCan not get info of file " + downloadCxt.FileName, Color.Red);
                             }
                         }
@@ -2446,7 +2577,11 @@ namespace NBST
 
                     case ThreadTask.CMD_GET_CURRENT_DNS:
                         DoNext = ThreadTask.CMD_CLOSE_SOCKET;
-                        ToDo = ThreadTask.CMD_RF_OFF;
+
+                        if (downloadLoop == true)
+                            ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                        else
+                            ToDo = ThreadTask.CMD_RF_OFF;
                         /*
                         tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#NWDNS=\r", 10000);
 
@@ -2464,7 +2599,11 @@ namespace NBST
                         if (tmpStr != null)
                         {
                             DoNext = ThreadTask.CMD_CLOSE_SOCKET;
-                            ToDo = ThreadTask.CMD_RF_OFF;
+
+                            if (downloadLoop == true)
+                                ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                            else
+                                ToDo = ThreadTask.CMD_RF_OFF;
 
                             if (tmpStr.Contains("#HTTPRING:"))
                             {
@@ -2486,6 +2625,7 @@ namespace NBST
 
                                 if (downloadCxt.FileSize == 0)
                                 {
+                                    failCount++;
                                     downloadCxt.sW = null;
                                     InfoAppendText("\nFile size = 0, error", Color.Red); ;
                                 }
@@ -2503,6 +2643,7 @@ namespace NBST
                             }
                             else
                             {
+                                failCount++;
                                 InfoAppendText("\nResponse error: " + tmpStr, Color.Red);
                             }
                         }
@@ -2536,7 +2677,12 @@ namespace NBST
                                 if (downloadCxt.DownloadedSize >= downloadCxt.FileSize)
                                 {
                                     DoNext = ThreadTask.CMD_CLOSE_SOCKET;
-                                    ToDo = ThreadTask.CLOSE_APP;
+
+                                    if (downloadLoop == true)
+                                        ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                                    else
+                                        ToDo = ThreadTask.CLOSE_APP;
+
                                     downloadCxt.sW.Close();
                                     downloadCxt.sW = null;
 
@@ -2559,17 +2705,24 @@ namespace NBST
                                     }
                                     else
                                     {
+                                        failCount++;
                                         md5_result = "MD5: " + md5_result + " incorrect";
                                         InfoAppendText("\n" + md5_result, Color.Red);
                                     }
 
-                                    MessageBox.Show(md5_result, "Info");
+                                    //MessageBox.Show(md5_result, "Info");
                                 }
                             }
                             else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
                             {
+                                failCount++;
                                 DoNext = ThreadTask.CMD_CLOSE_SOCKET;
-                                ToDo = ThreadTask.CMD_RF_OFF;
+
+                                if (downloadLoop == true)
+                                    ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                                else
+                                    ToDo = ThreadTask.CMD_RF_OFF;
+
                                 InfoAppendText("\n\nDownload fail", Color.Red);
                             }
                         }
@@ -2584,6 +2737,10 @@ namespace NBST
                                 DoNext = ToDo;
                             else
                                 DoNext++;
+
+                            string msg = "\nPass: " + (downloadCount - failCount).ToString() + "/" + downloadCount.ToString();
+                            PrintDebug(msg);
+                            InfoAppendText(msg);
                         }
                         break;
 
@@ -2626,14 +2783,28 @@ namespace NBST
                             {
                                 PrintDebug("\n\nModule is rebooting...\n\n");
                                 InfoAppendText("\n\nModule is rebooting...\n\n");
+                                //Timer_Init(null);
+
+                                if (downloadLoop == true)
+                                {
+                                    serialPort1.DtrEnable = false;
+                                    serialPort1.RtsEnable = false;
+                                    serialPort1.Close();
+                                    serialPort1.Dispose();
+                                    DoNext = ThreadTask.INIT_APP;
+                                    tryCount = 0;
+                                    thisTick = Tick_Get();
+                                    //PrintDebug("\nNew download...\n");
+                                }
+                                else
+                                    DoNext = ThreadTask.CLOSE_APP;
                             }
                             else
                             {
                                 PrintDebug("\n\nCan not reboot\n\n", Color.Red);
                                 InfoAppendText("\n\nCan not reboot\n\n", Color.Red);
+                                DoNext = ThreadTask.CLOSE_APP;
                             }
-
-                            DoNext++;
                         }
                         break;
 
@@ -2720,7 +2891,7 @@ namespace NBST
             portName = cb_Port1.Text;
         }
 
-        private void LoadUrl(bool online)
+        private bool LoadUrl(bool online)
         {
             Uri myUri;
             bool result = Uri.TryCreate(cb_Url.Text, UriKind.Absolute, out myUri);
@@ -2741,7 +2912,7 @@ namespace NBST
                 else
                 {
                     MessageBox.Show("Invalid URL", "Error");
-                    return;
+                    return false;
                 }
 
                 //MessageBox.Show("Port: " + downloadCxt.Port, "Info");
@@ -2752,13 +2923,13 @@ namespace NBST
                 if (downloadCxt.FileName == null)
                 {
                     MessageBox.Show("No file name", "Error");
-                    return;
+                    return false;
                 }
 
                 if (downloadCxt.FilePath == null)
                 {
                     MessageBox.Show("No file path", "Error");
-                    return;
+                    return false;
                 }
 
                 if (online)
@@ -2777,8 +2948,8 @@ namespace NBST
 
                             string md5_result = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
                             tb_Md5.Text = md5_result;
-                            MessageBox.Show("MD5: " + md5_result, "Info");
-                            return;
+                            //MessageBox.Show("MD5: " + md5_result, "Info");
+                            return true;
                         }
                     }
                     catch
@@ -2789,11 +2960,48 @@ namespace NBST
             }
             else
                 MessageBox.Show("Invalid URL", "Error");
+
+            return false;
         }
 
         private void cb_Url_TextChanged(object sender, EventArgs e)
         {
-            LoadUrl(true);
+            if(LoadUrl(true))
+            {
+                /*
+                string cmdStr = cb_Url.Text;
+
+                if (cmdStr != null)
+                {
+                    bool found = false;
+
+                    foreach (string s in historyUrl)
+                    {
+                        if (s == cmdStr)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found == false)
+                    {
+                        for (int i = 9; i > 0; i--)
+                            historyUrl[i] = historyUrl[i - 1];
+
+                        historyUrl[0] = cmdStr;
+                    }
+
+                    cb_Url.Items.Clear();
+
+                    foreach (string s in historyUrl)
+                    {
+                        if (s != null)
+                            cb_Url.Items.Add(s);
+                    }
+                }
+                */
+            }
         }
 
         private void tb_Md5_TextChanged(object sender, EventArgs e)
@@ -2834,38 +3042,14 @@ namespace NBST
             moduleInfo.UserDns = cb_Dns.Text;
         }
 
-        private void bt_Reboot_Click(object sender, EventArgs e)
+        private void Timer_Callback(string msg)
         {
-            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
-            bt_Download.Enabled = false;
-            bt_Reboot.Enabled = false;
-            bt_Scan.Enabled = false;
-            bt_CMD.Enabled = false;
-            cb_Apn.Enabled = false;
-            cb_Dns.Enabled = false;
-
-            if (SendAT(cb_Port1.Text, "AT#REBOOT\r"))
+            if (InvokeRequired)
             {
-                PrintDebug("\n\nModule is rebooting...\n\n");
-                InfoAppendText("\n\nModule is rebooting...\n\n");
-                tryCount = 0;
-                timer1.Interval = 5000;
-                timer1.Start();
+                this.Invoke(new Action<string>(Timer_Callback), new object[] { msg });
+                return;
             }
-            else
-            {
-                bt_Download.Enabled = true;
-                bt_Scan.Enabled = true;
-                bt_CMD.Enabled= true;
-                cb_Apn.Enabled = true;
-                cb_Dns.Enabled = true;
-                PrintDebug("\n\nCan not reboot\n\n", Color.Red);
-                InfoAppendText("\n\nCan not reboot\n\n", Color.Red);
-            }
-        }
 
-        private void timer1_Tick(object sender, EventArgs e)
-        {
             tryCount += 5;
 
             if (SendAT(cb_Port1.Text, "ATE0\r"))
@@ -2880,7 +3064,7 @@ namespace NBST
                 PrintDebug(" Done\n");
                 InfoAppendText("Done\n");
             }
-            else if(tryCount>=60)
+            else if (tryCount >= 60)
             {
                 timer1.Stop();
                 bt_Reboot.Enabled = true;
@@ -2893,6 +3077,56 @@ namespace NBST
                 PrintDebug("Failed\n", Color.Red);
                 InfoAppendText("Failed\n", Color.Red);
             }
+
+            //downloadCount *= (-1);
+        }
+
+        private void Timer_Init(string msg)
+        {
+            /*
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(Timer_Init), new object[] { msg });
+                return;
+            }*/
+
+            //downloadCount *= (-1);
+            tryCount = 0;
+            timer1.Interval = 5000;
+            timer1.Start();
+        }
+
+        private void bt_Reboot_Click(object sender, EventArgs e)
+        {
+            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
+            bt_Download.Enabled = false;
+            bt_Reboot.Enabled = false;
+            bt_Scan.Enabled = false;
+            bt_CMD.Enabled = false;
+            cb_Apn.Enabled = false;
+            cb_Dns.Enabled = false;
+
+            if (SendAT(cb_Port1.Text, "AT#REBOOT\r"))
+            {
+                PrintDebug("\n\nModule is rebooting...\n\n");
+                InfoAppendText("\n\nModule is rebooting...\n\n");
+                Timer_Init(null);
+            }
+            else
+            {
+                bt_Download.Enabled = true;
+                bt_Scan.Enabled = true;
+                bt_CMD.Enabled = true;
+                cb_Apn.Enabled = true;
+                cb_Dns.Enabled = true;
+                PrintDebug("\n\nCan not reboot\n\n", Color.Red);
+                InfoAppendText("\n\nCan not reboot\n\n", Color.Red);
+            }
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            Timer_Callback(null);
         }
 
         private string ChangeSpecialByte(string s)
@@ -3037,6 +3271,16 @@ namespace NBST
         private void ckb_Printable_CheckedChanged(object sender, EventArgs e)
         {
             printableMode = ckb_Printable.Checked;
+        }
+
+        private void ckb_DlLoop_CheckedChanged(object sender, EventArgs e)
+        {
+            downloadLoop = ckb_DlLoop.Checked;
+        }
+
+        private void nud_RebootWait_ValueChanged(object sender, EventArgs e)
+        {
+            rebootWait = (UInt32)nud_RebootWait.Value;
         }
     }
 }

@@ -59,9 +59,13 @@
             this.bt_CMD = new System.Windows.Forms.Button();
             this.cb_CMD = new System.Windows.Forms.ComboBox();
             this.ckb_Printable = new System.Windows.Forms.CheckBox();
+            this.ckb_DlLoop = new System.Windows.Forms.CheckBox();
+            this.nud_RebootWait = new System.Windows.Forms.NumericUpDown();
+            this.label6 = new System.Windows.Forms.Label();
             this.tabCtrl1.SuspendLayout();
             this.tabGraph.SuspendLayout();
             this.tabLog.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_RebootWait)).BeginInit();
             this.SuspendLayout();
             // 
             // tabCtrl1
@@ -273,9 +277,9 @@
             this.bt_Download.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.bt_Download.Enabled = false;
             this.bt_Download.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_Download.Location = new System.Drawing.Point(818, 542);
+            this.bt_Download.Location = new System.Drawing.Point(860, 566);
             this.bt_Download.Name = "bt_Download";
-            this.bt_Download.Size = new System.Drawing.Size(178, 48);
+            this.bt_Download.Size = new System.Drawing.Size(136, 23);
             this.bt_Download.TabIndex = 5;
             this.bt_Download.Text = "Download";
             this.bt_Download.UseVisualStyleBackColor = true;
@@ -321,6 +325,7 @@
             this.cb_Url.FormattingEnabled = true;
             this.cb_Url.Items.AddRange(new object[] {
             "https://raw.githubusercontent.com/dungliem92/DFUTest/master/Test.txt",
+            "http://elsa.rpc.vn/assets/images/logo-rp.png",
             "http://103.156.0.37:8081/Test.txt",
             "https://raw.githubusercontent.com/MicrochipTech/XPRESS-Loader/master/utilities/Xp" +
                 "ressBL.hex",
@@ -368,9 +373,9 @@
             // bt_Reboot
             // 
             this.bt_Reboot.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.bt_Reboot.Location = new System.Drawing.Point(726, 543);
+            this.bt_Reboot.Location = new System.Drawing.Point(726, 567);
             this.bt_Reboot.Name = "bt_Reboot";
-            this.bt_Reboot.Size = new System.Drawing.Size(86, 47);
+            this.bt_Reboot.Size = new System.Drawing.Size(128, 23);
             this.bt_Reboot.TabIndex = 17;
             this.bt_Reboot.Text = "Reboot";
             this.bt_Reboot.UseVisualStyleBackColor = true;
@@ -429,12 +434,61 @@
             this.ckb_Printable.UseVisualStyleBackColor = true;
             this.ckb_Printable.CheckedChanged += new System.EventHandler(this.ckb_Printable_CheckedChanged);
             // 
+            // ckb_DlLoop
+            // 
+            this.ckb_DlLoop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.ckb_DlLoop.AutoSize = true;
+            this.ckb_DlLoop.Location = new System.Drawing.Point(881, 544);
+            this.ckb_DlLoop.Name = "ckb_DlLoop";
+            this.ckb_DlLoop.Size = new System.Drawing.Size(95, 17);
+            this.ckb_DlLoop.TabIndex = 23;
+            this.ckb_DlLoop.Text = "Dowload Loop";
+            this.ckb_DlLoop.UseVisualStyleBackColor = true;
+            this.ckb_DlLoop.CheckedChanged += new System.EventHandler(this.ckb_DlLoop_CheckedChanged);
+            // 
+            // nud_RebootWait
+            // 
+            this.nud_RebootWait.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.nud_RebootWait.Location = new System.Drawing.Point(799, 542);
+            this.nud_RebootWait.Maximum = new decimal(new int[] {
+            60000,
+            0,
+            0,
+            0});
+            this.nud_RebootWait.Minimum = new decimal(new int[] {
+            5000,
+            0,
+            0,
+            0});
+            this.nud_RebootWait.Name = "nud_RebootWait";
+            this.nud_RebootWait.Size = new System.Drawing.Size(55, 20);
+            this.nud_RebootWait.TabIndex = 24;
+            this.nud_RebootWait.Value = new decimal(new int[] {
+            5000,
+            0,
+            0,
+            0});
+            this.nud_RebootWait.ValueChanged += new System.EventHandler(this.nud_RebootWait_ValueChanged);
+            // 
+            // label6
+            // 
+            this.label6.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(723, 544);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(70, 13);
+            this.label6.TabIndex = 25;
+            this.label6.Text = "Reboot Wait:";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(1008, 601);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.nud_RebootWait);
+            this.Controls.Add(this.ckb_DlLoop);
             this.Controls.Add(this.ckb_Printable);
             this.Controls.Add(this.cb_CMD);
             this.Controls.Add(this.bt_CMD);
@@ -465,6 +519,7 @@
             this.tabCtrl1.ResumeLayout(false);
             this.tabGraph.ResumeLayout(false);
             this.tabLog.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.nud_RebootWait)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -501,6 +556,9 @@
         private System.Windows.Forms.Button bt_CMD;
         private System.Windows.Forms.ComboBox cb_CMD;
         private System.Windows.Forms.CheckBox ckb_Printable;
+        private System.Windows.Forms.CheckBox ckb_DlLoop;
+        private System.Windows.Forms.NumericUpDown nud_RebootWait;
+        private System.Windows.Forms.Label label6;
     }
 }
 
