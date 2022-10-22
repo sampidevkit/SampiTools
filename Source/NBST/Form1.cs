@@ -73,6 +73,14 @@ namespace NBST
             CLOSE_APP
         }
 
+        private struct SignalCxt
+        {
+            public int value;
+            public int cout;
+            public int avg;
+            public long sum;
+        }
+
         private struct FileParseCxt
         {
             public byte[] Data;
@@ -183,13 +191,15 @@ namespace NBST
         private volatile int downloadCount = 0;
         private volatile bool downloadLoop = false;
         private volatile UInt32 rebootWait = 5000;
+        private int LogCount = 0;
 
-        private string[] UsbPid = new string[4]
+        private string[] UsbPid = new string[5]
         { 
         /* MICROCHIP USB CDC */ "VID_04D8&PID_000A",
         /* xE866 */             "VID_1BC7&PID_0021", 
         /* MEx10G1 */           "VID_1BC7&PID_110A",
-        /* LE910 */             "VID_1BC7&PID_1201"
+        /* LE910 */             "VID_1BC7&PID_1201",
+        /* FTDI */              "VID_0403+PID_6001"
         };
 
         private double Get_RealTime()
@@ -490,9 +500,16 @@ namespace NBST
             {
                 line++;
 
-                string s = "\n% https://maps.google.com/maps?hl=en&q=" + lat.ToString() + "," + lon.ToString() + "\n";
+                string s = "\n% ";
+
+                if ((lat < (-999.0)) || (lon < (-999.0)))
+                    s += "https://maps.google.com/maps?hl=en&q=" + lat.ToString("0.000000") + "," + lon.ToString("0.000000") + "\n";
+                else
+                    s += "Can not find your location\n";
+
                 s += line.ToString() + " " + rsrp.ToString() + " " + rsrq.ToString() + " " + rssi.ToString();
                 sW.WriteLine(s);
+
                 s = "\n" + line.ToString("D4") + " ";
                 s += DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString() + ": ";
                 s += lat.ToString() + ", " + lon.ToString();
@@ -1001,7 +1018,7 @@ namespace NBST
             rtb_Log.SelectionStart = rtb_Log.Text.Length;
             rtb_Log.ScrollToCaret();
 
-            if (line >= 3600)
+            if (line >= 1000)
                 OpenLogFile();
         }
 
@@ -1788,9 +1805,17 @@ namespace NBST
             int csq = 99;
             //int ber = 99;
             int rssi = -150;
-            int rsrp = -150;
-            int rsrq = -150;
-            double lon = 0, lat = 0;
+            //int rsrp = -150;
+            SignalCxt rsrp = new SignalCxt();
+            rsrp.sum = 0;
+            rsrp.cout = 0;
+
+            //int rsrq = -150;
+            SignalCxt rsrq = new SignalCxt();
+            rsrq.sum = 0;
+            rsrq.cout = 0;
+
+            double lon = -999.0, lat = -999.0;
             string tmpStr = null;
             char[] tmpArr = null;
             UInt32 DownloadTime = 0;
@@ -2408,17 +2433,19 @@ namespace NBST
 
                         try
                         {
-                            rsrp = int.Parse(moduleInfo.Rsrp);
+                            rsrp.sum += int.Parse(moduleInfo.Rsrp);
+                            rsrp.cout++;
+                            rsrp.value = (int)(rsrp.sum / (long)rsrp.cout);
 
-                            if (rsrp >= -70)
+                            if (rsrp.value >= -70)
                                 InfoAppendText(moduleInfo.Rsrp + "dBm (Excellent)", Color.Violet);
-                            else if (rsrp >= -80)
+                            else if (rsrp.value >= -80)
                                 InfoAppendText(moduleInfo.Rsrp + "dBm (Good)", Color.Blue);
-                            else if (rsrp >= -90)
+                            else if (rsrp.value >= -90)
                                 InfoAppendText(moduleInfo.Rsrp + "dBm (Normal)", Color.Green);
-                            else if (rsrp >= -100)
+                            else if (rsrp.value >= -100)
                                 InfoAppendText(moduleInfo.Rsrp + "dBm (Low)", Color.Orange);
-                            else if (rsrp >= -110)
+                            else if (rsrp.value >= -110)
                                 InfoAppendText(moduleInfo.Rsrp + "dBm (Very low)", Color.OrangeRed);
                             else
                                 InfoAppendText(moduleInfo.Rsrp + "dBm (No signal)", Color.Red);
@@ -2432,17 +2459,19 @@ namespace NBST
 
                         try
                         {
-                            rsrq = int.Parse(moduleInfo.Rsrq);
+                            rsrq.sum += int.Parse(moduleInfo.Rsrq);
+                            rsrq.cout++;
+                            rsrq.value = (int)(rsrq.sum / (long)rsrq.cout);
 
-                            if (rsrq >= -8)
+                            if (rsrq.value >= -8)
                                 InfoAppendText(moduleInfo.Rsrq + "dB (Excellent)", Color.Violet);
-                            else if (rsrq > -10)
+                            else if (rsrq.value > -10)
                                 InfoAppendText(moduleInfo.Rsrq + "dB (Good)", Color.Blue);
-                            else if (rsrq > -15)
+                            else if (rsrq.value > -15)
                                 InfoAppendText(moduleInfo.Rsrq + "dB (Normal)", Color.Green);
-                            else if (rsrq > -18)
+                            else if (rsrq.value > -18)
                                 InfoAppendText(moduleInfo.Rsrq + "dB (Low)", Color.Orange);
-                            else if (rsrq > -20)
+                            else if (rsrq.value > -20)
                                 InfoAppendText(moduleInfo.Rsrq + "dB (Very low)", Color.OrangeRed);
                             else
                                 InfoAppendText(moduleInfo.Rsrq + "dB (No signal)", Color.Red);
@@ -2452,17 +2481,17 @@ namespace NBST
                             InfoAppendText("Unknown", Color.Red);
                         }
 
-                        if ((lat > (double)0) || (lon > (double)0))
+                        if ((lat < (-999.0)) || (lon < (-999.0)))
                         {
-                            tmpStr = "\nLocation:        " + lat.ToString() + "," + lon.ToString();
+                            tmpStr = "\nLocation:        " + lat.ToString("0.000000") + "," + lon.ToString("0.000000");
                             InfoAppendText(tmpStr);
                         }
 
                         if (Thread_Mode == ThreadMode.RF_TEST)
                         {
                             DoNext = ThreadTask.GET_LOCATION;
-                            WriteLogFile(rsrp, rsrq, rssi, lat, lon);
-                            PlotData(rsrp, rsrq, rssi, TickStart++);
+                            WriteLogFile(rsrp.value, rsrq.value, rssi, lat, lon);
+                            PlotData(rsrp.value, rsrq.value, rssi, TickStart++);
 
                             UInt32 t = Tick_DifMs(thisTick);
 
