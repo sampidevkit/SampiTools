@@ -62,10 +62,13 @@
             this.ckb_DlLoop = new System.Windows.Forms.CheckBox();
             this.nud_RebootWait = new System.Windows.Forms.NumericUpDown();
             this.label6 = new System.Windows.Forms.Label();
+            this.label7 = new System.Windows.Forms.Label();
+            this.nud_RespWait = new System.Windows.Forms.NumericUpDown();
             this.tabCtrl1.SuspendLayout();
             this.tabGraph.SuspendLayout();
             this.tabLog.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nud_RebootWait)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_RespWait)).BeginInit();
             this.SuspendLayout();
             // 
             // tabCtrl1
@@ -214,9 +217,9 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.tb_Md5.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_Md5.ForeColor = System.Drawing.Color.OrangeRed;
-            this.tb_Md5.Location = new System.Drawing.Point(422, 542);
+            this.tb_Md5.Location = new System.Drawing.Point(50, 541);
             this.tb_Md5.Name = "tb_Md5";
-            this.tb_Md5.Size = new System.Drawing.Size(210, 20);
+            this.tb_Md5.Size = new System.Drawing.Size(241, 20);
             this.tb_Md5.TabIndex = 7;
             this.tb_Md5.Text = "834406D30F4F1FD20362A93CB3042696";
             this.tb_Md5.TextChanged += new System.EventHandler(this.tb_Md5_TextChanged);
@@ -235,7 +238,7 @@
             // 
             this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(383, 546);
+            this.label2.Location = new System.Drawing.Point(7, 545);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(33, 13);
             this.label2.TabIndex = 8;
@@ -264,9 +267,9 @@
             // 
             // label4
             // 
-            this.label4.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.label4.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(8, 546);
+            this.label4.Location = new System.Drawing.Point(487, 545);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(32, 13);
             this.label4.TabIndex = 8;
@@ -301,7 +304,7 @@
             // 
             // cb_Apn
             // 
-            this.cb_Apn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.cb_Apn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.cb_Apn.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cb_Apn.ForeColor = System.Drawing.Color.OrangeRed;
             this.cb_Apn.FormattingEnabled = true;
@@ -309,9 +312,9 @@
             "m-nbiot",
             "m-wap",
             "v-internet"});
-            this.cb_Apn.Location = new System.Drawing.Point(49, 542);
+            this.cb_Apn.Location = new System.Drawing.Point(525, 541);
             this.cb_Apn.Name = "cb_Apn";
-            this.cb_Apn.Size = new System.Drawing.Size(115, 21);
+            this.cb_Apn.Size = new System.Drawing.Size(107, 21);
             this.cb_Apn.TabIndex = 13;
             this.cb_Apn.Text = "m-nbiot";
             this.cb_Apn.TextChanged += new System.EventHandler(this.cb_Apn_TextChanged);
@@ -336,7 +339,7 @@
             "https://www.microchip.com/content/experience-fragments/mchp/en_us/site/header/mas" +
                 "ter/_jcr_content/root/responsivegrid/header/logo.coreimg.100.300.png/16058280814" +
                 "63/microchip.png"});
-            this.cb_Url.Location = new System.Drawing.Point(50, 515);
+            this.cb_Url.Location = new System.Drawing.Point(50, 514);
             this.cb_Url.Name = "cb_Url";
             this.cb_Url.Size = new System.Drawing.Size(583, 21);
             this.cb_Url.TabIndex = 14;
@@ -345,9 +348,9 @@
             // 
             // label3
             // 
-            this.label3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.label3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(170, 546);
+            this.label3.Location = new System.Drawing.Point(297, 545);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(33, 13);
             this.label3.TabIndex = 15;
@@ -355,7 +358,7 @@
             // 
             // cb_Dns
             // 
-            this.cb_Dns.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.cb_Dns.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.cb_Dns.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cb_Dns.ForeColor = System.Drawing.Color.OrangeRed;
             this.cb_Dns.FormattingEnabled = true;
@@ -363,9 +366,9 @@
             "\"0.0.0.0\",\"0.0.0.0\"",
             "\"1.1.1.1\",\"8.8.8.8\"",
             "\"8.8.8.8\",\"8.8.4.4\""});
-            this.cb_Dns.Location = new System.Drawing.Point(209, 542);
+            this.cb_Dns.Location = new System.Drawing.Point(336, 541);
             this.cb_Dns.Name = "cb_Dns";
-            this.cb_Dns.Size = new System.Drawing.Size(168, 21);
+            this.cb_Dns.Size = new System.Drawing.Size(145, 21);
             this.cb_Dns.TabIndex = 16;
             this.cb_Dns.Text = "\"0.0.0.0\",\"0.0.0.0\"";
             this.cb_Dns.TextChanged += new System.EventHandler(this.cb_Dns_TextChanged);
@@ -389,7 +392,7 @@
             // 
             this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(8, 572);
+            this.label5.Location = new System.Drawing.Point(10, 570);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(34, 13);
             this.label5.TabIndex = 19;
@@ -414,9 +417,9 @@
             this.cb_CMD.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cb_CMD.ForeColor = System.Drawing.Color.Blue;
             this.cb_CMD.FormattingEnabled = true;
-            this.cb_CMD.Location = new System.Drawing.Point(48, 568);
+            this.cb_CMD.Location = new System.Drawing.Point(50, 568);
             this.cb_CMD.Name = "cb_CMD";
-            this.cb_CMD.Size = new System.Drawing.Size(584, 21);
+            this.cb_CMD.Size = new System.Drawing.Size(431, 21);
             this.cb_CMD.TabIndex = 21;
             this.cb_CMD.Text = "AT\\r";
             // 
@@ -426,7 +429,7 @@
             this.ckb_Printable.AutoSize = true;
             this.ckb_Printable.Checked = true;
             this.ckb_Printable.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ckb_Printable.Location = new System.Drawing.Point(638, 544);
+            this.ckb_Printable.Location = new System.Drawing.Point(638, 543);
             this.ckb_Printable.Name = "ckb_Printable";
             this.ckb_Printable.Size = new System.Drawing.Size(67, 17);
             this.ckb_Printable.TabIndex = 22;
@@ -438,7 +441,7 @@
             // 
             this.ckb_DlLoop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.ckb_DlLoop.AutoSize = true;
-            this.ckb_DlLoop.Location = new System.Drawing.Point(881, 544);
+            this.ckb_DlLoop.Location = new System.Drawing.Point(881, 543);
             this.ckb_DlLoop.Name = "ckb_DlLoop";
             this.ckb_DlLoop.Size = new System.Drawing.Size(95, 17);
             this.ckb_DlLoop.TabIndex = 23;
@@ -449,7 +452,7 @@
             // nud_RebootWait
             // 
             this.nud_RebootWait.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.nud_RebootWait.Location = new System.Drawing.Point(799, 542);
+            this.nud_RebootWait.Location = new System.Drawing.Point(799, 541);
             this.nud_RebootWait.Maximum = new decimal(new int[] {
             60000,
             0,
@@ -474,11 +477,45 @@
             // 
             this.label6.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(723, 544);
+            this.label6.Location = new System.Drawing.Point(723, 545);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(70, 13);
             this.label6.TabIndex = 25;
             this.label6.Text = "Reboot Wait:";
+            // 
+            // label7
+            // 
+            this.label7.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(487, 572);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(78, 13);
+            this.label7.TabIndex = 27;
+            this.label7.Text = "Respond Wait:";
+            // 
+            // nud_RespWait
+            // 
+            this.nud_RespWait.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.nud_RespWait.Location = new System.Drawing.Point(571, 570);
+            this.nud_RespWait.Maximum = new decimal(new int[] {
+            60000,
+            0,
+            0,
+            0});
+            this.nud_RespWait.Minimum = new decimal(new int[] {
+            250,
+            0,
+            0,
+            0});
+            this.nud_RespWait.Name = "nud_RespWait";
+            this.nud_RespWait.Size = new System.Drawing.Size(61, 20);
+            this.nud_RespWait.TabIndex = 26;
+            this.nud_RespWait.Value = new decimal(new int[] {
+            250,
+            0,
+            0,
+            0});
+            this.nud_RespWait.ValueChanged += new System.EventHandler(this.nud_RespWait_ValueChanged);
             // 
             // Form1
             // 
@@ -486,6 +523,8 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(1008, 601);
+            this.Controls.Add(this.label7);
+            this.Controls.Add(this.nud_RespWait);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.nud_RebootWait);
             this.Controls.Add(this.ckb_DlLoop);
@@ -520,6 +559,7 @@
             this.tabGraph.ResumeLayout(false);
             this.tabLog.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.nud_RebootWait)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_RespWait)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -559,6 +599,8 @@
         private System.Windows.Forms.CheckBox ckb_DlLoop;
         private System.Windows.Forms.NumericUpDown nud_RebootWait;
         private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.NumericUpDown nud_RespWait;
     }
 }
 

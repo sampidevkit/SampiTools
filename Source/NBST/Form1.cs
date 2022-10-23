@@ -18,11 +18,13 @@ using System.Runtime.ConstrainedExecution;
 using System.Windows.Forms.VisualStyles;
 using System.Net;
 using System.Device.Location;
+using Spire.Xls;
 
 namespace NBST
 {
     public partial class Form1 : Form
     {
+        #region "Type and Variables"
         private enum HeadTail
         {
             head,
@@ -73,11 +75,20 @@ namespace NBST
             CLOSE_APP
         }
 
+        private struct ThreadCxt
+        {
+            public int Enbale;
+            public Thread Task;
+            public ThreadMode Mode;
+            public ThreadTask DoNext;
+            public ThreadTask ToDo;
+        }
+
         private struct SignalCxt
         {
             public int value;
             public int cout;
-            public int avg;
+            public int average;
             public long sum;
         }
 
@@ -102,6 +113,7 @@ namespace NBST
 
         private struct DownloadCxt
         {
+            public bool Loop;
             public bool SslEn;
             public string Host;
             public string Port;
@@ -110,7 +122,17 @@ namespace NBST
             public string Md5;
             public int FileSize;
             public int DownloadedSize;
+            public int Count;
             public BinaryWriter sW;
+        }
+
+        private struct RfCxt
+        {
+            public SignalCxt Rssi;
+            public SignalCxt Rsrp;
+            public SignalCxt Rsrq;
+            public UInt32 Delay;
+            public int Count;
         }
 
         private struct ModuleInfo
@@ -135,8 +157,18 @@ namespace NBST
             public string UserDns;
         }
 
+        private ThreadCxt threadCxt = new ThreadCxt
+        {
+            Enbale = 0,
+            Task = null,
+            Mode = ThreadMode.RF_TEST,
+            DoNext = ThreadTask.INIT_APP,
+            ToDo = ThreadTask.INIT_APP
+        };
+
         private DownloadCxt downloadCxt = new DownloadCxt
         {
+            Loop = false,
             SslEn = false,
             Host = null,
             Port = null,
@@ -145,6 +177,7 @@ namespace NBST
             Md5 = null,
             FileSize = 0,
             DownloadedSize = 0,
+            Count = 5,
             sW = null
         };
 
@@ -171,27 +204,23 @@ namespace NBST
         };
 
         static ASCIIEncoding encoding = new ASCIIEncoding();
+        private RfCxt rfCxt = new RfCxt();
         private volatile string[] historyCmd = new string[10];
         private volatile string[] historyUrl = new string[10];
-        private volatile int tryCount = 0;
+        private volatile int RebootTryCount = 0;
         private volatile bool debugEn = true;
         private volatile bool viewMode = false;
         private volatile bool printableMode = true;
-        private static Thread Thread_Task = null;
-        private volatile ThreadMode Thread_Mode = ThreadMode.RF_TEST;
-        private volatile int Thread_Enbale = 0;
-        private volatile ThreadTask DoNext = ThreadTask.CMD_ECHO_OFF;
-        private volatile ThreadTask ToDo = ThreadTask.CMD_ECHO_OFF;
         private StreamWriter sW = null;
         private string logfileName = null;
+        private volatile int LogCount = 0;
         private long line = 0;
         private UInt32 TickStart = 0;
         private volatile string portName = null;
         private int sysStart = 0;
-        private volatile int downloadCount = 0;
-        private volatile bool downloadLoop = false;
         private volatile UInt32 rebootWait = 5000;
-        private int LogCount = 0;
+        private volatile UInt32 respWait = 250;
+        private Workbook workbook = new Workbook();
 
         private string[] UsbPid = new string[5]
         { 
@@ -201,7 +230,9 @@ namespace NBST
         /* LE910 */             "VID_1BC7&PID_1201",
         /* FTDI */              "VID_0403+PID_6001"
         };
+        #endregion
 
+        #region "RTCC functions"
         private double Get_RealTime()
         {
             return 0;
@@ -233,6 +264,29 @@ namespace NBST
             return false;
         }
 
+        private int GetUnixTimeSeconds(DateTime date)
+        {
+            DateTime point = new DateTime(1970, 1, 1);
+            TimeSpan time = date.Subtract(point);
+
+            return (int)time.TotalSeconds;
+        }
+
+        private int ToUnixTimeSeconds()
+        {
+            return GetUnixTimeSeconds(DateTime.Now);
+        }
+        #endregion
+
+        #region "String processing functions"
+        private bool isPrintable(char c)
+        {
+            if ((c >= 0x20) && (c <= 0x7E))
+                return true;
+
+            return false;
+        }
+
         private bool FindString(char c, ref int pIdx, string StrSample)
         {
             char[] pStrSample = StrSample.ToCharArray();
@@ -255,41 +309,11 @@ namespace NBST
             return false;
         }
 
-        private int GetUnixTimeSeconds(DateTime date)
-        {
-            DateTime point = new DateTime(1970, 1, 1);
-            TimeSpan time = date.Subtract(point);
-
-            return (int)time.TotalSeconds;
-        }
-
-        private int ToUnixTimeSeconds()
-        {
-            return GetUnixTimeSeconds(DateTime.Now);
-        }
-
         private void ReplaceCharArray(ref char[] ChrArr, char oldChar, char newChar)
         {
             int i, j;
             int len = ChrArr.Length;
 
-            /*
-            PrintDebug("\nOld: ");
-
-            if (isPrintable(oldChar))
-                PrintDebug(oldChar.ToString());
-            else
-                PrintDebug("<" + Convert.ToByte(oldChar).ToString("X2") + ">");
-
-            PrintDebug(", New: ");
-
-            if (isPrintable(newChar))
-                PrintDebug(newChar.ToString());
-            else
-                PrintDebug("<" + Convert.ToByte(newChar).ToString("X2") + ">");
-
-            PrintChar("\nData: ", ChrArr, null);
-            */
             for (i = 0; i < len; i++)
             {
                 if (ChrArr[i] == oldChar)
@@ -312,8 +336,6 @@ namespace NBST
 
             for (i = 0; i < len; i++)
                 newChrArr[i] = ChrArr[i];
-
-            //PrintChar("\nReplace: ", newChrArr, null);
 
             ChrArr = null;
             ChrArr = newChrArr;
@@ -361,6 +383,241 @@ namespace NBST
             return new string(arr);
         }
 
+        private int Get_Index(char[] buffer, int offset, char chr, int chr_count)
+        {
+            if (chr_count == 0)
+                return (-1);
+
+            int len = buffer.Length - offset;
+
+            for (int i = offset; i < len; i++)
+            {
+                if (chr == buffer[i])
+                {
+                    if (--chr_count == 0)
+                        return i;
+                }
+            }
+
+            return (-1);
+        }
+
+        private int Get_1stIndex(char[] buffer, int offset, string para, HeadTail head_tail)
+        {
+            int i, j;
+            char[] p = para.ToCharArray();
+
+            for (i = offset, j = 0; i < (buffer.Length - offset); i++)
+            {
+                if (buffer[i] == p[j])
+                {
+                    if (++j == p.Length)
+                    {
+                        if (head_tail == HeadTail.head)
+                            i -= (j - 1);
+
+                        return i;
+                    }
+                }
+                else if (buffer[i] == p[0])
+                    j = 1;
+                else
+                    j = 0;
+            }
+
+            return (-1);
+        }
+
+        private int Get_LastIndex(char[] buffer, string para, HeadTail head_tail)
+        {
+            int i, j;
+            int l = (-1);
+            char[] p = para.ToCharArray();
+
+            for (i = 0, j = 0; i < buffer.Length; i++)
+            {
+                if (buffer[i] == p[j])
+                {
+                    if (++j == p.Length)
+                    {
+                        if (head_tail == HeadTail.head)
+                            i -= (j - 1);
+
+                        l = i;
+                        j = 0;
+                    }
+                }
+                else if (buffer[i] == p[0])
+                    j = 1;
+                else
+                    j = 0;
+            }
+
+            return l;
+        }
+
+        private char[] SubArray(char[] buffer, int headIdx, int tailIdx)
+        {
+            if ((headIdx >= 0) && (tailIdx >= 0) && (headIdx <= tailIdx))
+            {
+                char[] chr = new char[tailIdx - headIdx + 1];
+                int i;
+
+                for (i = 0; i < chr.Length; i++)
+                    chr[i] = buffer[headIdx + i];
+
+                return chr;
+            }
+
+            return null;
+        }
+
+        private char[] SubArray(char[] buffer, string str_head, string str_tail)
+        {
+            int head = Get_1stIndex(buffer, 0, str_head, HeadTail.tail) + 1;
+            int tail = Get_1stIndex(buffer, 0, str_tail, HeadTail.head) - 1;
+
+            return SubArray(buffer, head, tail);
+        }
+
+        private char[] SubArray(char[] buffer, char begin, int beginCount, char end, int endCount)
+        {
+            int beginIdx = Get_Index(buffer, 0, begin, beginCount) + 1;
+            int endIdx = Get_Index(buffer, 0, end, endCount) - 1;
+
+            if (endIdx >= beginIdx)
+            {
+                char[] chars = new char[endIdx - beginIdx + 1];
+
+                for (int i = 0; i < chars.Length; i++)
+                    chars[i] = buffer[beginIdx + i];
+
+                return chars;
+            }
+
+            return null;
+        }
+
+        private char[] SubArray(char[] buffer, string str_head, string str_tail, bool last)
+        {
+            int head, tail;
+
+            if (last)
+            {
+                head = Get_LastIndex(buffer, str_head, HeadTail.tail) + 1;
+                tail = Get_LastIndex(buffer, str_tail, HeadTail.head) - 1;
+            }
+            else
+            {
+                head = Get_1stIndex(buffer, 0, str_head, HeadTail.tail) + 1;
+                tail = Get_1stIndex(buffer, 0, str_tail, HeadTail.head) - 1;
+            }
+
+            return SubArray(buffer, head, tail);
+        }
+
+        private string RemoveAT(string atResp)
+        {
+            char[] arr = atResp.ToCharArray();
+            int head = Get_1stIndex(arr, 0, "\r\nOK\r\n", HeadTail.head);
+
+            if (head >= 0)
+            {
+                arr[head + 2] = '\r';
+                arr[head + 3] = '\n';
+            }
+
+            atResp = new string(arr);
+            ReplaceStr(ref atResp, '\r', '\0');
+            ReplaceStr(ref atResp, '\n', '\0');
+
+            return atResp;
+        }
+
+        private char[] HttpRcv_GetData(in char[] datain, int lenin)
+        {
+            char[] dataout = null;
+            int beginIdx = Get_1stIndex(datain, 0, "<<<", HeadTail.tail) + 1;
+            int endIdx = Get_LastIndex(datain, "\r\nOK\r\n", HeadTail.head);
+
+            //PrintDebug("\n\nFirst=" + beginIdx.ToString() + "\nLast=" + endIdx.ToString());
+            //PrintData("\nInput: ", datain, lenin, Color.Blue);
+
+            if ((lenin > 9) && (endIdx > beginIdx))
+            {
+                dataout = new char[endIdx - beginIdx];
+
+                for (int i = beginIdx, j = 0; i < endIdx; i++)
+                {
+                    dataout[j] = datain[beginIdx + j];
+                    j++;
+                }
+            }
+
+            //PrintData("\nOutput: ", dataout, dataout.Length, Color.Red);
+
+            return dataout;
+        }
+
+        private string ChangeSpecialByte(string s)
+        {
+            byte[] BIn = encoding.GetBytes(s);
+            byte[] BOut = new byte[BIn.Length];
+            int i, j;
+
+            for (i = 0, j = 0; i < BIn.Length; i++)
+            {
+                if (BIn[i] == '\\')
+                {
+                    try
+                    {
+                        switch (BIn[i + 1])
+                        {
+                            case (byte)'r':
+                                BOut[j++] = (byte)'\r';
+                                i++;
+                                break;
+
+                            case (byte)'n':
+                                BOut[j++] = (byte)'\n';
+                                i++;
+                                break;
+
+                            default:
+                                if ((BIn[i + 1] >= (byte)'0') && (BIn[i + 1] <= (byte)'9'))
+                                {
+                                    BOut[j++] = (byte)(BIn[i + 1] - '0');
+                                    i++;
+                                }
+                                else
+                                    BOut[j++] = BIn[i];
+                                break;
+                        }
+                    }
+                    catch
+                    {
+                        BOut[j++] = BIn[i];
+                    }
+                }
+                else
+                    BOut[j++] = BIn[i];
+            }
+
+            if (j > 0)
+            {
+                char[] Arr = new char[j];
+
+                for (i = 0; i < j; i++)
+                    Arr[i] = (char)BOut[i];
+
+                return new string(Arr);
+            }
+
+            return null;
+        }
+        #endregion
+
+        #region "Debug functions"
         private void PrintDebug(string msg, Color color)
         {
             if (InvokeRequired)
@@ -377,7 +634,6 @@ namespace NBST
 
             rtb_Log.SelectionColor = color;
             rtb_Log.AppendText(msg);
-            //rtb_Log.ForeColor = color;
         }
 
         private void PrintChar(string prefix, char[] chr, string subfix)
@@ -392,12 +648,11 @@ namespace NBST
                 return;
 
             string s = prefix + "Char len=" + chr.Length.ToString() + ": ";
-            //PrintDebug(prefix + "Char len=" + chr.Length.ToString() + ": ");
 
             foreach (char c in chr)
             {
                 if (isPrintable(c))
-                    s += c.ToString(); //PrintDebug(c.ToString());
+                    s += c.ToString();
                 else if (printableMode == true)
                 {
                     if ((c == '\r') || (c == '\n'))
@@ -406,10 +661,10 @@ namespace NBST
                         s += ".";
                 }
                 else
-                    s += "<" + Convert.ToByte(c).ToString("X2") + ">"; //PrintDebug("<" + Convert.ToByte(c).ToString("X2") + ">");
+                    s += "<" + Convert.ToByte(c).ToString("X2") + ">";
             }
 
-            s += subfix; //PrintDebug(subfix);
+            s += subfix;
             PrintDebug(s);
         }
 
@@ -479,19 +734,63 @@ namespace NBST
 
             PrintDebug(s + "\n\n", color);
         }
+        #endregion
 
-        private void FileParseInit(ref FileParseCxt FpCxt, int BufferSize)
-        {
-            FpCxt.DoNext = 0;
-            FpCxt.Count = 0;
-            FpCxt.Data = new byte[BufferSize];
-        }
+        #region "Log functions"
 
         private string FileNameGenerate(string prefix)
         {
             string s = RemoveInvalidName(prefix + DateTime.Now.ToShortDateString() + DateTime.Now.ToLongTimeString());
 
             return s;
+        }
+
+        private void WriteExcelFile(string device, string imei, string cimi, string ccid, string apn, 
+            int tac, int cellid, int rsrp, int rsrq, int rssi, double lat, double lon,
+            int pass, int fail, string note)
+        {
+
+        }
+
+        private void ExcelFile_Deinit()
+        {
+            if (sW != null)
+            {
+                StreamWriter slog = new StreamWriter(logfileName + ".txt");
+
+                slog.WriteLine(rtb_Log.Text);
+                slog.Close();
+                sW.WriteLine(NBST.Properties.Resources.footer);
+
+                sW.Close();
+                PrintDebug("\nLog file " + logfileName + ".m has been saved");
+                Thread.Sleep(1000);
+                sW = null;
+            }
+        }
+
+        private void ExcelFille_Init(string fileName)
+        {
+            ExcelFile_Deinit();
+            logfileName = FileNameGenerate("NBST_");
+
+            try
+            {
+                line = 0;
+                sW = new StreamWriter(logfileName + ".m");
+                sW.WriteLine("%{");
+                sW.WriteLine(rtb_Info.Text);
+                sW.WriteLine("%}");
+                sW.WriteLine(NBST.Properties.Resources.header);
+                sW.WriteLine("\nstartTime=" + ToUnixTimeSeconds().ToString() + ";");
+                sW.WriteLine("\na=[");
+
+                rtb_Log.Text = "New log file " + logfileName + ".m has been created";
+            }
+            catch
+            {
+                PrintDebug("\nFile name \"" + logfileName + "\"error");
+            }
         }
 
         private void WriteLogFile(int rsrp, int rsrq, int rssi, double lat, double lon)
@@ -518,7 +817,7 @@ namespace NBST
             }
         }
 
-        private void CloseLogFile()
+        private void Log_Deinit()
         {
             if (sW != null)
             {
@@ -536,9 +835,9 @@ namespace NBST
             }
         }
 
-        private void OpenLogFile()
+        private void Log_Init()
         {
-            CloseLogFile();
+            Log_Deinit();
             logfileName = FileNameGenerate("NBST_");
 
             try
@@ -560,9 +859,55 @@ namespace NBST
             }
         }
 
+        private void InfoAppendText(string msg)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(InfoAppendText), new object[] { msg });
+                return;
+            }
+
+            if (msg == null)
+                return;
+
+            rtb_Info.SelectionColor = Color.Black;
+            rtb_Info.AppendText(msg);
+        }
+
+        private void InfoAppendText(string msg, Color color)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string, Color>(InfoAppendText), new object[] { msg, color });
+                return;
+            }
+
+            if (msg == null)
+                return;
+
+            rtb_Info.SelectionColor = color;
+            rtb_Info.AppendText(msg);
+        }
+
+        private void InfoWriteText(string msg)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(InfoWriteText), new object[] { msg });
+                return;
+            }
+
+            if (msg == null)
+                return;
+
+            rtb_Info.SelectionColor = Color.Black;
+            rtb_Info.Text = msg;
+        }
+        #endregion
+
+        #region "Serial port functions"
         private string Parse_COMPort(string str)
         {
-            // ...(COM10)
             int i, j, k;
             string s = null;
             char[] arr = str.ToCharArray();
@@ -597,7 +942,7 @@ namespace NBST
             return s;
         }
 
-        private bool SendAT(string pName, string cmd)
+        private bool SendAT(string pName, string cmd, UInt32 wait)
         {
             int loop = 0;
             bool found = false;
@@ -620,7 +965,6 @@ namespace NBST
                 serialPort1.DtrEnable = true;
                 serialPort1.RtsEnable = true;
                 serialPort1.Open();
-                //PrintDebug("\nOpen " + pName);
 
                 do
                 {
@@ -634,18 +978,14 @@ namespace NBST
                             found = true;
                         }
                     }
-                    else if (Tick_IsOverMs(ref tick, 250))
+                    else if (Tick_IsOverMs(ref tick, wait))
                     {
                         loop++;
-                        //PrintDebug("\nRX Timeout");
                     }
                 }
                 while (loop < 2);
             }
-            catch
-            {
-                //PrintDebug("\nTX Timeout");
-            }
+            catch { }
 
             try
             {
@@ -659,6 +999,11 @@ namespace NBST
             return found;
         }
 
+        private bool SendAT(string pName, string cmd)
+        {
+            return SendAT(pName, cmd, 250);
+        }
+
         private void Scan_AT_Port()
         {
             //string[] ports;
@@ -666,14 +1011,12 @@ namespace NBST
             string port = null;
             string portlist = null;
 
-            
             PrintDebug("\nSupport device: ");
 
             foreach (string Pid in UsbPid)
             {
                 PrintDebug("\n" + Pid);
             }
-            
 
             try
             {
@@ -691,12 +1034,10 @@ namespace NBST
                             if (device["DeviceID"].ToString().Contains(Pid))
                             {
                                 port = Parse_COMPort(device["Caption"].ToString()); // new
-                                //PrintDebug("\nFound " + port);
 
                                 if (portlist == null)
                                 {
                                     portlist += port;
-                                    //PrintDebug("\nFound: " + port);
 
                                     if (SendAT(port, "ATE0\r"))
                                     {
@@ -707,7 +1048,6 @@ namespace NBST
                                 else if (!portlist.Contains(port))
                                 {
                                     portlist += port;
-                                    //PrintDebug("\nFound: " + port);
 
                                     if (SendAT(port, "ATE0\r"))
                                     {
@@ -727,12 +1067,10 @@ namespace NBST
                     foreach (ManagementObject device in deviceList.Get())
                     {
                         port = device["AttachedTo"].ToString();
-                        //PrintDebug("\nFound " + port);
 
                         if (portlist == null)
                         {
                             portlist += port;
-                            //PrintDebug("\nFound: " + port);
 
                             if (SendAT(port, "ATE0\r"))
                             {
@@ -743,7 +1081,6 @@ namespace NBST
                         else if (!portlist.Contains(port))
                         {
                             portlist += port;
-                            //PrintDebug("\nFound: " + port);
 
                             if (SendAT(port, "ATE0\r"))
                             {
@@ -769,513 +1106,6 @@ namespace NBST
 
             cb_Port1.Enabled = true;
             PrintDebug("\nFound: " + found.ToString() + " AT command port(s)");
-        }
-
-        public Form1()
-        {
-            InitializeComponent();
-            sysStart = Environment.TickCount;
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            if (File.Exists("HistoryCMD.txt"))
-            {
-                StreamReader sR = new StreamReader("HistoryCMD.txt");
-                string deviceStr = sR.ReadToEnd();
-
-                sR.Close();
-                ReplaceStr(ref deviceStr, '\r', (char)0x00);
-
-                char[] deviceArr = deviceStr.ToCharArray();
-                int lineCount = 1;
-
-                foreach (char c in deviceArr)
-                {
-                    if (c == '\n')
-                        lineCount++;
-                }
-
-                int lineIdx = 0;
-                historyCmd[lineIdx] = null;
-
-                foreach (char c in deviceArr)
-                {
-                    switch (c)
-                    {
-                        case '\n':
-                            lineIdx++;
-
-                            if (lineIdx < lineCount)
-                                historyCmd[lineIdx] = null;
-                            break;
-
-                        default:
-                            if (lineIdx < lineCount)
-                                historyCmd[lineIdx] += c.ToString();
-                            break;
-                    }
-                }
-
-                cb_CMD.Items.Clear();
-
-                foreach (string s in historyCmd)
-                {
-                    if (s != null)
-                        cb_CMD.Items.Add(s);
-                }
-
-                cb_CMD.SelectedIndex = 0;
-            }
-
-            if (File.Exists("HistoryUrl.txt"))
-            {
-                StreamReader sR = new StreamReader("HistoryUrl.txt");
-                string deviceStr = sR.ReadToEnd();
-
-                sR.Close();
-                ReplaceStr(ref deviceStr, '\r', (char)0x00);
-
-                char[] deviceArr = deviceStr.ToCharArray();
-                int lineCount = 1;
-
-                foreach (char c in deviceArr)
-                {
-                    if (c == '\n')
-                        lineCount++;
-                }
-
-                int lineIdx = 0;
-                historyUrl[lineIdx] = null;
-
-                foreach (char c in deviceArr)
-                {
-                    switch (c)
-                    {
-                        case '\n':
-                            lineIdx++;
-
-                            if (lineIdx < lineCount)
-                                historyUrl[lineIdx] = null;
-                            break;
-
-                        default:
-                            if (lineIdx < lineCount)
-                                historyUrl[lineIdx] += c.ToString();
-                            break;
-                    }
-                }
-
-                cb_Url.Items.Clear();
-                bool _1st = true;
-
-                foreach (string s in historyUrl)
-                {
-                    if (s != null)
-                    {
-                        if (_1st == true)
-                        {
-                            _1st = false;
-                            tb_Md5.Text = s;
-                        }
-                        else
-                            cb_Url.Items.Add(s);
-                    }
-                }
-
-                cb_Url.SelectedIndex = 0;
-            }
-
-            if (File.Exists("SupportedDevices.txt"))
-            {
-                StreamReader sRUsbDevice = new StreamReader("SupportedDevices.txt");
-                string deviceStr = sRUsbDevice.ReadToEnd();
-                
-                sRUsbDevice.Close();
-                ReplaceStr(ref deviceStr, '\r', (char)0x00);
-
-                char[] deviceArr = deviceStr.ToCharArray();
-                int lineCount = 1;
-
-                foreach(char c in deviceArr)
-                {
-                    if (c == '\n')
-                        lineCount++;
-                }
-
-                UsbPid = new string[lineCount];
-                int lineIdx = 0;
-                UsbPid[lineIdx] = null;
-
-                foreach (char c in deviceArr)
-                {
-                    switch (c)
-                    {
-                        case '\n':
-                            lineIdx++;
-
-                            if (lineIdx < lineCount)
-                                UsbPid[lineIdx] = null;
-                            break;
-
-                        default:
-                            if (lineIdx < lineCount)
-                                UsbPid[lineIdx] += c.ToString();
-                            break;
-                    }
-                }
-            }
-            else
-            {
-                StreamWriter sW = new StreamWriter("SupportedDevices.txt");
-                bool _1st = true;
-
-                foreach (string s in UsbPid)
-                {
-                    if (_1st)
-                    {
-                        _1st = false;
-                        sW.Write(s);
-                    }
-                    else
-                        sW.Write("\n" + s);
-                }
-
-                sW.Close();
-                MessageBox.Show("SupportedDevices.txt not found, use default supported devices", "Warning");
-            }
-
-            string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-
-            this.Text += " v." + $"{version}";
-            this.Update();
-
-            downloadCxt.Md5 = tb_Md5.Text;
-            moduleInfo.Apn = cb_Apn.Text;
-            moduleInfo.UserDns = cb_Dns.Text;
-            LoadUrl(false);
-            Scan_AT_Port();
-        }
-
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            if (Thread_Task != null)
-            {
-                if (Thread_Task.IsAlive)
-                {
-                    Thread_Enbale = 0;
-                    Thread_Task.Abort();
-                    Thread_Task.Interrupt();
-                    Thread_Task.Abort();
-                    Thread_Task.Join();
-                    while (Thread_Task.IsAlive) ;
-                }
-            }
-
-            StreamWriter sW = new StreamWriter("HistoryCMD.txt");
-            bool _1st = true;
-
-            foreach (string s in historyCmd)
-            {
-                if (s != null)
-                {
-                    if (_1st)
-                    {
-                        _1st = false;
-                        sW.Write(s);
-                    }
-                    else
-                        sW.Write("\n" + s);
-                }
-            }
-
-            sW.Close();
-            /*
-            sW = new StreamWriter("HistoryUrl.txt");
-            _1st = true;
-
-            foreach (string s in historyUrl)
-            {
-                if (s != null)
-                {
-                    if (_1st == true)
-                    {
-                        _1st = false;
-                        sW.Write(s);
-                    }
-                    else
-                        sW.Write("\n" + s);
-                }
-            }
-
-            sW.Close();
-            */
-            CloseLogFile();
-        }
-
-        private void rtb_Log_TextChanged(object sender, EventArgs e)
-        {
-            rtb_Log.SelectionStart = rtb_Log.Text.Length;
-            rtb_Log.ScrollToCaret();
-
-            if (line >= 1000)
-                OpenLogFile();
-        }
-
-        private void bt_Scan_Click(object sender, EventArgs e)
-        {
-            Scan_AT_Port();
-        }
-
-        private void bt_RFTest_Update(string msg)
-        {
-            if (InvokeRequired)
-            {
-                this.Invoke(new Action<string>(bt_RFTest_Update), new object[] { msg });
-                return;
-            }
-
-            CloseLogFile();
-            bt_Download.Enabled = true;
-            bt_Reboot.Enabled = true;
-            bt_Scan.Enabled = true;
-            bt_CMD.Enabled = true;
-            cb_Apn.Enabled = true;
-            cb_Dns.Enabled = true;
-            bt_RFTest.Text = "RF Test";
-        }
-
-        private void bt_Download_Update(string msg)
-        {
-            if (InvokeRequired)
-            {
-                this.Invoke(new Action<string>(bt_Download_Update), new object[] { msg });
-                return;
-            }
-
-            bt_RFTest.Enabled = true;
-            bt_Scan.Enabled = true;
-            bt_CMD.Enabled = true;
-            bt_Reboot.Enabled = true;
-            cb_Apn.Enabled = true;
-            cb_Dns.Enabled = true;
-            cb_Url.Enabled = true;
-            tb_Md5.Enabled = true;
-            bt_Download.Text = "Download";
-        }
-
-        private void bt_RFTest_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (bt_RFTest.Text == "RF Test")
-                {
-                    tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabGraph"];
-
-                    zedGraphControl1.GraphPane.CurveList.Clear();
-                    zedGraphControl1.GraphPane.GraphObjList.Clear();
-                    zedGraphControl1.Refresh();
-
-                    zedGraphControl1.GraphPane.Title.Text = "RF Measurement";
-                    zedGraphControl1.GraphPane.XAxis.Title.Text = "Time";
-                    zedGraphControl1.GraphPane.YAxis.Title.Text = "Strength";
-
-                    RollingPointPairList list1 = new RollingPointPairList(65536);
-                    RollingPointPairList list2 = new RollingPointPairList(65536);
-                    RollingPointPairList list3 = new RollingPointPairList(65536);
-
-                    LineItem curve1 = zedGraphControl1.GraphPane.AddCurve("RSRP (dBm)", list1, Color.Red, SymbolType.None);
-                    LineItem curve2 = zedGraphControl1.GraphPane.AddCurve("RSRQ (dB)", list2, Color.Green, SymbolType.None);
-                    LineItem curve3 = zedGraphControl1.GraphPane.AddCurve("RSSI (dBm)", list3, Color.Blue, SymbolType.None);
-
-                    curve1.Line.Width = 2;
-                    curve2.Line.Width = 2;
-                    curve3.Line.Width = 2;
-
-                    zedGraphControl1.GraphPane.XAxis.Scale.Min = 0;
-                    zedGraphControl1.GraphPane.XAxis.Scale.Max = 60;
-                    zedGraphControl1.GraphPane.XAxis.Scale.MinorStep = 1;
-                    zedGraphControl1.GraphPane.XAxis.Scale.MajorStep = 5;
-                    zedGraphControl1.AxisChange();
-
-                    Thread_Mode = ThreadMode.RF_TEST;
-                    Thread_Enbale = 1;
-                    OpenLogFile();
-                    bt_Download.Enabled = false;
-                    bt_Reboot.Enabled = false;
-                    bt_Scan.Enabled = false;
-                    bt_CMD.Enabled = false;
-                    cb_Apn.Enabled = false;
-                    cb_Dns.Enabled = false;
-                    Thread_Task = new Thread(() => Thread_Tasks()); // Create new app tasks
-                    Thread_Task.Start();
-                    bt_RFTest.Text = "Stop";
-                }
-                else
-                {
-                    Thread_Enbale = 0;
-                }
-            }
-            catch { }
-        }
-
-        private bool isPrintable(char c)
-        {
-            if ((c >= 0x20) && (c <= 0x7E))
-                return true;
-
-            return false;
-        }
-
-        private int Get_Index(char[] buffer, int offset, char chr, int chr_count)
-        {
-            if (chr_count == 0)
-                return (-1);
-
-            int len = buffer.Length - offset;
-
-            for (int i = offset; i < len; i++)
-            {
-                if(chr == buffer[i])
-                {
-                    if (--chr_count == 0)
-                        return i;
-                }
-            }
-
-            return (-1);
-        }
-
-        private int Get_1stIndex(char[] buffer, int offset, string para, HeadTail head_tail)
-        {
-            int i, j;
-            char[] p = para.ToCharArray();
-
-            for (i = offset, j = 0; i < (buffer.Length - offset); i++)
-            {
-                if (buffer[i] == p[j])
-                {
-                    if (++j == p.Length)
-                    {
-                        if (head_tail == HeadTail.head)
-                            i -= (j - 1);
-                        /*
-                        PrintDebug("\nIdx=" + i.ToString() + ", ");
-
-                        if (isPrintable(buffer[i]))
-                            PrintDebug(buffer[i].ToString());
-                        else
-                            PrintDebug("<" + Convert.ToByte(buffer[i]).ToString("X2") + ">");
-                        */
-                        return i;
-                    }
-                }
-                else if (buffer[i] == p[0])
-                    j = 1;
-                else
-                    j = 0;
-            }
-
-            return (-1);
-        }
-
-        private int Get_LastIndex(char[] buffer, string para, HeadTail head_tail)
-        {
-            int i, j;
-            int l = (-1);
-            char[] p = para.ToCharArray();
-
-            for (i = 0, j = 0; i < buffer.Length; i++)
-            {
-                if (buffer[i] == p[j])
-                {
-                    if (++j == p.Length)
-                    {
-                        if (head_tail == HeadTail.head)
-                            i -= (j - 1);
-                        /*
-                        PrintDebug("\nIdx=" + i.ToString() + ", ");
-
-                        if (isPrintable(buffer[i]))
-                            PrintDebug(buffer[i].ToString());
-                        else
-                            PrintDebug("<" + Convert.ToByte(buffer[i]).ToString("X2") + ">");
-                        */
-                        l = i;
-                        j = 0;
-                    }
-                }
-                else if (buffer[i] == p[0])
-                    j = 1;
-                else
-                    j = 0;
-            }
-
-            return l;
-        }
-
-        private char[] SubArray(char[] buffer, int headIdx, int tailIdx)
-        {
-            if ((headIdx >= 0) && (tailIdx >= 0) && (headIdx <= tailIdx))
-            {
-                char[] chr = new char[tailIdx - headIdx + 1];
-                int i;
-
-                for (i = 0; i < chr.Length; i++)
-                    chr[i] = buffer[headIdx + i];
-
-                return chr;
-            }
-
-            return null;
-        }
-
-        private char[] SubArray(char[] buffer, string str_head, string str_tail)
-        {
-            int head = Get_1stIndex(buffer, 0, str_head, HeadTail.tail) + 1;
-            int tail = Get_1stIndex(buffer, 0, str_tail, HeadTail.head) - 1;
-
-            //PrintDebug("\n--> head " + head.ToString()+ " tail " + tail.ToString());
-
-            return SubArray(buffer, head, tail);
-        }
-
-        private char[] SubArray(char[] buffer, char begin, int beginCount, char end, int endCount)
-        {
-            int beginIdx = Get_Index(buffer, 0, begin, beginCount) + 1;
-            int endIdx = Get_Index(buffer, 0, end, endCount) - 1;
-
-            if (endIdx >= beginIdx)
-            {
-                char[] chars = new char[endIdx - beginIdx + 1];
-
-                for (int i = 0; i < chars.Length; i++)
-                    chars[i] = buffer[beginIdx + i];
-
-                return chars;
-            }
-
-            return null;
-        }
-
-        private char[] SubArray(char[] buffer, string str_head, string str_tail, bool last)
-        {
-            int head, tail;
-
-            if (last)
-            {
-                head = Get_LastIndex(buffer, str_head, HeadTail.tail) + 1;
-                tail = Get_LastIndex(buffer, str_tail, HeadTail.head) - 1;
-            }
-            else
-            {
-                head = Get_1stIndex(buffer, 0, str_head, HeadTail.tail) + 1;
-                tail = Get_1stIndex(buffer, 0, str_tail, HeadTail.head) - 1;
-            }
-
-            //PrintDebug("\n--> head " + head.ToString() + " tail " + tail.ToString());
-
-            return SubArray(buffer, head, tail);
         }
 
         private string SendCmd_GetRes(ref CmdCxt cmdCxt, string cmd, UInt32 timeout, UInt32 wait, bool AT_Track)
@@ -1651,82 +1481,590 @@ namespace NBST
         {
             return SendCmd_GetRes(ref cmdCxt, cmd, 500, true);
         }
+        #endregion
 
-        private void InfoAppendText(string msg)
+        #region "System functions"
+        public Form1()
+        {
+            InitializeComponent();
+            sysStart = Environment.TickCount;
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            if (File.Exists("HistoryCMD.txt"))
+            {
+                StreamReader sR = new StreamReader("HistoryCMD.txt");
+                string deviceStr = sR.ReadToEnd();
+
+                sR.Close();
+                ReplaceStr(ref deviceStr, '\r', (char)0x00);
+
+                char[] deviceArr = deviceStr.ToCharArray();
+                int lineCount = 1;
+
+                foreach (char c in deviceArr)
+                {
+                    if (c == '\n')
+                        lineCount++;
+                }
+
+                int lineIdx = 0;
+                historyCmd[lineIdx] = null;
+
+                foreach (char c in deviceArr)
+                {
+                    switch (c)
+                    {
+                        case '\n':
+                            lineIdx++;
+
+                            if (lineIdx < lineCount)
+                                historyCmd[lineIdx] = null;
+                            break;
+
+                        default:
+                            if (lineIdx < lineCount)
+                                historyCmd[lineIdx] += c.ToString();
+                            break;
+                    }
+                }
+
+                bool not_empty = false;
+
+                cb_CMD.Items.Clear();
+
+                foreach (string s in historyCmd)
+                {
+                    if (s != null)
+                    {
+                        not_empty = true;
+                        cb_CMD.Items.Add(s);
+                    }
+                }
+
+                if (not_empty == false)
+                    cb_CMD.Items.Add("AT\\r");
+
+                cb_CMD.SelectedIndex = 0;
+            }
+
+            if (File.Exists("HistoryUrl.txt"))
+            {
+                StreamReader sR = new StreamReader("HistoryUrl.txt");
+                string deviceStr = sR.ReadToEnd();
+
+                sR.Close();
+                ReplaceStr(ref deviceStr, '\r', (char)0x00);
+
+                char[] deviceArr = deviceStr.ToCharArray();
+                int lineCount = 1;
+
+                foreach (char c in deviceArr)
+                {
+                    if (c == '\n')
+                        lineCount++;
+                }
+
+                int lineIdx = 0;
+                historyUrl[lineIdx] = null;
+
+                foreach (char c in deviceArr)
+                {
+                    switch (c)
+                    {
+                        case '\n':
+                            lineIdx++;
+
+                            if (lineIdx < lineCount)
+                                historyUrl[lineIdx] = null;
+                            break;
+
+                        default:
+                            if (lineIdx < lineCount)
+                                historyUrl[lineIdx] += c.ToString();
+                            break;
+                    }
+                }
+
+                cb_Url.Items.Clear();
+                bool _1st = true;
+
+                foreach (string s in historyUrl)
+                {
+                    if (s != null)
+                    {
+                        if (_1st == true)
+                        {
+                            _1st = false;
+                            tb_Md5.Text = s;
+                        }
+                        else
+                            cb_Url.Items.Add(s);
+                    }
+                }
+
+                cb_Url.SelectedIndex = 0;
+            }
+
+            if (File.Exists("SupportedDevices.txt"))
+            {
+                StreamReader sRUsbDevice = new StreamReader("SupportedDevices.txt");
+                string deviceStr = sRUsbDevice.ReadToEnd();
+                
+                sRUsbDevice.Close();
+                ReplaceStr(ref deviceStr, '\r', (char)0x00);
+
+                char[] deviceArr = deviceStr.ToCharArray();
+                int lineCount = 1;
+
+                foreach(char c in deviceArr)
+                {
+                    if (c == '\n')
+                        lineCount++;
+                }
+
+                UsbPid = new string[lineCount];
+                int lineIdx = 0;
+                UsbPid[lineIdx] = null;
+
+                foreach (char c in deviceArr)
+                {
+                    switch (c)
+                    {
+                        case '\n':
+                            lineIdx++;
+
+                            if (lineIdx < lineCount)
+                                UsbPid[lineIdx] = null;
+                            break;
+
+                        default:
+                            if (lineIdx < lineCount)
+                                UsbPid[lineIdx] += c.ToString();
+                            break;
+                    }
+                }
+            }
+            else
+            {
+                StreamWriter sW = new StreamWriter("SupportedDevices.txt");
+                bool _1st = true;
+
+                foreach (string s in UsbPid)
+                {
+                    if (_1st)
+                    {
+                        _1st = false;
+                        sW.Write(s);
+                    }
+                    else
+                        sW.Write("\n" + s);
+                }
+
+                sW.Close();
+                MessageBox.Show("SupportedDevices.txt not found, use default supported devices", "Warning");
+            }
+
+            string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+            this.Text += " v." + $"{version}";
+            this.Update();
+
+            downloadCxt.Md5 = tb_Md5.Text;
+            moduleInfo.Apn = cb_Apn.Text;
+            moduleInfo.UserDns = cb_Dns.Text;
+            LoadUrl(false);
+            Scan_AT_Port();
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (threadCxt.Task != null)
+            {
+                if (threadCxt.Task.IsAlive)
+                {
+                    threadCxt.Enbale = 0;
+                    threadCxt.Task.Abort();
+                    threadCxt.Task.Interrupt();
+                    threadCxt.Task.Abort();
+                    threadCxt.Task.Join();
+                    while (threadCxt.Task.IsAlive) ;
+                }
+            }
+
+            StreamWriter sW = new StreamWriter("HistoryCMD.txt");
+            bool _1st = true;
+
+            foreach (string s in historyCmd)
+            {
+                if (s != null)
+                {
+                    if (_1st)
+                    {
+                        _1st = false;
+                        sW.Write(s);
+                    }
+                    else
+                        sW.Write("\n" + s);
+                }
+            }
+
+            sW.Close();
+            Log_Deinit();
+        }
+        #endregion
+
+        #region "Button functions"
+        private void bt_Scan_Click(object sender, EventArgs e)
+        {
+            Scan_AT_Port();
+        }
+
+        private void bt_RFTest_Update(string msg)
         {
             if (InvokeRequired)
             {
-                this.Invoke(new Action<string>(InfoAppendText), new object[] { msg });
+                this.Invoke(new Action<string>(bt_RFTest_Update), new object[] { msg });
                 return;
             }
 
-            if (msg == null)
-                return;
-
-            rtb_Info.SelectionColor = Color.Black;
-            rtb_Info.AppendText(msg);
+            Log_Deinit();
+            bt_Download.Enabled = true;
+            bt_Reboot.Enabled = true;
+            bt_Scan.Enabled = true;
+            bt_CMD.Enabled = true;
+            cb_Apn.Enabled = true;
+            cb_Dns.Enabled = true;
+            bt_RFTest.Text = "RF Test";
         }
 
-        private void InfoAppendText(string msg, Color color)
+        private void bt_Download_Update(string msg)
         {
             if (InvokeRequired)
             {
-                this.Invoke(new Action<string, Color>(InfoAppendText), new object[] { msg, color });
+                this.Invoke(new Action<string>(bt_Download_Update), new object[] { msg });
                 return;
             }
 
-            if (msg == null)
-                return;
-
-            rtb_Info.SelectionColor = color;
-            rtb_Info.AppendText(msg);
+            bt_RFTest.Enabled = true;
+            bt_Scan.Enabled = true;
+            bt_CMD.Enabled = true;
+            bt_Reboot.Enabled = true;
+            cb_Apn.Enabled = true;
+            cb_Dns.Enabled = true;
+            cb_Url.Enabled = true;
+            tb_Md5.Enabled = true;
+            bt_Download.Text = "Download";
         }
 
-        private void InfoWriteText(string msg)
+        private void bt_Download_Click(object sender, EventArgs e)
         {
-            if (InvokeRequired)
+            try
             {
-                this.Invoke(new Action<string>(InfoWriteText), new object[] { msg });
-                return;
+                if (bt_Download.Text == "Download")
+                {
+                    tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
+                    bt_RFTest.Enabled = false;
+                    bt_Scan.Enabled = false;
+                    bt_Reboot.Enabled = false;
+                    bt_CMD.Enabled = false;
+                    cb_Apn.Enabled = false;
+                    cb_Dns.Enabled = false;
+                    cb_Url.Enabled = false;
+                    tb_Md5.Enabled = false;
+                    bt_Download.Text = "Stop";
+                    pgb_Percent.Value = 0;
+                    lb_Percent.Text = "0 byte";
+                    Graph_Init();
+                    Log_Init();
+                    Thread_Init(ThreadMode.DOWNLOAD, 10, 250);
+                }
+                else
+                {
+                    threadCxt.Enbale = 0;
+                    Log_Deinit();
+                }
             }
-
-            if (msg == null)
-                return;
-
-            rtb_Info.SelectionColor = Color.Black;
-            rtb_Info.Text = msg;
+            catch { }
         }
 
-        private void ProgressBar_Update(int maxSize, int curSize)
+        private void bt_RFTest_Click(object sender, EventArgs e)
         {
-            if (InvokeRequired)
+            try
             {
-                this.Invoke(new Action<int, int>(ProgressBar_Update), new object[] { maxSize, curSize });
-                return;
+                if (bt_RFTest.Text == "RF Test")
+                {
+                    tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabGraph"];
+                    bt_Download.Enabled = false;
+                    bt_Reboot.Enabled = false;
+                    bt_Scan.Enabled = false;
+                    bt_CMD.Enabled = false;
+                    cb_Apn.Enabled = false;
+                    cb_Dns.Enabled = false;
+                    bt_RFTest.Text = "Stop";
+                    Log_Init();
+                    Graph_Init();
+                    Thread_Init(ThreadMode.RF_TEST, 60, 1000);
+                }
+                else
+                {
+                    threadCxt.Enbale = 0;
+                    Log_Deinit();
+                }
             }
-
-            float per = ((float)curSize * 100.0f) / (float)maxSize + 0.5f;
-
-            pgb_Percent.Value = (int)per;
-            lb_Percent.Text = curSize.ToString() + " / " + maxSize.ToString();
+            catch { }
         }
 
-        private string RemoveAT(string atResp)
+        private void bt_Reboot_Click(object sender, EventArgs e)
         {
-            char[] arr = atResp.ToCharArray();
-            int head = Get_1stIndex(arr, 0, "\r\nOK\r\n", HeadTail.head);
+            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
+            bt_Download.Enabled = false;
+            bt_Reboot.Enabled = false;
+            bt_Scan.Enabled = false;
+            bt_CMD.Enabled = false;
+            cb_Apn.Enabled = false;
+            cb_Dns.Enabled = false;
 
-            if (head >= 0)
+            if (SendAT(cb_Port1.Text, "AT#REBOOT\r"))
             {
-                arr[head + 2] = '\r';
-                arr[head + 3] = '\n';
+                PrintDebug("\n\nModule is rebooting...\n\n");
+                InfoAppendText("\n\nModule is rebooting...\n\n");
+                RebootTryCount = 0;
+                timer1.Interval = 5000;
+                timer1.Start();
+            }
+            else
+            {
+                bt_Download.Enabled = true;
+                bt_Scan.Enabled = true;
+                bt_CMD.Enabled = true;
+                cb_Apn.Enabled = true;
+                cb_Dns.Enabled = true;
+                PrintDebug("\n\nCan not reboot\n\n", Color.Red);
+                InfoAppendText("\n\nCan not reboot\n\n", Color.Red);
+            }
+        }
+
+        private void bt_CMD_Click(object sender, EventArgs e)
+        {
+            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
+            bt_RFTest.Enabled = false;
+            bt_Download.Enabled = false;
+            bt_Reboot.Enabled = false;
+            bt_Scan.Enabled = false;
+            bt_CMD.Enabled = false;
+            cb_Apn.Enabled = false;
+            cb_Dns.Enabled = false;
+
+            string cmdStr = cb_CMD.Text;
+
+            if (cmdStr != null)
+            {
+                bool found = false;
+
+                foreach (string s in historyCmd)
+                {
+                    if (s == cmdStr)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found == false)
+                {
+                    for (int i = 9; i > 0; i--)
+                        historyCmd[i] = historyCmd[i - 1];
+
+                    historyCmd[0] = cmdStr;
+                }
+
+                cb_CMD.Items.Clear();
+
+                foreach (string s in historyCmd)
+                {
+                    if (s != null)
+                        cb_CMD.Items.Add(s);
+                }
+
+                cmdStr = ChangeSpecialByte(cmdStr);
+                CmdCxt cmdCxt = new CmdCxt();
+                cmdCxt.buffer = new char[4096];
+                cmdCxt.donext = 0;
+                cmdCxt.findIdx = 0;
+
+                try
+                {
+                    if (serialPort1.IsOpen == false)
+                    {
+                        serialPort1.PortName = portName;
+                        serialPort1.BaudRate = 115200;
+                        serialPort1.WriteTimeout = 10;
+                        serialPort1.DtrEnable = true;
+                        serialPort1.RtsEnable = true;
+                        serialPort1.Open();
+
+                        while (SendCmd_GetRes(ref cmdCxt, cmdStr, respWait, respWait, true) == null) ;
+
+                        serialPort1.DtrEnable = false;
+                        serialPort1.RtsEnable = false;
+                        serialPort1.Close();
+                        serialPort1.Dispose();
+                    }
+                }
+                catch
+                {
+                    PrintDebug("\nSend CMD error");
+                }
             }
 
-            atResp = new string(arr);
-            ReplaceStr(ref atResp, '\r', '\0');
-            ReplaceStr(ref atResp, '\n', '\0');
+            bt_RFTest.Enabled = true;
+            bt_Download.Enabled = true;
+            bt_Scan.Enabled = true;
+            bt_Reboot.Enabled = true;
+            bt_CMD.Enabled = true;
+            cb_Apn.Enabled = true;
+            cb_Dns.Enabled = true;
+        }
 
-            return atResp;
+        #endregion
+
+        #region "Combobox functions"
+        private void cb_ViewMode_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cb_ViewMode.Text == "Scroll")
+                viewMode = true;
+            else
+                viewMode = false;
+        }
+
+        private void cb_Port1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            portName = cb_Port1.Text;
+        }
+
+        private void cb_Url_TextChanged(object sender, EventArgs e)
+        {
+            if (LoadUrl(true))
+            {
+                /*
+                string cmdStr = cb_Url.Text;
+
+                if (cmdStr != null)
+                {
+                    bool found = false;
+
+                    foreach (string s in historyUrl)
+                    {
+                        if (s == cmdStr)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found == false)
+                    {
+                        for (int i = 9; i > 0; i--)
+                            historyUrl[i] = historyUrl[i - 1];
+
+                        historyUrl[0] = cmdStr;
+                    }
+
+                    cb_Url.Items.Clear();
+
+                    foreach (string s in historyUrl)
+                    {
+                        if (s != null)
+                            cb_Url.Items.Add(s);
+                    }
+                }
+                */
+            }
+        }
+
+        private void cb_Port1_TextChanged(object sender, EventArgs e)
+        {
+            if (cb_Port1.Text != "Empty")
+            {
+                bt_Download.Enabled = true;
+                bt_Reboot.Enabled = true;
+                bt_RFTest.Enabled = true;
+                bt_CMD.Enabled = true;
+            }
+            else
+            {
+                bt_Download.Enabled = false;
+                bt_Reboot.Enabled = false;
+                bt_RFTest.Enabled = false;
+                bt_CMD.Enabled = false;
+            }
+        }
+
+        private void cb_Apn_TextChanged(object sender, EventArgs e)
+        {
+            moduleInfo.Apn = cb_Apn.Text;
+        }
+
+        private void cb_Dns_TextChanged(object sender, EventArgs e)
+        {
+            moduleInfo.UserDns = cb_Dns.Text;
+        }
+        #endregion
+
+        #region "Text functions"
+        private void rtb_Log_TextChanged(object sender, EventArgs e)
+        {
+            rtb_Log.SelectionStart = rtb_Log.Text.Length;
+            rtb_Log.ScrollToCaret();
+
+            if (line >= 1000)
+                Log_Init();
+        }
+
+        private void rtb_Log_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            if (sW != null)
+                Log_Init();
+
+            rtb_Log.Clear();
+        }
+
+        private void tb_Md5_TextChanged(object sender, EventArgs e)
+        {
+            downloadCxt.Md5 = tb_Md5.Text;
+        }
+        #endregion
+
+        #region "Graph functions"
+        private void Graph_Init()
+        {
+            zedGraphControl1.GraphPane.CurveList.Clear();
+            zedGraphControl1.GraphPane.GraphObjList.Clear();
+            zedGraphControl1.Refresh();
+
+            zedGraphControl1.GraphPane.Title.Text = "RF Measurement";
+            zedGraphControl1.GraphPane.XAxis.Title.Text = "Time";
+            zedGraphControl1.GraphPane.YAxis.Title.Text = "Strength";
+
+            RollingPointPairList list1 = new RollingPointPairList(65536);
+            RollingPointPairList list2 = new RollingPointPairList(65536);
+            RollingPointPairList list3 = new RollingPointPairList(65536);
+
+            LineItem curve1 = zedGraphControl1.GraphPane.AddCurve("RSRP (dBm)", list1, Color.Red, SymbolType.None);
+            LineItem curve2 = zedGraphControl1.GraphPane.AddCurve("RSRQ (dB)", list2, Color.Green, SymbolType.None);
+            LineItem curve3 = zedGraphControl1.GraphPane.AddCurve("RSSI (dBm)", list3, Color.Blue, SymbolType.None);
+
+            curve1.Line.Width = 2;
+            curve2.Line.Width = 2;
+            curve3.Line.Width = 2;
+
+            zedGraphControl1.GraphPane.XAxis.Scale.Min = 0;
+            zedGraphControl1.GraphPane.XAxis.Scale.Max = 60;
+            zedGraphControl1.GraphPane.XAxis.Scale.MinorStep = 1;
+            zedGraphControl1.GraphPane.XAxis.Scale.MajorStep = 5;
+            zedGraphControl1.AxisChange();
         }
 
         private void PlotData(int rsrp, int rsrq, int rssi, long count)
@@ -1774,47 +2112,38 @@ namespace NBST
             zedGraphControl1.AxisChange();
             zedGraphControl1.Invalidate();
         }
+        #endregion
 
-        private char[] HttpRcv_GetData(in char[] datain, int lenin)
+        #region "Checkbox functions"
+        private void ckb_DebugEn_CheckedChanged(object sender, EventArgs e)
         {
-            char[] dataout = null;
-            int beginIdx = Get_1stIndex(datain, 0, "<<<", HeadTail.tail) + 1;
-            int endIdx = Get_LastIndex(datain, "\r\nOK\r\n", HeadTail.head);
+            debugEn = ckb_DebugEn.Checked;
+        }
 
-            //PrintDebug("\n\nFirst=" + beginIdx.ToString() + "\nLast=" + endIdx.ToString());
-            //PrintData("\nInput: ", datain, lenin, Color.Blue);
+        private void ckb_Printable_CheckedChanged(object sender, EventArgs e)
+        {
+            printableMode = ckb_Printable.Checked;
+        }
 
-            if ((lenin > 9) && (endIdx > beginIdx))
-            {
-                dataout = new char[endIdx - beginIdx];
+        private void ckb_DlLoop_CheckedChanged(object sender, EventArgs e)
+        {
+            downloadCxt.Loop = ckb_DlLoop.Checked;
+        }
+        #endregion
 
-                for (int i = beginIdx, j = 0; i < endIdx; i++)
-                {
-                    dataout[j] = datain[beginIdx + j];
-                    j++;
-                }
-            }
-
-            //PrintData("\nOutput: ", dataout, dataout.Length, Color.Red);
-
-            return dataout;
+        #region "Thread functions"
+        private void Thread_Init(ThreadMode mode, int rfTestCount, UInt32 rfTestDelay)
+        {
+            threadCxt.Mode = mode;
+            threadCxt.Enbale = 1;
+            rfCxt.Count = rfTestCount;
+            rfCxt.Delay = rfTestDelay;
+            threadCxt.Task = new Thread(() => Thread_Tasks()); // Create new app tasks
+            threadCxt.Task.Start();
         }
 
         private void Thread_Tasks()
         {
-            int csq = 99;
-            //int ber = 99;
-            int rssi = -150;
-            //int rsrp = -150;
-            SignalCxt rsrp = new SignalCxt();
-            rsrp.sum = 0;
-            rsrp.cout = 0;
-
-            //int rsrq = -150;
-            SignalCxt rsrq = new SignalCxt();
-            rsrq.sum = 0;
-            rsrq.cout = 0;
-
             double lon = -999.0, lat = -999.0;
             string tmpStr = null;
             char[] tmpArr = null;
@@ -1822,8 +2151,26 @@ namespace NBST
             CmdCxt cmdCxt = new CmdCxt();
             int failCount = 0;
             int tryCount = 0;
-            
-            downloadCount = 0;
+
+            rfCxt.Rssi = new SignalCxt
+            {
+                sum = 0,
+                cout = 0
+            };
+
+            rfCxt.Rsrp = new SignalCxt
+            {
+                sum = 0,
+                cout = 0
+            };
+
+            rfCxt.Rsrq = new SignalCxt
+            {
+                sum = 0,
+                cout = 0
+            };
+
+            downloadCxt.Count = 0;
 
             cmdCxt.buffer = new char[4096];
             cmdCxt.donext = 0;
@@ -1846,1003 +2193,982 @@ namespace NBST
             moduleInfo.OpDns = null;
             moduleInfo.OpAltDns = null;
 
-            DoNext = ThreadTask.INIT_APP;
-            GeoCoordinateWatcher watcher = new GeoCoordinateWatcher();
-            InfoWriteText("Reading module info... ");
+            threadCxt.DoNext = ThreadTask.INIT_APP;
+            threadCxt.ToDo = ThreadTask.INIT_APP;
 
+            GeoCoordinateWatcher watcher = new GeoCoordinateWatcher();
             UInt32 thisTick = rebootWait + Tick_Get();
 
-            while (Thread_Enbale == 1)
+            InfoWriteText("Reading module info... ");
+
+            while (threadCxt.Enbale == 1)
             {
-                switch (DoNext)
+                switch (threadCxt.DoNext)
                 {
                     case ThreadTask.INIT_APP:
-                        if (Tick_IsOverMs(ref thisTick, rebootWait))
                         {
-                            try
+                            if (Tick_IsOverMs(ref thisTick, rebootWait))
                             {
-                                if (serialPort1.IsOpen)
-                                    serialPort1.Close();
+                                try
+                                {
+                                    if (serialPort1.IsOpen)
+                                        serialPort1.Close();
 
-                                serialPort1.PortName = portName;
-                                serialPort1.BaudRate = 115200;
-                                serialPort1.WriteTimeout = 10;
-                                serialPort1.DtrEnable = true;
-                                serialPort1.RtsEnable = true;
-                                serialPort1.Open();
+                                    serialPort1.PortName = portName;
+                                    serialPort1.BaudRate = 115200;
+                                    serialPort1.WriteTimeout = 10;
+                                    serialPort1.DtrEnable = true;
+                                    serialPort1.RtsEnable = true;
+                                    serialPort1.Open();
 
-                                PrintDebug(" Done\n");
-                                InfoAppendText("Done\n");
-                                thisTick = Tick_Get();
-                                DoNext++;
+                                    if (threadCxt.ToDo == ThreadTask.CMD_MODULE_REBOOT)
+                                    {
+                                        PrintDebug(" Done\n");
+                                        InfoAppendText("Done\n");
+                                    }
+
+                                    thisTick = Tick_Get();
+                                    threadCxt.DoNext++;
+                                }
+                                catch
+                                {
+                                    if (++tryCount > 4)
+                                        threadCxt.Enbale = 0;
+                                }
                             }
-                            catch
-                            {
-                                if (++tryCount > 4)
-                                    Thread_Enbale = 0;
-                            }
+                            else
+                                Thread.Sleep(250);
                         }
-                        else
-                            Thread.Sleep(250);
                         break;
 
                     case ThreadTask.CMD_ECHO_OFF:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "ATE0\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                                DoNext++;
-                            else
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "ATE0\r");
+
+                            if (tmpStr != null)
                             {
-                                DoNext = ThreadTask.INIT_APP;
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                    threadCxt.DoNext++;
+                                else
+                                {
+                                    threadCxt.DoNext = ThreadTask.INIT_APP;
+                                    threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_DISPLAY_ERROR:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CMEE=2\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n") || tmpStr.Contains("ERROR"))
-                                DoNext++;
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CMEE=2\r");
+
+                            if (tmpStr != null)
+                            {
+                                if (tmpStr.Contains("\r\nOK\r\n") || tmpStr.Contains("ERROR"))
+                                    threadCxt.DoNext++;
+                            }
                         }
                         break;
 
                     case ThreadTask.CMD_NO_FLOW_CONTROL:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT&K0\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                                DoNext++;
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT&K0\r");
+
+                            if (tmpStr != null)
+                            {
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                    threadCxt.DoNext++;
+                            }
                         }
                         break;
 
                     case ThreadTask.CMD_GET_MODULE_NAME:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGMM\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGMM\r");
+
+                            if (tmpStr != null)
                             {
-                                DoNext++;
-                                tmpStr = new string(SubArray(cmdCxt.buffer, "+CGMM: ", "\r\nOK"));
-                                moduleInfo.Name = RemoveAT(tmpStr);
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext++;
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, "+CGMM: ", "\r\nOK"));
+                                    moduleInfo.Name = RemoveAT(tmpStr);
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_GET_MODULE_IMEI:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGSN\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGSN\r");
+
+                            if (tmpStr != null)
                             {
-                                DoNext++;
-                                moduleInfo.Imei = RemoveAT(tmpStr);
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext++;
+                                    moduleInfo.Imei = RemoveAT(tmpStr);
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_GET_CIMI:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CIMI\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CIMI\r");
+
+                            if (tmpStr != null)
                             {
-                                DoNext = ThreadTask.CMD_GET_CCID;
-                                tmpStr = new string(SubArray(cmdCxt.buffer, "+CIMI: ", "\r\nOK"));
-                                moduleInfo.Cimi = RemoveAT(tmpStr);
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext = ThreadTask.CMD_GET_CCID;
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, "+CIMI: ", "\r\nOK"));
+                                    moduleInfo.Cimi = RemoveAT(tmpStr);
+                                }
+                                else if (tmpStr.Contains("ERROR"))
+                                    threadCxt.DoNext++;
                             }
-                            else if (tmpStr.Contains("ERROR"))
-                                DoNext++;
                         }
                         break;
 
                     case ThreadTask.CMD_GET_ALT_CIMI:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#CIMI\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#CIMI\r");
+
+                            if (tmpStr != null)
                             {
-                                DoNext++;
-                                tmpStr = new string(SubArray(cmdCxt.buffer, "#CIMI: ", "\r\nOK"));
-                                moduleInfo.Cimi = RemoveAT(tmpStr);
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext++;
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, "#CIMI: ", "\r\nOK"));
+                                    moduleInfo.Cimi = RemoveAT(tmpStr);
+                                }
+                                else if (tmpStr.Contains("ERROR"))
+                                    threadCxt.DoNext++;
                             }
-                            else if (tmpStr.Contains("ERROR"))
-                                DoNext++;
                         }
                         break;
 
                     case ThreadTask.CMD_GET_CCID:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CCID\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CCID\r");
+
+                            if (tmpStr != null)
                             {
-                                DoNext += 2;
-                                tmpStr = new string(SubArray(cmdCxt.buffer, "+CCID: ", "\r\nOK"));
-                                moduleInfo.Ccid = RemoveAT(tmpStr);
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext += 2;
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, "+CCID: ", "\r\nOK"));
+                                    moduleInfo.Ccid = RemoveAT(tmpStr);
+                                }
+                                else if (tmpStr.Contains("ERROR"))
+                                    threadCxt.DoNext++;
                             }
-                            else if (tmpStr.Contains("ERROR"))
-                                DoNext++;
                         }
                         break;
 
                     case ThreadTask.CMD_GET_ALT_CCID:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#CCID\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#CCID\r");
+
+                            if (tmpStr != null)
                             {
-                                DoNext++;
-                                tmpStr = new string(SubArray(cmdCxt.buffer, "#CCID: ", "\r\nOK"));
-                                moduleInfo.Ccid = RemoveAT(tmpStr);
-                            }
-                            else if (tmpStr.Contains("ERROR"))
-                                DoNext++;
-                            else
-                            {
-                                DoNext--;
-                                Thread.Sleep(250);
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext++;
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, "#CCID: ", "\r\nOK"));
+                                    moduleInfo.Ccid = RemoveAT(tmpStr);
+                                }
+                                else if (tmpStr.Contains("ERROR"))
+                                    threadCxt.DoNext++;
+                                else
+                                {
+                                    threadCxt.DoNext--;
+                                    Thread.Sleep(250);
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_GET_NETWORK_REGIS:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CEREG?\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CEREG?\r");
+
+                            if (tmpStr != null)
                             {
-                                tmpStr = new string(SubArray(cmdCxt.buffer, ",", "\r\nOK"));
-                                tmpStr = RemoveAT(tmpStr);
-
-                                if (tmpStr == "1")
+                                if (tmpStr.Contains("\r\nOK\r\n"))
                                 {
-                                    DoNext++;
-                                    break;
-                                }
-                            }
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, ",", "\r\nOK"));
+                                    tmpStr = RemoveAT(tmpStr);
 
-                            Thread.Sleep(250);
+                                    if (tmpStr == "1")
+                                    {
+                                        threadCxt.DoNext++;
+                                        break;
+                                    }
+                                }
+
+                                Thread.Sleep(250);
+                            }
                         }
                         break;
 
                     case ThreadTask.CMD_GET_OPERATOR_INFO:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+COPS?\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+COPS?\r");
+
+                            if (tmpStr != null)
                             {
-                                DoNext++;
-                                TickStart = 0;
-                                moduleInfo.Operator = new string(SubArray(cmdCxt.buffer, ",\"", "\","));
-                                moduleInfo.NetworkType = new string(SubArray(cmdCxt.buffer, "\",", "\r\nOK"));
-                                ReplaceStr(ref moduleInfo.NetworkType, ' ', '\0');
-                                ReplaceStr(ref moduleInfo.NetworkType, '\r', '\0');
-                                ReplaceStr(ref moduleInfo.NetworkType, '\n', '\0');
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext++;
+                                    TickStart = 0;
+                                    moduleInfo.Operator = new string(SubArray(cmdCxt.buffer, ",\"", "\","));
+                                    moduleInfo.NetworkType = new string(SubArray(cmdCxt.buffer, "\",", "\r\nOK"));
+                                    ReplaceStr(ref moduleInfo.NetworkType, ' ', '\0');
+                                    ReplaceStr(ref moduleInfo.NetworkType, '\r', '\0');
+                                    ReplaceStr(ref moduleInfo.NetworkType, '\n', '\0');
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_DEACT_PDP:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SGACT=1,0\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                                DoNext++;
-                            else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
-                                DoNext = ThreadTask.CMD_SET_APN;
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SGACT=1,0\r");
+
+                            if (tmpStr != null)
+                            {
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                    threadCxt.DoNext++;
+                                else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
+                                    threadCxt.DoNext = ThreadTask.CMD_SET_APN;
+                            }
                         }
                         break;
 
                     case ThreadTask.CMD_SET_APN:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGDCONT=1,\"IP\",\"" + moduleInfo.Apn + "\"\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                                DoNext++;
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGDCONT=1,\"IP\",\"" + moduleInfo.Apn + "\"\r");
+
+                            if (tmpStr != null)
+                            {
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                    threadCxt.DoNext++;
+                            }
                         }
                         break;
 
                     case ThreadTask.CMD_SET_DNS:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#DNS=1," + moduleInfo.UserDns + "\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n") || tmpStr.Contains("ERROR"))
-                                DoNext++;
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#DNS=1," + moduleInfo.UserDns + "\r");
+
+                            if (tmpStr != null)
+                            {
+                                if (tmpStr.Contains("\r\nOK\r\n") || tmpStr.Contains("ERROR"))
+                                    threadCxt.DoNext++;
+                            }
                         }
                         break;
 
                     case ThreadTask.CMD_ACT_PDP:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SGACT=1,1\r", 30000);
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SGACT=1,1\r", 30000);
+
+                            if (tmpStr != null)
                             {
-                                DoNext++;
-                                tmpStr = new string(SubArray(cmdCxt.buffer, "#SGACT: ", "\r\nOK"));
-                                moduleInfo.Ip = RemoveAT(tmpStr);
-                            }
-                            else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
-                            {
-                                DoNext = ThreadTask.CMD_GET_CURRENT_PDP;
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext++;
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, "#SGACT: ", "\r\nOK"));
+                                    moduleInfo.Ip = RemoveAT(tmpStr);
+                                }
+                                else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
+                                {
+                                    threadCxt.DoNext = ThreadTask.CMD_GET_CURRENT_PDP;
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_GET_CURRENT_PDP:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGCONTRDP=1\r", 10000);
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                            {
-                                DoNext++;
-                                tmpStr = new string(SubArray(cmdCxt.buffer, ",\"", "\","));
-                                moduleInfo.OpApn = RemoveAT(tmpStr);
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGCONTRDP=1\r", 10000);
 
-                                if (moduleInfo.Ip == null)
+                            if (tmpStr != null)
+                            {
+                                if (tmpStr.Contains("\r\nOK\r\n"))
                                 {
-                                    tmpStr = new string(SubArray(cmdCxt.buffer, ',', 3, ',', 4));
+                                    threadCxt.DoNext++;
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, ",\"", "\","));
+                                    moduleInfo.OpApn = RemoveAT(tmpStr);
+
+                                    if (moduleInfo.Ip == null)
+                                    {
+                                        tmpStr = new string(SubArray(cmdCxt.buffer, ',', 3, ',', 4));
+                                        ReplaceStr(ref tmpStr, '\"', '\0');
+                                        ReplaceStr(ref tmpStr, ',', '\0');
+                                        moduleInfo.Ip = tmpStr;
+                                    }
+
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, ',', 5, ',', 6));
                                     ReplaceStr(ref tmpStr, '\"', '\0');
                                     ReplaceStr(ref tmpStr, ',', '\0');
-                                    moduleInfo.Ip = tmpStr;
+                                    moduleInfo.OpDns = tmpStr;
+
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, ',', 6, '\r', 2));
+                                    ReplaceStr(ref tmpStr, '\"', '\0');
+                                    ReplaceStr(ref tmpStr, ',', '\0');
+                                    moduleInfo.OpAltDns = tmpStr;
                                 }
-
-                                tmpStr = new string(SubArray(cmdCxt.buffer, ',', 5, ',', 6));
-                                ReplaceStr(ref tmpStr, '\"', '\0');
-                                ReplaceStr(ref tmpStr, ',', '\0');
-                                moduleInfo.OpDns = tmpStr;
-
-                                tmpStr = new string(SubArray(cmdCxt.buffer, ',', 6, '\r', 2));
-                                ReplaceStr(ref tmpStr, '\"', '\0');
-                                ReplaceStr(ref tmpStr, ',', '\0');
-                                moduleInfo.OpAltDns = tmpStr;
-                            }
-                            else if (tmpStr.Contains("ERROR"))
-                            {
-                                DoNext++;
+                                else if (tmpStr.Contains("ERROR"))
+                                {
+                                    threadCxt.DoNext++;
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_SETUP_CELL_INFO:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#MONI=0\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#MONI=0\r");
+
+                            if (tmpStr != null)
                             {
-                                DoNext++;
-                                thisTick = Tick_Get();
-                            }
-                            else if (tmpStr.Contains("ERROR"))
-                            {
-                                DoNext++;
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext++;
+                                    thisTick = Tick_Get();
+                                }
+                                else if (tmpStr.Contains("ERROR"))
+                                {
+                                    threadCxt.DoNext++;
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.GET_LOCATION:
-                        // Do not suppress prompt, and wait 1000 milliseconds to start.
-                        watcher.TryStart(false, TimeSpan.FromMilliseconds(1000));
-
-                        GeoCoordinate coord = watcher.Position.Location;
-
-                        if (coord.IsUnknown != true)
                         {
-                            //PrintDebug("\nLat: " + coord.Latitude.ToString() + ", Long: " + coord.Longitude.ToString());
-                            lon = coord.Longitude;
-                            lat = coord.Latitude;
-                        }
-                        //else
-                            //PrintDebug("\nUnknown latitude and longitude.");
+                            watcher.TryStart(false, TimeSpan.FromMilliseconds(1000));
 
-                        DoNext++;
+                            GeoCoordinate coord = watcher.Position.Location;
+
+                            if (coord.IsUnknown != true)
+                            {
+                                lon = coord.Longitude;
+                                lat = coord.Latitude;
+                            }
+
+                            threadCxt.DoNext++;
+                        }
                         break;
 
                     case ThreadTask.CMD_GET_SIGNAL_QUALITY:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CSQ\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CSQ\r");
+
+                            if (tmpStr != null)
                             {
-                                DoNext++;
-                                moduleInfo.Csq = new string(SubArray(cmdCxt.buffer, "+CSQ: ", ","));
-                                moduleInfo.BitErrRate = new string(SubArray(cmdCxt.buffer, ",", "\r\nOK"));
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext++;
+                                    moduleInfo.Csq = new string(SubArray(cmdCxt.buffer, "+CSQ: ", ","));
+                                    moduleInfo.BitErrRate = new string(SubArray(cmdCxt.buffer, ",", "\r\nOK"));
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_GET_CELL_INFO:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#MONI\r");
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                            {
-                                DoNext++;
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#MONI\r");
 
-                                if (moduleInfo.Operator == null)
-                                    moduleInfo.Operator = new string(SubArray(cmdCxt.buffer, "#MONI: ", " RSRP:"));
-
-                                moduleInfo.Rsrp = new string(SubArray(cmdCxt.buffer, "RSRP:", " RSRQ:"));
-                                moduleInfo.Rsrq = new string(SubArray(cmdCxt.buffer, "RSRQ:", " TAC:"));
-                                moduleInfo.Tac = new string(SubArray(cmdCxt.buffer, "TAC:", " Id:"));
-                                moduleInfo.CellID = new string(SubArray(cmdCxt.buffer, " Id:", " EARFCN:"));
-                                //PrintDebug("\nRSRP: " + moduleInfo.Rsrp);
-                                //PrintDebug("\nRSRQ: " + moduleInfo.Rsrq);
-                            }
-                            else if (tmpStr.Contains("ERROR"))
+                            if (tmpStr != null)
                             {
-                                DoNext++;
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext++;
+
+                                    if (moduleInfo.Operator == null)
+                                        moduleInfo.Operator = new string(SubArray(cmdCxt.buffer, "#MONI: ", " RSRP:"));
+
+                                    moduleInfo.Rsrp = new string(SubArray(cmdCxt.buffer, "RSRP:", " RSRQ:"));
+                                    moduleInfo.Rsrq = new string(SubArray(cmdCxt.buffer, "RSRQ:", " TAC:"));
+                                    moduleInfo.Tac = new string(SubArray(cmdCxt.buffer, "TAC:", " Id:"));
+                                    moduleInfo.CellID = new string(SubArray(cmdCxt.buffer, " Id:", " EARFCN:"));
+                                }
+                                else if (tmpStr.Contains("ERROR"))
+                                {
+                                    threadCxt.DoNext++;
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.PARSE_INFO:
-                        if (moduleInfo.Name != null)
-                            InfoWriteText("Module:          " + moduleInfo.Name);
-
-                        if (moduleInfo.Imei != null)
-                            InfoAppendText("\nIMEI:            " + moduleInfo.Imei);
-
-                        if (moduleInfo.Cimi != null)
-                            InfoAppendText("\nCIMI:            " + moduleInfo.Cimi);
-
-                        if (moduleInfo.Ccid != null)
-                            InfoAppendText("\nCCID:            " + moduleInfo.Ccid);
-
-                        if (moduleInfo.Operator != null)
-                            InfoAppendText("\nOperator:        " + moduleInfo.Operator);
-
-                        if (moduleInfo.NetworkType != null)
                         {
-                            InfoAppendText("\nNetwork " + "(" + moduleInfo.NetworkType + "):     ");
+                            if (moduleInfo.Name != null)
+                                InfoWriteText("Module:          " + moduleInfo.Name);
 
-                            int netType;
+                            if (moduleInfo.Imei != null)
+                                InfoAppendText("\nIMEI:            " + moduleInfo.Imei);
+
+                            if (moduleInfo.Cimi != null)
+                                InfoAppendText("\nCIMI:            " + moduleInfo.Cimi);
+
+                            if (moduleInfo.Ccid != null)
+                                InfoAppendText("\nCCID:            " + moduleInfo.Ccid);
+
+                            if (moduleInfo.Operator != null)
+                                InfoAppendText("\nOperator:        " + moduleInfo.Operator);
+
+                            if (moduleInfo.NetworkType != null)
+                            {
+                                InfoAppendText("\nNetwork " + "(" + moduleInfo.NetworkType + "):     ");
+
+                                int netType;
+
+                                try
+                                {
+                                    netType = int.Parse(moduleInfo.NetworkType);
+                                }
+                                catch
+                                {
+                                    netType = (-1);
+                                    moduleInfo.NetworkType = "-1";
+                                }
+
+                                switch (netType)
+                                {
+                                    case 0:
+                                        InfoAppendText("GSM");
+                                        break;
+
+                                    case 1:
+                                        InfoAppendText("GSM Compact");
+                                        break;
+
+                                    case 2:
+                                        InfoAppendText("UTRAN");
+                                        break;
+
+                                    case 3:
+                                        InfoAppendText("GSM/EGPRS");
+                                        break;
+
+                                    case 4:
+                                        InfoAppendText("UTRAN/HSDPA");
+                                        break;
+
+                                    case 5:
+                                        InfoAppendText("UTRAN/HSUPA");
+                                        break;
+
+                                    case 6:
+                                        InfoAppendText("UTRAN/HSDPA&HSUPA");
+                                        break;
+
+                                    case 7:
+                                        InfoAppendText("E-UTRAN");
+                                        break;
+
+                                    case 8:
+                                        InfoAppendText("CAT M1");
+                                        break;
+
+                                    case 9:
+                                        InfoAppendText("NB IoT");
+                                        break;
+
+                                    default:
+                                        InfoAppendText("Unknown");
+                                        break;
+                                }
+                            }
+
+                            if (moduleInfo.Ip != null)
+                                InfoAppendText("\nIP:              " + moduleInfo.Ip);
+
+                            if (moduleInfo.OpDns != null)
+                                InfoAppendText("\nDNS:             " + moduleInfo.OpDns);
+
+                            if (moduleInfo.OpAltDns != null)
+                                InfoAppendText("\nALT DNS:         " + moduleInfo.OpAltDns);
+
+                            if (moduleInfo.OpApn != null)
+                                InfoAppendText("\nAPN:             " + moduleInfo.OpApn);
+
+                            if (moduleInfo.Tac != null)
+                            {
+                                InfoAppendText("\nTAC(LAC):        ");
+
+                                try
+                                {
+                                    InfoAppendText(moduleInfo.Tac + " (" + Convert.ToUInt32(moduleInfo.Tac, 16).ToString() + ")");
+                                }
+                                catch
+                                {
+                                    InfoAppendText("Unknown", Color.Red);
+                                }
+                            }
+
+                            if (moduleInfo.CellID != null)
+                            {
+                                InfoAppendText("\nCell ID:         ");
+
+                                try
+                                {
+                                    InfoAppendText(moduleInfo.CellID + " (" + Convert.ToUInt32(moduleInfo.CellID, 16).ToString() + ")");
+                                }
+                                catch
+                                {
+                                    InfoAppendText("Unknown");
+                                }
+                            }
+
+                            int csq = 99;
 
                             try
                             {
-                                netType = int.Parse(moduleInfo.NetworkType);
+                                csq = int.Parse(moduleInfo.Csq);
+                                InfoAppendText("\nQuality" + " (" + csq.ToString("D2") + "):    ");
                             }
                             catch
                             {
-                                netType = (-1);
-                                moduleInfo.NetworkType = "-1";
+                                csq = 99;
+                                InfoAppendText("\nQuality: Unknown");
                             }
 
-                            switch (netType)
+                            switch (csq)
                             {
                                 case 0:
-                                    InfoAppendText("GSM");
+                                    rfCxt.Rssi.value = -113;
                                     break;
 
                                 case 1:
-                                    InfoAppendText("GSM Compact");
+                                    rfCxt.Rssi.value = -111;
                                     break;
 
-                                case 2:
-                                    InfoAppendText("UTRAN");
+                                case 31:
+                                    rfCxt.Rssi.value = -51;
                                     break;
 
-                                case 3:
-                                    InfoAppendText("GSM/EGPRS");
-                                    break;
-
-                                case 4:
-                                    InfoAppendText("UTRAN/HSDPA");
-                                    break;
-
-                                case 5:
-                                    InfoAppendText("UTRAN/HSUPA");
-                                    break;
-
-                                case 6:
-                                    InfoAppendText("UTRAN/HSDPA&HSUPA");
-                                    break;
-
-                                case 7:
-                                    InfoAppendText("E-UTRAN");
-                                    break;
-
-                                case 8:
-                                    InfoAppendText("CAT M1");
-                                    break;
-
-                                case 9:
-                                    InfoAppendText("NB IoT");
+                                case 99:
+                                    rfCxt.Rssi.value = -150;
                                     break;
 
                                 default:
-                                    InfoAppendText("Unknown");
+                                    rfCxt.Rssi.value = 2 * csq - 113;
                                     break;
                             }
-                        }
 
-                        if (moduleInfo.Ip != null)
-                            InfoAppendText("\nIP:              " + moduleInfo.Ip);
+                            if (csq != 99)
+                            {
+                                rfCxt.Rssi.sum += rfCxt.Rssi.value;
+                                rfCxt.Rssi.cout++;
+                                rfCxt.Rssi.average = (int)(rfCxt.Rssi.sum / (long)rfCxt.Rssi.cout);
+                            }
 
-                        if (moduleInfo.OpDns != null)
-                            InfoAppendText("\nDNS:             " + moduleInfo.OpDns);
+                            if (rfCxt.Rssi.average > (-60))
+                                InfoAppendText(rfCxt.Rssi.average.ToString() + "dBm (Excellent)", Color.Violet);
+                            else if (rfCxt.Rssi.average > (-70))
+                                InfoAppendText(rfCxt.Rssi.average.ToString() + "dBm (Good)", Color.Blue);
+                            else if (rfCxt.Rssi.average > (-80))
+                                InfoAppendText(rfCxt.Rssi.average.ToString() + "dBm (Normal)", Color.Green);
+                            else if (rfCxt.Rssi.average > (-90))
+                                InfoAppendText(rfCxt.Rssi.average.ToString() + "dBm (Low)", Color.Orange);
+                            else if (rfCxt.Rssi.average > (-100))
+                                InfoAppendText(rfCxt.Rssi.average.ToString() + "dBm (Very low)", Color.OrangeRed);
+                            else if (csq != 99)
+                                InfoAppendText(rfCxt.Rssi.average.ToString() + "dBm (No signal)", Color.Red);
+                            else
+                                InfoAppendText("Unknown", Color.Red);
 
-                        if (moduleInfo.OpAltDns != null)
-                            InfoAppendText("\nALT DNS:         " + moduleInfo.OpAltDns);
-
-                        if (moduleInfo.OpApn != null)
-                            InfoAppendText("\nAPN:             " + moduleInfo.OpApn);
-
-                        if (moduleInfo.Tac != null)
-                        {
-                            InfoAppendText("\nTAC(LAC):        ");
+                            InfoAppendText("\nRSRP:            ");
 
                             try
                             {
-                                InfoAppendText(moduleInfo.Tac + " (" + Convert.ToUInt32(moduleInfo.Tac, 16).ToString() + ")");
+                                rfCxt.Rsrp.value = int.Parse(moduleInfo.Rsrp);
+                                rfCxt.Rsrp.sum += rfCxt.Rsrp.value;
+                                rfCxt.Rsrp.cout++;
+                                rfCxt.Rsrp.average = (int)(rfCxt.Rsrp.sum / (long)rfCxt.Rsrp.cout);
+
+                                if (rfCxt.Rsrp.average >= -70)
+                                    InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Excellent)", Color.Violet);
+                                else if (rfCxt.Rsrp.average >= -80)
+                                    InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Good)", Color.Blue);
+                                else if (rfCxt.Rsrp.average >= -90)
+                                    InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Normal)", Color.Green);
+                                else if (rfCxt.Rsrp.average >= -100)
+                                    InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Low)", Color.Orange);
+                                else if (rfCxt.Rsrp.average >= -110)
+                                    InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Very low)", Color.OrangeRed);
+                                else
+                                    InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (No signal)", Color.Red);
                             }
                             catch
                             {
                                 InfoAppendText("Unknown", Color.Red);
                             }
-                        }
 
-                        if (moduleInfo.CellID != null)
-                        {
-                            InfoAppendText("\nCell ID:         ");
+                            InfoAppendText("\nRSRQ:            ");
 
                             try
                             {
-                                InfoAppendText(moduleInfo.CellID + " (" + Convert.ToUInt32(moduleInfo.CellID, 16).ToString() + ")");
+                                rfCxt.Rsrq.value = int.Parse(moduleInfo.Rsrq);
+                                rfCxt.Rsrq.sum += rfCxt.Rsrq.value;
+                                rfCxt.Rsrq.cout++;
+                                rfCxt.Rsrq.average = (int)(rfCxt.Rsrq.sum / (long)rfCxt.Rsrq.cout);
+
+                                if (rfCxt.Rsrq.average >= -8)
+                                    InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Excellent)", Color.Violet);
+                                else if (rfCxt.Rsrq.average > -10)
+                                    InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Good)", Color.Blue);
+                                else if (rfCxt.Rsrq.average > -15)
+                                    InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Normal)", Color.Green);
+                                else if (rfCxt.Rsrq.average > -18)
+                                    InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Low)", Color.Orange);
+                                else if (rfCxt.Rsrq.average > -20)
+                                    InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Very low)", Color.OrangeRed);
+                                else
+                                    InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (No signal)", Color.Red);
                             }
                             catch
                             {
-                                InfoAppendText("Unknown");
+                                InfoAppendText("Unknown", Color.Red);
                             }
-                        }
 
-                        try
-                        {
-                            csq = int.Parse(moduleInfo.Csq);
-                            InfoAppendText("\nQuality" + " (" + csq.ToString("D2") + "):    ");
-                        }
-                        catch
-                        {
-                            csq = 99;
-                            InfoAppendText("\nQuality: Unknown");
-                        }
-
-                        switch (csq)
-                        {
-                            case 0:
-                                rssi = -113;
-                                break;
-
-                            case 1:
-                                rssi = -111;
-                                break;
-
-                            case 31:
-                                rssi = -51;
-                                break;
-
-                            case 99:
-                                rssi = -150;
-                                break;
-
-                            default:
-                                rssi = 2 * csq - 113;
-                                break;
-                        }
-
-                        if (rssi > (-60))
-                            InfoAppendText(rssi.ToString() + "dBm (Excellent)", Color.Violet);
-                        else if (rssi > (-70))
-                            InfoAppendText(rssi.ToString() + "dBm (Good)", Color.Blue);
-                        else if (rssi > (-80))
-                            InfoAppendText(rssi.ToString() + "dBm (Normal)", Color.Green);
-                        else if (rssi > (-90))
-                            InfoAppendText(rssi.ToString() + "dBm (Low)", Color.Orange);
-                        else if (rssi > (-100))
-                            InfoAppendText(rssi.ToString() + "dBm (Very low)", Color.OrangeRed);
-                        else
-                            InfoAppendText(rssi.ToString() + "dBm (No signal)", Color.Red);
-
-                        /*
-                        if (int.Parse(moduleInfo.NetworkType) == 0) // 2G network
-                        {
-                            ber = int.Parse(moduleInfo.BitErrRate);
-                            InfoAppendText("\nError rate " + "(" + ber.ToString("D2") + "): ");
-
-                            switch (ber)
+                            if ((lat < (-999.0)) || (lon < (-999.0)))
                             {
-                                case 0:
-                                    InfoAppendText("Less than 0.2%", Color.Blue);
-                                    break;
-
-                                case 1:
-                                    InfoAppendText("0.2% to 0.4%", Color.Blue);
-                                    break;
-
-                                case 2:
-                                    InfoAppendText("0.4% to 0.8%", Color.Green);
-                                    break;
-
-                                case 3:
-                                    InfoAppendText("0.8% to 1.6%", Color.Green);
-                                    break;
-
-                                case 4:
-                                    InfoAppendText("1.6% to 3.2%", Color.Orange);
-                                    break;
-
-                                case 5:
-                                    InfoAppendText("3.2% to 6.4%", Color.Orange);
-                                    break;
-
-                                case 6:
-                                    InfoAppendText("6.4% to 12.8%", Color.OrangeRed);
-                                    break;
-
-                                case 7:
-                                    InfoAppendText("More than 12.8%", Color.OrangeRed);
-                                    break;
-
-                                default:
-                                    InfoAppendText("Not known or not detectable", Color.Red);
-                                    break;
+                                tmpStr = "\nLocation:        " + lat.ToString("0.000000") + "," + lon.ToString("0.000000");
+                                InfoAppendText(tmpStr);
                             }
-                        }*/
 
-                        InfoAppendText("\nRSRP:            ");
+                            WriteLogFile(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, lat, lon);
+                            PlotData(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, TickStart++);
 
-                        try
-                        {
-                            rsrp.sum += int.Parse(moduleInfo.Rsrp);
-                            rsrp.cout++;
-                            rsrp.value = (int)(rsrp.sum / (long)rsrp.cout);
+                            if (rfCxt.Count > 0)
+                            {
+                                UInt32 t = Tick_DifMs(thisTick);
 
-                            if (rsrp.value >= -70)
-                                InfoAppendText(moduleInfo.Rsrp + "dBm (Excellent)", Color.Violet);
-                            else if (rsrp.value >= -80)
-                                InfoAppendText(moduleInfo.Rsrp + "dBm (Good)", Color.Blue);
-                            else if (rsrp.value >= -90)
-                                InfoAppendText(moduleInfo.Rsrp + "dBm (Normal)", Color.Green);
-                            else if (rsrp.value >= -100)
-                                InfoAppendText(moduleInfo.Rsrp + "dBm (Low)", Color.Orange);
-                            else if (rsrp.value >= -110)
-                                InfoAppendText(moduleInfo.Rsrp + "dBm (Very low)", Color.OrangeRed);
-                            else
-                                InfoAppendText(moduleInfo.Rsrp + "dBm (No signal)", Color.Red);
-                        }
-                        catch
-                        {
-                            InfoAppendText("Unknown", Color.Red);
-                        }
+                                if ((t > 0) && (t < rfCxt.Delay))
+                                    Thread.Sleep((int)(rfCxt.Delay - t));
 
-                        InfoAppendText("\nRSRQ:            ");
-
-                        try
-                        {
-                            rsrq.sum += int.Parse(moduleInfo.Rsrq);
-                            rsrq.cout++;
-                            rsrq.value = (int)(rsrq.sum / (long)rsrq.cout);
-
-                            if (rsrq.value >= -8)
-                                InfoAppendText(moduleInfo.Rsrq + "dB (Excellent)", Color.Violet);
-                            else if (rsrq.value > -10)
-                                InfoAppendText(moduleInfo.Rsrq + "dB (Good)", Color.Blue);
-                            else if (rsrq.value > -15)
-                                InfoAppendText(moduleInfo.Rsrq + "dB (Normal)", Color.Green);
-                            else if (rsrq.value > -18)
-                                InfoAppendText(moduleInfo.Rsrq + "dB (Low)", Color.Orange);
-                            else if (rsrq.value > -20)
-                                InfoAppendText(moduleInfo.Rsrq + "dB (Very low)", Color.OrangeRed);
-                            else
-                                InfoAppendText(moduleInfo.Rsrq + "dB (No signal)", Color.Red);
-                        }
-                        catch
-                        {
-                            InfoAppendText("Unknown", Color.Red);
-                        }
-
-                        if ((lat < (-999.0)) || (lon < (-999.0)))
-                        {
-                            tmpStr = "\nLocation:        " + lat.ToString("0.000000") + "," + lon.ToString("0.000000");
-                            InfoAppendText(tmpStr);
-                        }
-
-                        if (Thread_Mode == ThreadMode.RF_TEST)
-                        {
-                            DoNext = ThreadTask.GET_LOCATION;
-                            WriteLogFile(rsrp.value, rsrq.value, rssi, lat, lon);
-                            PlotData(rsrp.value, rsrq.value, rssi, TickStart++);
-
-                            UInt32 t = Tick_DifMs(thisTick);
-
-                            if ((t > 0) && (t < 1000))
-                                Thread.Sleep(1000 - (int)t);
-
-                            thisTick = Tick_Get();
-                        }
-                        else
-                        {
-                            if (moduleInfo.Ip != null)
-                                DoNext++;
+                                rfCxt.Count--;
+                                thisTick = Tick_Get();
+                                threadCxt.DoNext = ThreadTask.GET_LOCATION;
+                            }
+                            else if (threadCxt.Mode == ThreadMode.RF_TEST)
+                                threadCxt.DoNext = ThreadTask.CLOSE_APP;
                             else
                             {
-                                DoNext = ThreadTask.CLOSE_APP;
-                                InfoAppendText("\n\nCan not access the internet", Color.Red);
+                                if (moduleInfo.Ip != null)
+                                    threadCxt.DoNext++;
+                                else
+                                {
+                                    threadCxt.DoNext = ThreadTask.CLOSE_APP;
+                                    InfoAppendText("\n\nCan not access the internet", Color.Red);
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_PING:
-                        DoNext++;
-                        downloadCount++;
-
-                        string s = "\n\nDownload: " + downloadCount.ToString();
-
-                        if (downloadCount > 1)
-                            s += "\nPass: " + (downloadCount - failCount - 1).ToString();
-
-                        InfoAppendText(s);
-                        PrintDebug(s);
-                        /*
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#PING=\"" + moduleInfo.OpDns + "\",1\r", 10000);
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                                DoNext++;
-                            else
-                            { 
-                                string s = "\n\nPing to " + moduleInfo.OpDns + " error";
-                                InfoAppendText(s, Color.Red);
-                                PrintDebug(s);
-                            }
+                            threadCxt.DoNext++;
+                            downloadCxt.Count++;
+
+                            string s = "\n\nDownload: " + downloadCxt.Count.ToString();
+
+                            if (downloadCxt.Count > 1)
+                                s += "\nPass: " + (downloadCxt.Count - failCount - 1).ToString();
+
+                            InfoAppendText(s);
+                            PrintDebug(s);
                         }
-                        */
                         break;
 
                     case ThreadTask.CMD_CFG_HTTPS_HOST:
-                        if (downloadCxt.SslEn == true)
                         {
-                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\"," + downloadCxt.Port + ",0,,,1,30,1\r", 60000);
-                            //tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\",443\r", 60000);
-                        }
-                        else
-                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\"," + downloadCxt.Port + ",0,,,0,30,1\r", 60000);
+                            if (downloadCxt.SslEn == true)
+                                tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\"," + downloadCxt.Port + ",0,,,1,30,1\r", 60000);
+                            else
+                                tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPCFG=0,\"" + downloadCxt.Host + "\"," + downloadCxt.Port + ",0,,,0,30,1\r", 60000);
 
-                        if (tmpStr != null)
-                        {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            if (tmpStr != null)
                             {
-                                DoNext++;
-                                InfoAppendText("\n\nConnected to host " + downloadCxt.Host, Color.Blue);
-                            }
-                            else if (tmpStr.Contains("ERROR"))
-                            {
-                                failCount++;
-                                DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext++;
+                                    InfoAppendText("\n\nConnected to host " + downloadCxt.Host, Color.Blue);
+                                }
+                                else if (tmpStr.Contains("ERROR"))
+                                {
+                                    failCount++;
+                                    threadCxt.DoNext = ThreadTask.CMD_CLOSE_SOCKET;
 
-                                if (downloadLoop == true)
-                                    ToDo = ThreadTask.CMD_MODULE_REBOOT;
-                                else
-                                    ToDo = ThreadTask.CMD_RF_OFF;
+                                    if (downloadCxt.Loop == true)
+                                        threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                                    else
+                                        threadCxt.ToDo = ThreadTask.CMD_RF_OFF;
 
-                                InfoAppendText("\n\nCan not connect to host " + downloadCxt.Host, Color.Red);
+                                    InfoAppendText("\n\nCan not connect to host " + downloadCxt.Host, Color.Red);
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_CFG_HTTPS_FILE:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPQRY=0,0,\"" + downloadCxt.FilePath + "\"\r", 60000);
-
-                        if (tmpStr != null)
                         {
-                            //PrintRxDebug("\n--> " + tmpStr);
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#HTTPQRY=0,0,\"" + downloadCxt.FilePath + "\"\r", 60000);
 
-                            if (tmpStr.Contains("\r\nOK\r\n"))
+                            if (tmpStr != null)
                             {
-                                DoNext = ThreadTask.HTTPS_GET_FILE_INFO;
-                                InfoAppendText("\nGet info of file " + downloadCxt.FileName, Color.Blue);
-                            }
-                            else
-                            {
-                                DoNext++;
-                                failCount++;
-                                InfoAppendText("\nCan not get info of file " + downloadCxt.FileName, Color.Red);
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                {
+                                    threadCxt.DoNext = ThreadTask.HTTPS_GET_FILE_INFO;
+                                    InfoAppendText("\nGet info of file " + downloadCxt.FileName, Color.Blue);
+                                }
+                                else
+                                {
+                                    threadCxt.DoNext++;
+                                    failCount++;
+                                    InfoAppendText("\nCan not get info of file " + downloadCxt.FileName, Color.Red);
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_GET_CURRENT_IP:
-                        DoNext++;
-                        /*
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CGCONTRDP\r", 10000);
-
-                        if (tmpStr != null)
                         {
-                                DoNext++;
+                            threadCxt.DoNext++;
                         }
-                        */
                         break;
 
                     case ThreadTask.CMD_GET_CURRENT_DNS:
-                        DoNext = ThreadTask.CMD_CLOSE_SOCKET;
-
-                        if (downloadLoop == true)
-                            ToDo = ThreadTask.CMD_MODULE_REBOOT;
-                        else
-                            ToDo = ThreadTask.CMD_RF_OFF;
-                        /*
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#NWDNS=\r", 10000);
-
-                        if (tmpStr != null)
                         {
-                            DoNext = ThreadTask.CMD_CLOSE_SOCKET;
-                            ToDo = ThreadTask.CMD_RF_OFF;
+                            threadCxt.DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+
+                            if (downloadCxt.Loop == true)
+                                threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                            else
+                                threadCxt.ToDo = ThreadTask.CMD_RF_OFF;
                         }
-                        */
                         break;
 
                     case ThreadTask.HTTPS_GET_FILE_INFO:
-                        tmpStr = Get_ExtResp(ref cmdCxt, null, 60000);
-
-                        if (tmpStr != null)
                         {
-                            DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                            tmpStr = Get_ExtResp(ref cmdCxt, null, 60000);
 
-                            if (downloadLoop == true)
-                                ToDo = ThreadTask.CMD_MODULE_REBOOT;
-                            else
-                                ToDo = ThreadTask.CMD_RF_OFF;
-
-                            if (tmpStr.Contains("#HTTPRING:"))
+                            if (tmpStr != null)
                             {
-                                tmpStr = new string(SubArray(cmdCxt.buffer, "\",", "\r\n", true));
-                                ReplaceStr(ref tmpStr, '\r', '\0');
-                                ReplaceStr(ref tmpStr, '\n', '\0');
+                                threadCxt.DoNext = ThreadTask.CMD_CLOSE_SOCKET;
 
-                                if (tmpStr != null)
-                                {
-                                    try
-                                    {
-                                        downloadCxt.FileSize = int.Parse(tmpStr);
-                                    }
-                                    catch
-                                    {
-                                        downloadCxt.FileSize = 0;
-                                    }
-                                }
+                                if (downloadCxt.Loop == true)
+                                    threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                                else
+                                    threadCxt.ToDo = ThreadTask.CMD_RF_OFF;
 
-                                if (downloadCxt.FileSize == 0)
+                                if (tmpStr.Contains("#HTTPRING:"))
                                 {
-                                    failCount++;
-                                    downloadCxt.sW = null;
-                                    InfoAppendText("\nFile size = 0, error", Color.Red); ;
+                                    tmpStr = new string(SubArray(cmdCxt.buffer, "\",", "\r\n", true));
+                                    ReplaceStr(ref tmpStr, '\r', '\0');
+                                    ReplaceStr(ref tmpStr, '\n', '\0');
+
+                                    if (tmpStr != null)
+                                    {
+                                        try
+                                        {
+                                            downloadCxt.FileSize = int.Parse(tmpStr);
+                                        }
+                                        catch
+                                        {
+                                            downloadCxt.FileSize = 0;
+                                        }
+                                    }
+
+                                    if (downloadCxt.FileSize == 0)
+                                    {
+                                        failCount++;
+                                        downloadCxt.sW = null;
+                                        InfoAppendText("\nFile size = 0, error", Color.Red); ;
+                                    }
+                                    else
+                                    {
+                                        threadCxt.DoNext = ThreadTask.CMD_GET_HTTPS_1500;
+                                        DownloadTime = 0;
+                                        downloadCxt.DownloadedSize = 0;
+                                        ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
+                                        var stream = File.Open(downloadCxt.FileName, FileMode.Create);
+                                        downloadCxt.sW = new BinaryWriter(stream);
+                                        InfoAppendText("\nFile size = " + downloadCxt.FileSize + " byte(s)", Color.Blue);
+                                    }
                                 }
                                 else
                                 {
-                                    DoNext = ThreadTask.CMD_GET_HTTPS_1500;
-                                    DownloadTime = 0;// Tick_Get();
-                                    downloadCxt.DownloadedSize = 0;
-                                    ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
-                                    //downloadCxt.sW = new StreamWriter(downloadCxt.FileName);
-                                    var stream = File.Open(downloadCxt.FileName, FileMode.Create);
-                                    downloadCxt.sW = new BinaryWriter(stream);
-                                    InfoAppendText("\nFile size = " + downloadCxt.FileSize + " byte(s)", Color.Blue);
+                                    failCount++;
+                                    InfoAppendText("\nResponse error: " + tmpStr, Color.Red);
                                 }
-                            }
-                            else
-                            {
-                                failCount++;
-                                InfoAppendText("\nResponse error: " + tmpStr, Color.Red);
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_GET_HTTPS_1500:
-                        int dlsize = downloadCxt.FileSize - downloadCxt.DownloadedSize;
-
-                        if (dlsize > 1500)
-                            dlsize = 1500;
-
-                        tmpStr = SendCmd_GetData(ref cmdCxt, "AT#HTTPRCV=0,1500\r", 60000, 3000, dlsize, false);
-
-                        if (tmpStr != null)
                         {
-                            tmpArr = HttpRcv_GetData(cmdCxt.buffer, cmdCxt.len);
-                            DownloadTime += cmdCxt.proctime;
+                            int dlsize = downloadCxt.FileSize - downloadCxt.DownloadedSize;
 
-                            if (tmpArr != null)
+                            if (dlsize > 1500)
+                                dlsize = 1500;
+
+                            tmpStr = SendCmd_GetData(ref cmdCxt, "AT#HTTPRCV=0,1500\r", 60000, 3000, dlsize, false);
+
+                            if (tmpStr != null)
                             {
-                                byte[] data = new byte[tmpArr.Length];
+                                tmpArr = HttpRcv_GetData(cmdCxt.buffer, cmdCxt.len);
+                                DownloadTime += cmdCxt.proctime;
 
-                                for (int i = 0; i < tmpArr.Length; i++)
-                                    data[i] = Convert.ToByte(tmpArr[i]);
-
-                                downloadCxt.sW.Write(data);
-                                downloadCxt.sW.Flush();
-                                downloadCxt.DownloadedSize += tmpArr.Length;
-                                ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
-
-                                if (downloadCxt.DownloadedSize >= downloadCxt.FileSize)
+                                if (tmpArr != null)
                                 {
-                                    DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                                    byte[] data = new byte[tmpArr.Length];
 
-                                    if (downloadLoop == true)
-                                        ToDo = ThreadTask.CMD_MODULE_REBOOT;
-                                    else
-                                        ToDo = ThreadTask.CLOSE_APP;
+                                    for (int i = 0; i < tmpArr.Length; i++)
+                                        data[i] = Convert.ToByte(tmpArr[i]);
 
-                                    downloadCxt.sW.Close();
-                                    downloadCxt.sW = null;
+                                    downloadCxt.sW.Write(data);
+                                    downloadCxt.sW.Flush();
+                                    downloadCxt.DownloadedSize += tmpArr.Length;
+                                    ProgressBar_Update(downloadCxt.FileSize, downloadCxt.DownloadedSize);
 
-                                    double speed = (((double)downloadCxt.FileSize * 1000.0f / (double)DownloadTime) * 8.0f) / 1024.0f;
-
-                                    InfoAppendText("\n\nDownload complete: " + DownloadTime.ToString() + "(ms)", Color.Green);
-                                    InfoAppendText("\nSpeed: " + speed.ToString("0.00") + "(kbps)", Color.Green);
-
-                                    MD5 md5 = MD5.Create();
-                                    var stream = File.OpenRead(downloadCxt.FileName);
-                                    var hash = md5.ComputeHash(stream);
-                                    stream.Close();
-
-                                    string md5_result = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
-
-                                    if (md5_result == downloadCxt.Md5.ToUpperInvariant())
+                                    if (downloadCxt.DownloadedSize >= downloadCxt.FileSize)
                                     {
-                                        md5_result = "MD5: " + md5_result + " correct";
-                                        InfoAppendText("\n" + md5_result, Color.Green);
-                                    }
-                                    else
-                                    {
-                                        failCount++;
-                                        md5_result = "MD5: " + md5_result + " incorrect";
-                                        InfoAppendText("\n" + md5_result, Color.Red);
-                                    }
+                                        threadCxt.DoNext = ThreadTask.CMD_CLOSE_SOCKET;
 
-                                    //MessageBox.Show(md5_result, "Info");
+                                        if (downloadCxt.Loop == true)
+                                            threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                                        else
+                                            threadCxt.ToDo = ThreadTask.CLOSE_APP;
+
+                                        downloadCxt.sW.Close();
+                                        downloadCxt.sW = null;
+
+                                        double speed = (((double)downloadCxt.FileSize * 1000.0f / (double)DownloadTime) * 8.0f) / 1024.0f;
+
+                                        InfoAppendText("\n\nDownload complete: " + DownloadTime.ToString() + "(ms)", Color.Green);
+                                        InfoAppendText("\nSpeed: " + speed.ToString("0.00") + "(kbps)", Color.Green);
+
+                                        MD5 md5 = MD5.Create();
+                                        var stream = File.OpenRead(downloadCxt.FileName);
+                                        var hash = md5.ComputeHash(stream);
+                                        stream.Close();
+
+                                        string md5_result = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
+
+                                        if (md5_result == downloadCxt.Md5.ToUpperInvariant())
+                                        {
+                                            md5_result = "MD5: " + md5_result + " correct";
+                                            InfoAppendText("\n" + md5_result, Color.Green);
+                                        }
+                                        else
+                                        {
+                                            failCount++;
+                                            md5_result = "MD5: " + md5_result + " incorrect";
+                                            InfoAppendText("\n" + md5_result, Color.Red);
+                                        }
+
+                                        //MessageBox.Show(md5_result, "Info");
+                                    }
                                 }
-                            }
-                            else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
-                            {
-                                failCount++;
-                                DoNext = ThreadTask.CMD_CLOSE_SOCKET;
+                                else if (tmpStr.Contains("ERROR") || tmpStr.Contains("RX TIMEOUT"))
+                                {
+                                    failCount++;
+                                    threadCxt.DoNext = ThreadTask.CMD_CLOSE_SOCKET;
 
-                                if (downloadLoop == true)
-                                    ToDo = ThreadTask.CMD_MODULE_REBOOT;
-                                else
-                                    ToDo = ThreadTask.CMD_RF_OFF;
+                                    if (downloadCxt.Loop == true)
+                                        threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                                    else
+                                        threadCxt.ToDo = ThreadTask.CMD_RF_OFF;
 
-                                InfoAppendText("\n\nDownload fail", Color.Red);
+                                    InfoAppendText("\n\nDownload fail", Color.Red);
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CMD_CLOSE_SOCKET:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SH=1\r", 3000);
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                                DoNext = ToDo;
-                            else
-                                DoNext++;
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#SH=1\r", 3000);
 
-                            string msg = "\nPass: " + (downloadCount - failCount).ToString() + "/" + downloadCount.ToString();
-                            PrintDebug(msg);
-                            InfoAppendText(msg);
+                            if (tmpStr != null)
+                            {
+                                if (tmpStr.Contains("\r\nOK\r\n"))
+                                    threadCxt.DoNext = threadCxt.ToDo;
+                                else
+                                    threadCxt.DoNext++;
+
+                                string msg = "\nPass: " + (downloadCxt.Count - failCount).ToString() + "/" + downloadCxt.Count.ToString();
+                                PrintDebug(msg);
+                                InfoAppendText(msg);
+                            }
                         }
                         break;
 
                     case ThreadTask.CMD_RF_OFF:
-                        DoNext++;
-                        /*
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CFUN=4\r", 30000);
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                                DoNext++;
-                            else
-                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
+                            threadCxt.DoNext++;
                         }
-                        */
                         break;
 
                     case ThreadTask.CMD_RF_ON:
-                        DoNext = ThreadTask.CLOSE_APP;
-                        /*
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CFUN=1\r", 30000);
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                                DoNext = ThreadTask.CLOSE_APP;
-                            else
-                                DoNext = ThreadTask.CMD_MODULE_REBOOT;
+                            threadCxt.DoNext = ThreadTask.CLOSE_APP;
                         }
-                        */
                         break;
 
                     case ThreadTask.CMD_MODULE_REBOOT:
-                        tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#REBOOT\r", 3000);
-
-                        if (tmpStr != null)
                         {
-                            if (tmpStr.Contains("\r\nOK\r\n"))
-                            {
-                                PrintDebug("\n\nModule is rebooting...\n\n");
-                                InfoAppendText("\n\nModule is rebooting...\n\n");
-                                //Timer_Init(null);
+                            tmpStr = SendCmd_GetRes(ref cmdCxt, "AT#REBOOT\r", 3000);
 
-                                if (downloadLoop == true)
+                            if (tmpStr != null)
+                            {
+                                if (tmpStr.Contains("\r\nOK\r\n"))
                                 {
-                                    serialPort1.DtrEnable = false;
-                                    serialPort1.RtsEnable = false;
-                                    serialPort1.Close();
-                                    serialPort1.Dispose();
-                                    DoNext = ThreadTask.INIT_APP;
-                                    tryCount = 0;
-                                    thisTick = Tick_Get();
-                                    //PrintDebug("\nNew download...\n");
+                                    PrintDebug("\n\nModule is rebooting...\n\n");
+                                    InfoAppendText("\n\nModule is rebooting...\n\n");
+
+                                    if (downloadCxt.Loop == true)
+                                    {
+                                        serialPort1.DtrEnable = false;
+                                        serialPort1.RtsEnable = false;
+                                        serialPort1.Close();
+                                        serialPort1.Dispose();
+                                        threadCxt.DoNext = ThreadTask.INIT_APP;
+                                        threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
+                                        tryCount = 0;
+                                        thisTick = Tick_Get();
+                                        //PrintDebug("\nNew download...\n");
+                                    }
+                                    else
+                                        threadCxt.DoNext = ThreadTask.CLOSE_APP;
                                 }
                                 else
-                                    DoNext = ThreadTask.CLOSE_APP;
-                            }
-                            else
-                            {
-                                PrintDebug("\n\nCan not reboot\n\n", Color.Red);
-                                InfoAppendText("\n\nCan not reboot\n\n", Color.Red);
-                                DoNext = ThreadTask.CLOSE_APP;
+                                {
+                                    PrintDebug("\n\nCan not reboot\n\n", Color.Red);
+                                    InfoAppendText("\n\nCan not reboot\n\n", Color.Red);
+                                    threadCxt.DoNext = ThreadTask.CLOSE_APP;
+                                }
                             }
                         }
                         break;
 
                     case ThreadTask.CLOSE_APP:
                     default:
-                        if (downloadCxt.sW != null)
-                            downloadCxt.sW.Close();
+                        {
+                            if (downloadCxt.sW != null)
+                                downloadCxt.sW.Close();
 
-                        Thread_Enbale = 0;
+                            threadCxt.Enbale = 0;
+                        }
                         break;
                 }
             }
@@ -2852,74 +3178,31 @@ namespace NBST
             serialPort1.Close();
             serialPort1.Dispose();
 
-            if (Thread_Mode == ThreadMode.RF_TEST)
+            if (threadCxt.Mode == ThreadMode.RF_TEST)
                 bt_RFTest_Update(null);
             else
                 bt_Download_Update(null);
 
-            Thread_Task.Abort();
-            Thread_Task.Interrupt();
-            Thread_Task.Abort();
-            Thread_Task.Join();
+            threadCxt.Task.Abort();
+            threadCxt.Task.Interrupt();
+            threadCxt.Task.Abort();
+            threadCxt.Task.Join();
         }
+        #endregion
 
-        private void rtb_Log_MouseDoubleClick(object sender, MouseEventArgs e)
+        #region "Numeric Up/Down"
+        private void nud_RebootWait_ValueChanged(object sender, EventArgs e)
         {
-            if (sW != null)
-                OpenLogFile();
-
-            rtb_Log.Clear();
+            rebootWait = (UInt32)nud_RebootWait.Value;
         }
 
-        private void bt_Download_Click(object sender, EventArgs e)
+        private void nud_RespWait_ValueChanged(object sender, EventArgs e)
         {
-            try
-            {
-                if (bt_Download.Text == "Download")
-                {
-                    tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
-                    Thread_Mode = ThreadMode.DOWNLOAD;
-                    Thread_Enbale = 1;
-                    bt_RFTest.Enabled = false;
-                    bt_Scan.Enabled = false;
-                    bt_Reboot.Enabled = false;
-                    bt_CMD.Enabled = false;
-                    cb_Apn.Enabled = false;
-                    cb_Dns.Enabled = false;
-                    cb_Url.Enabled = false;
-                    tb_Md5.Enabled = false;
-                    pgb_Percent.Value = 0;
-                    lb_Percent.Text = "0 byte";
-
-                    Thread_Task = new Thread(() => Thread_Tasks()); // Create new app tasks
-                    Thread_Task.Start();
-
-                    bt_Download.Text = "Stop";
-                }
-                else
-                {
-                    Thread_Enbale = 0;
-                }
-            }
-            catch
-            {
-
-            }
+            respWait = (UInt32)nud_RespWait.Value;
         }
+        #endregion
 
-        private void cb_ViewMode_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (cb_ViewMode.Text == "Scroll")
-                viewMode = true;
-            else
-                viewMode = false;
-        }
-
-        private void cb_Port1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            portName = cb_Port1.Text;
-        }
-
+        #region "Other functions"
         private bool LoadUrl(bool online)
         {
             Uri myUri;
@@ -2993,93 +3276,23 @@ namespace NBST
             return false;
         }
 
-        private void cb_Url_TextChanged(object sender, EventArgs e)
-        {
-            if(LoadUrl(true))
-            {
-                /*
-                string cmdStr = cb_Url.Text;
-
-                if (cmdStr != null)
-                {
-                    bool found = false;
-
-                    foreach (string s in historyUrl)
-                    {
-                        if (s == cmdStr)
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if (found == false)
-                    {
-                        for (int i = 9; i > 0; i--)
-                            historyUrl[i] = historyUrl[i - 1];
-
-                        historyUrl[0] = cmdStr;
-                    }
-
-                    cb_Url.Items.Clear();
-
-                    foreach (string s in historyUrl)
-                    {
-                        if (s != null)
-                            cb_Url.Items.Add(s);
-                    }
-                }
-                */
-            }
-        }
-
-        private void tb_Md5_TextChanged(object sender, EventArgs e)
-        {
-            downloadCxt.Md5 = tb_Md5.Text;
-        }
-
-        private void cb_Port1_TextChanged(object sender, EventArgs e)
-        {
-            if (cb_Port1.Text != "Empty")
-            {
-                bt_Download.Enabled = true;
-                bt_Reboot.Enabled = true;
-                bt_RFTest.Enabled = true;
-                bt_CMD.Enabled = true;
-            }
-            else
-            {
-                bt_Download.Enabled = false;
-                bt_Reboot.Enabled = false;
-                bt_RFTest.Enabled = false;
-                bt_CMD.Enabled = false;
-            }
-        }
-
-        private void ckb_DebugEn_CheckedChanged(object sender, EventArgs e)
-        {
-            debugEn = ckb_DebugEn.Checked;
-        }
-
-        private void cb_Apn_TextChanged(object sender, EventArgs e)
-        {
-            moduleInfo.Apn = cb_Apn.Text;
-        }
-
-        private void cb_Dns_TextChanged(object sender, EventArgs e)
-        {
-            moduleInfo.UserDns = cb_Dns.Text;
-        }
-
-        private void Timer_Callback(string msg)
+        private void ProgressBar_Update(int maxSize, int curSize)
         {
             if (InvokeRequired)
             {
-                this.Invoke(new Action<string>(Timer_Callback), new object[] { msg });
+                this.Invoke(new Action<int, int>(ProgressBar_Update), new object[] { maxSize, curSize });
                 return;
             }
 
-            tryCount += 5;
+            float per = ((float)curSize * 100.0f) / (float)maxSize + 0.5f;
+
+            pgb_Percent.Value = (int)per;
+            lb_Percent.Text = curSize.ToString() + " / " + maxSize.ToString();
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            RebootTryCount += 5;
 
             if (SendAT(cb_Port1.Text, "ATE0\r"))
             {
@@ -3093,7 +3306,7 @@ namespace NBST
                 PrintDebug(" Done\n");
                 InfoAppendText("Done\n");
             }
-            else if (tryCount >= 60)
+            else if (RebootTryCount >= 60)
             {
                 timer1.Stop();
                 bt_Reboot.Enabled = true;
@@ -3106,210 +3319,7 @@ namespace NBST
                 PrintDebug("Failed\n", Color.Red);
                 InfoAppendText("Failed\n", Color.Red);
             }
-
-            //downloadCount *= (-1);
         }
-
-        private void Timer_Init(string msg)
-        {
-            /*
-            if (InvokeRequired)
-            {
-                this.Invoke(new Action<string>(Timer_Init), new object[] { msg });
-                return;
-            }*/
-
-            //downloadCount *= (-1);
-            tryCount = 0;
-            timer1.Interval = 5000;
-            timer1.Start();
-        }
-
-        private void bt_Reboot_Click(object sender, EventArgs e)
-        {
-            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
-            bt_Download.Enabled = false;
-            bt_Reboot.Enabled = false;
-            bt_Scan.Enabled = false;
-            bt_CMD.Enabled = false;
-            cb_Apn.Enabled = false;
-            cb_Dns.Enabled = false;
-
-            if (SendAT(cb_Port1.Text, "AT#REBOOT\r"))
-            {
-                PrintDebug("\n\nModule is rebooting...\n\n");
-                InfoAppendText("\n\nModule is rebooting...\n\n");
-                Timer_Init(null);
-            }
-            else
-            {
-                bt_Download.Enabled = true;
-                bt_Scan.Enabled = true;
-                bt_CMD.Enabled = true;
-                cb_Apn.Enabled = true;
-                cb_Dns.Enabled = true;
-                PrintDebug("\n\nCan not reboot\n\n", Color.Red);
-                InfoAppendText("\n\nCan not reboot\n\n", Color.Red);
-            }
-        }
-
-        private void timer1_Tick(object sender, EventArgs e)
-        {
-            Timer_Callback(null);
-        }
-
-        private string ChangeSpecialByte(string s)
-        {
-            byte[] BIn = encoding.GetBytes(s);
-            byte[] BOut = new byte[BIn.Length];
-            int i, j;
-
-            for (i = 0, j = 0; i < BIn.Length; i++)
-            {
-                if (BIn[i] == '\\')
-                {
-                    try
-                    {
-                        switch (BIn[i + 1])
-                        {
-                            case (byte)'r':
-                                BOut[j++] = (byte)'\r';
-                                i++;
-                                break;
-
-                            case (byte)'n':
-                                BOut[j++] = (byte)'\n';
-                                i++;
-                                break;
-
-                            default:
-                                if ((BIn[i + 1] >= (byte)'0') && (BIn[i + 1] <= (byte)'9'))
-                                {
-                                    BOut[j++] = (byte)(BIn[i + 1] - '0');
-                                    i++;
-                                }
-                                else 
-                                    BOut[j++] = BIn[i];
-                                break;
-                        }
-                    }
-                    catch
-                    {
-                        BOut[j++] = BIn[i];
-                    }
-                }
-                else 
-                    BOut[j++] = BIn[i];
-            }
-
-            if (j > 0)
-            {
-                char[] Arr = new char[j];
-
-                for (i = 0; i < j; i++)
-                    Arr[i] = (char)BOut[i];
-
-                return new string(Arr);
-            }
-
-            return null;
-        }
-
-        private void bt_CMD_Click(object sender, EventArgs e)
-        {
-            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
-            bt_RFTest.Enabled = false;
-            bt_Download.Enabled = false;
-            bt_Reboot.Enabled = false;
-            bt_Scan.Enabled = false;
-            bt_CMD.Enabled = false;
-            cb_Apn.Enabled = false;
-            cb_Dns.Enabled = false;
-
-            string cmdStr = cb_CMD.Text;
-
-            if (cmdStr != null)
-            {
-                bool found = false;
-
-                foreach(string s in historyCmd)
-                {
-                    if (s == cmdStr)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (found == false)
-                {
-                    for (int i = 9; i > 0; i--)
-                        historyCmd[i] = historyCmd[i - 1];
-
-                    historyCmd[0] = cmdStr;
-                }
-
-                cb_CMD.Items.Clear();
-
-                foreach(string s in historyCmd)
-                {
-                    if (s != null)
-                        cb_CMD.Items.Add(s);
-                }
-
-                cmdStr = ChangeSpecialByte(cmdStr);
-                CmdCxt cmdCxt = new CmdCxt();
-                cmdCxt.buffer = new char[4096];
-                cmdCxt.donext = 0;
-                cmdCxt.findIdx = 0;
-
-                try
-                {
-                    if (serialPort1.IsOpen == false)
-                    {
-                        serialPort1.PortName = portName;
-                        serialPort1.BaudRate = 115200;
-                        serialPort1.WriteTimeout = 10;
-                        serialPort1.DtrEnable = true;
-                        serialPort1.RtsEnable = true;
-                        serialPort1.Open();
-
-                        while (SendCmd_GetRes(ref cmdCxt, cmdStr, 250) == null) ;
-
-                        serialPort1.DtrEnable = false;
-                        serialPort1.RtsEnable = false;
-                        serialPort1.Close();
-                        serialPort1.Dispose();
-                    }
-                }
-                catch
-                {
-                    PrintDebug("\nSend CMD error");
-                }
-            }
-
-            bt_RFTest.Enabled = true;
-            bt_Download.Enabled = true;
-            bt_Scan.Enabled = true;
-            bt_Reboot.Enabled = true;
-            bt_CMD.Enabled = true;
-            cb_Apn.Enabled = true;
-            cb_Dns.Enabled = true;
-        }
-
-        private void ckb_Printable_CheckedChanged(object sender, EventArgs e)
-        {
-            printableMode = ckb_Printable.Checked;
-        }
-
-        private void ckb_DlLoop_CheckedChanged(object sender, EventArgs e)
-        {
-            downloadLoop = ckb_DlLoop.Checked;
-        }
-
-        private void nud_RebootWait_ValueChanged(object sender, EventArgs e)
-        {
-            rebootWait = (UInt32)nud_RebootWait.Value;
-        }
+        #endregion
     }
 }
