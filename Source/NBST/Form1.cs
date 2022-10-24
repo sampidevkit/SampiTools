@@ -2148,6 +2148,7 @@ namespace NBST
             string tmpStr = null;
             char[] tmpArr = null;
             UInt32 DownloadTime = 0;
+            UInt32 BootTime = 0;
             CmdCxt cmdCxt = new CmdCxt();
             int failCount = 0;
             int tryCount = 0;
@@ -2404,6 +2405,8 @@ namespace NBST
                                     if (tmpStr == "1")
                                     {
                                         threadCxt.DoNext++;
+                                        BootTime = Tick_DifMs(thisTick);
+                                        thisTick = Tick_Get();
                                         break;
                                     }
                                 }
@@ -2845,6 +2848,12 @@ namespace NBST
                                 InfoAppendText(tmpStr);
                             }
 
+                            tmpStr =     "\nBoot time:       " + BootTime.ToString() + " ms";
+
+                            if (BootTime >= 30000)
+                                tmpStr += " (Slow)";
+
+                            InfoAppendText(tmpStr);
                             WriteLogFile(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, lat, lon);
                             PlotData(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, TickStart++);
 
@@ -2878,11 +2887,12 @@ namespace NBST
                         {
                             threadCxt.DoNext++;
                             downloadCxt.Count++;
-
-                            string s = "\n\nDownload: " + downloadCxt.Count.ToString();
+                            //           "\nBoot time:       "
+                            string s = "\n\nDownload at:     " + DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString();
+                            s += "\nDownload:        " + downloadCxt.Count.ToString();
 
                             if (downloadCxt.Count > 1)
-                                s += "\nPass: " + (downloadCxt.Count - failCount - 1).ToString();
+                                s += "\nPass:            " + (downloadCxt.Count - failCount - 1).ToString();
 
                             InfoAppendText(s);
                             PrintDebug(s);
@@ -3106,7 +3116,9 @@ namespace NBST
                                 else
                                     threadCxt.DoNext++;
 
-                                string msg = "\nPass: " + (downloadCxt.Count - failCount).ToString() + "/" + downloadCxt.Count.ToString();
+                                //          "\nBoot time:       "
+                                string msg = "\nStop at:         " + DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString();
+                                    msg +=  "\nPass:            " + (downloadCxt.Count - failCount).ToString() + "/" + downloadCxt.Count.ToString();
                                 PrintDebug(msg);
                                 InfoAppendText(msg);
                             }
