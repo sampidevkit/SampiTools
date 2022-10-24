@@ -826,7 +826,9 @@ namespace NBST
                 slog.WriteLine(rtb_Log.Text);
                 slog.Close();
                 sW.WriteLine(NBST.Properties.Resources.footer);
-
+                sW.WriteLine("%{");
+                sW.WriteLine(rtb_Info.Text);
+                sW.WriteLine("%}");
                 sW.Close();
                 PrintDebug("\nLog file " + logfileName + ".m has been saved");
                 Thread.Sleep(1000);
@@ -843,9 +845,6 @@ namespace NBST
             try
             {
                 sW = new StreamWriter(logfileName + ".m");
-                sW.WriteLine("%{");
-                sW.WriteLine(rtb_Info.Text);
-                sW.WriteLine("%}");
                 sW.WriteLine(NBST.Properties.Resources.header);
                 sW.WriteLine("\nstartTime=" + ToUnixTimeSeconds().ToString() + ";");
                 sW.WriteLine("\na=[");
