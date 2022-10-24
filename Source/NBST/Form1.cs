@@ -20,6 +20,7 @@ using System.Net;
 using System.Device.Location;
 using Spire.Xls;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
+using System.Security.Policy;
 
 namespace NBST
 {
@@ -113,7 +114,6 @@ namespace NBST
 
         private struct DownloadCxt
         {
-            public bool Loop;
             public bool SslEn;
             public string Host;
             public string Port;
@@ -122,7 +122,9 @@ namespace NBST
             public string Md5;
             public int FileSize;
             public int DownloadedSize;
+            public int Failed;
             public int Count;
+            public int Loop;
             public BinaryWriter sW;
         }
 
@@ -148,6 +150,10 @@ namespace NBST
             public string Rsrq;
             public string Tac;
             public string CellID;
+            public string CellLon;
+            public string CellLat;
+            public string DeviceLon;
+            public string DeviceLat;
             public string Csq;
             public string BitErrRate;
             public string Apn; // user's APN
@@ -169,7 +175,6 @@ namespace NBST
 
         private DownloadCxt downloadCxt = new DownloadCxt
         {
-            Loop = true,
             SslEn = false,
             Host = null,
             Port = null,
@@ -178,7 +183,9 @@ namespace NBST
             Md5 = null,
             FileSize = 0,
             DownloadedSize = 0,
-            Count = 5,
+            Failed = 0,
+            Count = 0,
+            Loop = 5,
             sW = null
         };
 
@@ -194,6 +201,10 @@ namespace NBST
             Rsrq = null,
             Tac = null,
             CellID = null,
+            CellLon = null,
+            CellLat = null,
+            DeviceLon = null,
+            DeviceLat = null,
             Csq = null,
             BitErrRate = null,
             Apn = null,
@@ -221,6 +232,8 @@ namespace NBST
         private int sysStart = 0;
         private volatile UInt32 rebootWait = 5000;
         private volatile UInt32 respWait = 250;
+        private double lon = -999.0;
+        private double lat = -999.0;
         private Workbook workbook = new Workbook();
 
         private string[] UsbPid = new string[5]
@@ -746,15 +759,23 @@ namespace NBST
             return s;
         }
 
-        private void WriteExcelFile(string device, string imei, string cimi, string ccid, string apn, 
-            int tac, int cellid, int rsrp, int rsrq, int rssi, double lat, double lon,
-            int pass, int fail, string note)
+        private void WriteExcelFile(ModuleInfo info, int count, int passed, string note)
         {
-
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<ModuleInfo, int, int, string>(WriteExcelFile), new object[] { info, count, passed, note });
+                return;
+            }
         }
 
-        private void ExcelFile_Deinit()
+        private void ExcelFile_Deinit(string msg)
         {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(ExcelFile_Deinit), new object[] { msg });
+                return;
+            }
+
             if (sW != null)
             {
                 StreamWriter slog = new StreamWriter(logfileName + ".txt");
@@ -770,9 +791,15 @@ namespace NBST
             }
         }
 
-        private void ExcelFille_Init(string fileName)
+        private void ExcelFille_Init(string msg)
         {
-            ExcelFile_Deinit();
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(ExcelFille_Init), new object[] { msg });
+                return;
+            }
+
+            ExcelFile_Deinit(null);
             logfileName = FileNameGenerate("NBST_");
 
             try
@@ -808,7 +835,7 @@ namespace NBST
 
                 string s = "\n% ";
 
-                if ((lat < (-999.0)) || (lon < (-999.0)))
+                if ((lat != (-999.0)) && (lon != (-999.0)))
                     s += "https://maps.google.com/maps?hl=en&q=" + lat.ToString("0.000000") + "," + lon.ToString("0.000000") + "\n";
                 else
                     s += "Can not find your location\n";
@@ -2142,11 +2169,6 @@ namespace NBST
         {
             printableMode = ckb_Printable.Checked;
         }
-
-        private void ckb_DlLoop_CheckedChanged(object sender, EventArgs e)
-        {
-            downloadCxt.Loop = ckb_DlLoop.Checked;
-        }
         #endregion
 
         #region "Thread functions"
@@ -2163,7 +2185,6 @@ namespace NBST
 
         private void Thread_Tasks()
         {
-            double lon = -999.0, lat = -999.0;
             string tmpStr = null;
             char[] tmpArr = null;
             UInt32 DownloadTime = 0;
@@ -2171,6 +2192,9 @@ namespace NBST
             CmdCxt cmdCxt = new CmdCxt();
             int failCount = 0;
             int tryCount = 0;
+
+            lon = -999.0;
+            lat = -999.0;
 
             rfCxt.Rssi = new SignalCxt
             {
@@ -2206,6 +2230,10 @@ namespace NBST
             moduleInfo.Rsrq = null;
             moduleInfo.Tac = null;
             moduleInfo.CellID = null;
+            moduleInfo.CellLon = null;
+            moduleInfo.CellLat = null;
+            moduleInfo.DeviceLon = null;
+            moduleInfo.DeviceLat = null;
             moduleInfo.Csq = null;
             moduleInfo.BitErrRate = null;
             moduleInfo.Ip = null;
@@ -2224,7 +2252,7 @@ namespace NBST
 
             while (threadCxt.Enbale == 1)
             {
-                if(Tick_DifMs(gpsTick)>=1000)
+                if (Tick_DifMs(gpsTick) >= 1000)
                 {
                     watcher.TryStart(false, TimeSpan.FromMilliseconds(1000));
 
@@ -2287,11 +2315,12 @@ namespace NBST
                             {
                                 if (tmpStr.Contains("\r\nOK\r\n"))
                                     threadCxt.DoNext++;
+                                /*
                                 else
                                 {
                                     threadCxt.DoNext = ThreadTask.INIT_APP;
                                     threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
-                                }
+                                }*/
                             }
                         }
                         break;
@@ -2863,9 +2892,12 @@ namespace NBST
                                 InfoAppendText("Unknown", Color.Red);
                             }
 
-                            if ((lat < (-999.0)) || (lon < (-999.0)))
+                            if ((lat != (-999.0)) && (lon != (-999.0)))
                             {
-                                tmpStr = "\nLocation:        " + lat.ToString("0.000000") + "," + lon.ToString("0.000000");
+                                moduleInfo.DeviceLat = lat.ToString("0.000000");
+                                moduleInfo.DeviceLon = lon.ToString("0.000000");
+
+                                tmpStr = "\nLocation:        " + moduleInfo.DeviceLat + "," + moduleInfo.DeviceLon;
                                 InfoAppendText(tmpStr);
                             }
 
@@ -2875,6 +2907,7 @@ namespace NBST
                                 tmpStr += " (Slow)";
 
                             InfoAppendText(tmpStr);
+                            //WriteExcelFile();
                             WriteLogFile(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, lat, lon);
                             PlotData(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, TickStart++);
 
@@ -2912,11 +2945,11 @@ namespace NBST
                             threadCxt.DoNext++;
                             downloadCxt.Count++;
                             //           "\nBoot time:       "
-                            string s = "\n\nDownload at:     " + DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString();
-                            s += "\nDownload:        " + downloadCxt.Count.ToString();
+                            string s = "\n\nDownload " + downloadCxt.Count.ToString("D2");
+                            s += " at:  " + DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString();
 
                             if (downloadCxt.Count > 1)
-                                s += "\nPass:            " + (downloadCxt.Count - failCount - 1).ToString();
+                                s += "\nPassed:          " + (downloadCxt.Count - failCount - 1).ToString();
 
                             InfoAppendText(s);
                             PrintDebug(s);
@@ -2942,7 +2975,7 @@ namespace NBST
                                     failCount++;
                                     threadCxt.DoNext = ThreadTask.CMD_CLOSE_SOCKET;
 
-                                    if (downloadCxt.Loop == true)
+                                    if (--downloadCxt.Count > 0)
                                         threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
                                     else
                                         threadCxt.ToDo = ThreadTask.CMD_RF_OFF;
@@ -2984,7 +3017,7 @@ namespace NBST
                         {
                             threadCxt.DoNext = ThreadTask.CMD_CLOSE_SOCKET;
 
-                            if (downloadCxt.Loop == true)
+                            if (downloadCxt.Count < downloadCxt.Loop)
                                 threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
                             else
                                 threadCxt.ToDo = ThreadTask.CMD_RF_OFF;
@@ -2999,7 +3032,7 @@ namespace NBST
                             {
                                 threadCxt.DoNext = ThreadTask.CMD_CLOSE_SOCKET;
 
-                                if (downloadCxt.Loop == true)
+                                if (downloadCxt.Count < downloadCxt.Loop)
                                     threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
                                 else
                                     threadCxt.ToDo = ThreadTask.CMD_RF_OFF;
@@ -3078,7 +3111,7 @@ namespace NBST
                                     {
                                         threadCxt.DoNext = ThreadTask.CMD_CLOSE_SOCKET;
 
-                                        if (downloadCxt.Loop == true)
+                                        if (downloadCxt.Count < downloadCxt.Loop)
                                             threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
                                         else
                                             threadCxt.ToDo = ThreadTask.CLOSE_APP;
@@ -3118,7 +3151,7 @@ namespace NBST
                                     failCount++;
                                     threadCxt.DoNext = ThreadTask.CMD_CLOSE_SOCKET;
 
-                                    if (downloadCxt.Loop == true)
+                                    if (downloadCxt.Count < downloadCxt.Loop)
                                         threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
                                     else
                                         threadCxt.ToDo = ThreadTask.CMD_RF_OFF;
@@ -3141,8 +3174,8 @@ namespace NBST
                                     threadCxt.DoNext++;
 
                                 //          "\nBoot time:       "
-                                string msg = "\nStop at:         " + DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString();
-                                    msg +=  "\nPass:            " + (downloadCxt.Count - failCount).ToString() + "/" + downloadCxt.Count.ToString();
+                                string msg = "\n\nPassed " + (downloadCxt.Count - failCount).ToString("D2") + "/" + downloadCxt.Count.ToString("D2");
+                                msg += " at: " + DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString();
                                 PrintDebug(msg);
                                 InfoAppendText(msg);
                             }
@@ -3172,12 +3205,17 @@ namespace NBST
                                     PrintDebug("\n\nModule is rebooting...\n\n");
                                     InfoAppendText("\n\nModule is rebooting...\n\n");
 
-                                    if (downloadCxt.Loop == true)
+                                    if (downloadCxt.Count < downloadCxt.Loop)
                                     {
-                                        serialPort1.DtrEnable = false;
-                                        serialPort1.RtsEnable = false;
-                                        serialPort1.Close();
-                                        serialPort1.Dispose();
+                                        try
+                                        {
+                                            serialPort1.DtrEnable = false;
+                                            serialPort1.RtsEnable = false;
+                                            serialPort1.Close();
+                                            serialPort1.Dispose();
+                                        }
+                                        catch { }
+
                                         threadCxt.DoNext = ThreadTask.INIT_APP;
                                         threadCxt.ToDo = ThreadTask.CMD_MODULE_REBOOT;
                                         tryCount = 0;
@@ -3209,10 +3247,14 @@ namespace NBST
                 }
             }
 
-            serialPort1.DtrEnable = false;
-            serialPort1.RtsEnable = false;
-            serialPort1.Close();
-            serialPort1.Dispose();
+            try
+            {
+                serialPort1.DtrEnable = false;
+                serialPort1.RtsEnable = false;
+                serialPort1.Close();
+                serialPort1.Dispose();
+            }
+            catch { }
 
             if (threadCxt.Mode == ThreadMode.RF_TEST)
                 bt_RFTest_Update(null);
@@ -3236,6 +3278,37 @@ namespace NBST
         private void nud_RespWait_ValueChanged(object sender, EventArgs e)
         {
             respWait = (UInt32)nud_RespWait.Value;
+        }
+
+        private void nud_DlCount_ValueChanged(object sender, EventArgs e)
+        {
+            downloadCxt.Loop = (int)nud_DlCount.Value;
+        }
+        #endregion
+
+        #region "Link labels
+        private void lklb_GMaps_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            string url = "https://maps.google.com";
+
+            lklb_GMaps.LinkVisited = true;
+
+            if ((lat != (-999.0)) && (lon != (-999.0)))
+                url += "/maps?hl=en&q=" + lat.ToString("0.000000") + "," + lon.ToString("0.000000");
+
+            System.Diagnostics.Process.Start(url);
+        }
+
+        private void lklb_CellFind_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            lklb_CellFind.LinkVisited = true;
+            System.Diagnostics.Process.Start("https://findcellid.com");
+        }
+
+        private void lklb_LogFolder_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            lklb_LogFolder.LinkVisited = true;
+            System.Diagnostics.Process.Start("explorer.exe", System.IO.Path.GetDirectoryName(Application.ExecutablePath));
         }
         #endregion
 
