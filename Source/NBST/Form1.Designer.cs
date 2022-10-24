@@ -441,6 +441,8 @@
             // 
             this.ckb_DlLoop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.ckb_DlLoop.AutoSize = true;
+            this.ckb_DlLoop.Checked = true;
+            this.ckb_DlLoop.CheckState = System.Windows.Forms.CheckState.Checked;
             this.ckb_DlLoop.Location = new System.Drawing.Point(881, 543);
             this.ckb_DlLoop.Name = "ckb_DlLoop";
             this.ckb_DlLoop.Size = new System.Drawing.Size(95, 17);

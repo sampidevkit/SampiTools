@@ -19,6 +19,7 @@ using System.Windows.Forms.VisualStyles;
 using System.Net;
 using System.Device.Location;
 using Spire.Xls;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 
 namespace NBST
 {
@@ -57,7 +58,6 @@ namespace NBST
             CMD_ACT_PDP,
             CMD_GET_CURRENT_PDP,
             CMD_SETUP_CELL_INFO,
-            GET_LOCATION,
             CMD_GET_SIGNAL_QUALITY,
             CMD_GET_CELL_INFO,
             PARSE_INFO,
@@ -133,6 +133,7 @@ namespace NBST
             public SignalCxt Rsrq;
             public UInt32 Delay;
             public int Count;
+            public int Loop;
         }
 
         private struct ModuleInfo
@@ -168,7 +169,7 @@ namespace NBST
 
         private DownloadCxt downloadCxt = new DownloadCxt
         {
-            Loop = false,
+            Loop = true,
             SslEn = false,
             Host = null,
             Port = null,
@@ -795,6 +796,12 @@ namespace NBST
 
         private void WriteLogFile(int rsrp, int rsrq, int rssi, double lat, double lon)
         {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<int, int, int, double, double>(WriteLogFile), new object[] { rsrp, rsrq, rssi, lat, lon });
+                return;
+            }
+
             if (sW != null)
             {
                 line++;
@@ -817,8 +824,14 @@ namespace NBST
             }
         }
 
-        private void Log_Deinit()
+        private void Log_Deinit(string msg)
         {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(Log_Deinit), new object[] { msg });
+                return;
+            }
+
             if (sW != null)
             {
                 StreamWriter slog = new StreamWriter(logfileName + ".txt");
@@ -837,9 +850,15 @@ namespace NBST
             }
         }
 
-        private void Log_Init()
+        private void Log_Init(string msg)
         {
-            Log_Deinit();
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(Log_Init), new object[] { msg });
+                return;
+            }
+
+            Log_Deinit(null);
             logfileName = FileNameGenerate("NBST_");
 
             try
@@ -1710,7 +1729,7 @@ namespace NBST
             }
 
             sW.Close();
-            Log_Deinit();
+            Log_Deinit(null);
         }
         #endregion
 
@@ -1728,7 +1747,7 @@ namespace NBST
                 return;
             }
 
-            Log_Deinit();
+            Log_Deinit(null);
             bt_Download.Enabled = true;
             bt_Reboot.Enabled = true;
             bt_Scan.Enabled = true;
@@ -1775,14 +1794,11 @@ namespace NBST
                     bt_Download.Text = "Stop";
                     pgb_Percent.Value = 0;
                     lb_Percent.Text = "0 byte";
-                    Graph_Init();
-                    Log_Init();
                     Thread_Init(ThreadMode.DOWNLOAD, 10, 250);
                 }
                 else
                 {
                     threadCxt.Enbale = 0;
-                    Log_Deinit();
                 }
             }
             catch { }
@@ -1802,14 +1818,11 @@ namespace NBST
                     cb_Apn.Enabled = false;
                     cb_Dns.Enabled = false;
                     bt_RFTest.Text = "Stop";
-                    Log_Init();
-                    Graph_Init();
                     Thread_Init(ThreadMode.RF_TEST, 60, 1000);
                 }
                 else
                 {
                     threadCxt.Enbale = 0;
-                    Log_Deinit();
                 }
             }
             catch { }
@@ -2019,13 +2032,13 @@ namespace NBST
             rtb_Log.ScrollToCaret();
 
             if (line >= 1000)
-                Log_Init();
+                Log_Init(null);
         }
 
         private void rtb_Log_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             if (sW != null)
-                Log_Init();
+                Log_Init(null);
 
             rtb_Log.Clear();
         }
@@ -2037,8 +2050,14 @@ namespace NBST
         #endregion
 
         #region "Graph functions"
-        private void Graph_Init()
+        private void Graph_Init(string msg)
         {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(Graph_Init), new object[] { msg });
+                return;
+            }
+
             zedGraphControl1.GraphPane.CurveList.Clear();
             zedGraphControl1.GraphPane.GraphObjList.Clear();
             zedGraphControl1.Refresh();
@@ -2135,7 +2154,8 @@ namespace NBST
         {
             threadCxt.Mode = mode;
             threadCxt.Enbale = 1;
-            rfCxt.Count = rfTestCount;
+            rfCxt.Count = 0;
+            rfCxt.Loop = rfTestCount;
             rfCxt.Delay = rfTestDelay;
             threadCxt.Task = new Thread(() => Thread_Tasks()); // Create new app tasks
             threadCxt.Task.Start();
@@ -2197,12 +2217,28 @@ namespace NBST
             threadCxt.ToDo = ThreadTask.INIT_APP;
 
             GeoCoordinateWatcher watcher = new GeoCoordinateWatcher();
+            UInt32 gpsTick = Tick_Get();
             UInt32 thisTick = rebootWait + Tick_Get();
-
+            
             InfoWriteText("Reading module info... ");
 
             while (threadCxt.Enbale == 1)
             {
+                if(Tick_DifMs(gpsTick)>=1000)
+                {
+                    watcher.TryStart(false, TimeSpan.FromMilliseconds(1000));
+
+                    GeoCoordinate coord = watcher.Position.Location;
+
+                    if (coord.IsUnknown != true)
+                    {
+                        lon = coord.Longitude;
+                        lat = coord.Latitude;
+                    }
+
+                    gpsTick = Tick_Get();
+                }
+
                 switch (threadCxt.DoNext)
                 {
                     case ThreadTask.INIT_APP:
@@ -2227,6 +2263,8 @@ namespace NBST
                                         InfoAppendText("Done\n");
                                     }
 
+                                    Graph_Init(null);
+                                    Log_Init(null);
                                     thisTick = Tick_Get();
                                     threadCxt.DoNext++;
                                 }
@@ -2550,22 +2588,6 @@ namespace NBST
                         }
                         break;
 
-                    case ThreadTask.GET_LOCATION:
-                        {
-                            watcher.TryStart(false, TimeSpan.FromMilliseconds(1000));
-
-                            GeoCoordinate coord = watcher.Position.Location;
-
-                            if (coord.IsUnknown != true)
-                            {
-                                lon = coord.Longitude;
-                                lat = coord.Latitude;
-                            }
-
-                            threadCxt.DoNext++;
-                        }
-                        break;
-
                     case ThreadTask.CMD_GET_SIGNAL_QUALITY:
                         {
                             tmpStr = SendCmd_GetRes(ref cmdCxt, "AT+CSQ\r");
@@ -2783,7 +2805,7 @@ namespace NBST
                             else if (rfCxt.Rssi.average > (-100))
                                 InfoAppendText(rfCxt.Rssi.average.ToString() + "dBm (Very low)", Color.OrangeRed);
                             else if (csq != 99)
-                                InfoAppendText(rfCxt.Rssi.average.ToString() + "dBm (No signal)", Color.Red);
+                                InfoAppendText(rfCxt.Rssi.average.ToString() + "dBm (Extremely low)", Color.Red);
                             else
                                 InfoAppendText("Unknown", Color.Red);
 
@@ -2807,7 +2829,7 @@ namespace NBST
                                 else if (rfCxt.Rsrp.average >= -110)
                                     InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Very low)", Color.OrangeRed);
                                 else
-                                    InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (No signal)", Color.Red);
+                                    InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Extremely low)", Color.Red);
                             }
                             catch
                             {
@@ -2834,7 +2856,7 @@ namespace NBST
                                 else if (rfCxt.Rsrq.average > -20)
                                     InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Very low)", Color.OrangeRed);
                                 else
-                                    InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (No signal)", Color.Red);
+                                    InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Extremely low)", Color.Red);
                             }
                             catch
                             {
@@ -2856,23 +2878,26 @@ namespace NBST
                             WriteLogFile(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, lat, lon);
                             PlotData(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, TickStart++);
 
-                            if (rfCxt.Count > 0)
+                            if (rfCxt.Count < rfCxt.Loop)
                             {
                                 UInt32 t = Tick_DifMs(thisTick);
 
                                 if ((t > 0) && (t < rfCxt.Delay))
                                     Thread.Sleep((int)(rfCxt.Delay - t));
 
-                                rfCxt.Count--;
+                                rfCxt.Count++;
                                 thisTick = Tick_Get();
-                                threadCxt.DoNext = ThreadTask.GET_LOCATION;
+                                threadCxt.DoNext = ThreadTask.CMD_GET_SIGNAL_QUALITY;
                             }
                             else if (threadCxt.Mode == ThreadMode.RF_TEST)
                                 threadCxt.DoNext = ThreadTask.CLOSE_APP;
                             else
                             {
                                 if (moduleInfo.Ip != null)
+                                {
+                                    rfCxt.Count = 0;
                                     threadCxt.DoNext++;
+                                }
                                 else
                                 {
                                     threadCxt.DoNext = ThreadTask.CLOSE_APP;
@@ -3194,6 +3219,7 @@ namespace NBST
             else
                 bt_Download_Update(null);
 
+            Log_Deinit(null);
             threadCxt.Task.Abort();
             threadCxt.Task.Interrupt();
             threadCxt.Task.Abort();
