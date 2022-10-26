@@ -61,6 +61,15 @@ namespace NBST.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to No,Time,Device Name,IMEI,CIMI,CCID,APN,TAC,Cell ID,RSRP,RSRP State,RSRQ,RSRQ State,Device LAT,Device LON,Cell LAT,Cell LON,Download Success,Note.
+        /// </summary>
+        internal static string csv_header {
+            get {
+                return ResourceManager.GetString("csv_header", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to ];
         ///
         ///line=a(:,1);

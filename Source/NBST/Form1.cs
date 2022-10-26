@@ -18,9 +18,9 @@ using System.Runtime.ConstrainedExecution;
 using System.Windows.Forms.VisualStyles;
 using System.Net;
 using System.Device.Location;
-using Spire.Xls;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 using System.Security.Policy;
+using System.Drawing.Imaging;
 
 namespace NBST
 {
@@ -93,6 +93,7 @@ namespace NBST
             public long sum;
         }
 
+        /*
         private struct FileParseCxt
         {
             public byte[] Data;
@@ -100,7 +101,7 @@ namespace NBST
             public int Index;
             public int Count;
             public int DoNext;
-        }
+        }*/
 
         private struct CmdCxt
         {
@@ -147,7 +148,9 @@ namespace NBST
             public string Operator;
             public string NetworkType;
             public string Rsrp;
+            public string RsrpQty;
             public string Rsrq;
+            public string RsrqQty;
             public string Tac;
             public string CellID;
             public string CellLon;
@@ -162,6 +165,7 @@ namespace NBST
             public string OpDns; // operator DNS
             public string OpAltDns; // operator alternator DNS
             public string UserDns;
+            public string Note;
         }
 
         private ThreadCxt threadCxt = new ThreadCxt
@@ -198,7 +202,9 @@ namespace NBST
             Operator = null,
             NetworkType = null,
             Rsrp = null,
+            RsrpQty = null,
             Rsrq = null,
+            RsrqQty = null,
             Tac = null,
             CellID = null,
             CellLon = null,
@@ -212,7 +218,8 @@ namespace NBST
             OpApn = null,
             OpDns = null,
             OpAltDns = null,
-            UserDns = null
+            UserDns = null,
+            Note = null,
         };
 
         static ASCIIEncoding encoding = new ASCIIEncoding();
@@ -225,7 +232,7 @@ namespace NBST
         private volatile bool printableMode = true;
         private StreamWriter sW = null;
         private string logfileName = null;
-        private volatile int LogCount = 0;
+        //private volatile int LogCount = 0;
         private long line = 0;
         private UInt32 TickStart = 0;
         private volatile string portName = null;
@@ -234,7 +241,7 @@ namespace NBST
         private volatile UInt32 respWait = 250;
         private double lon = -999.0;
         private double lat = -999.0;
-        private Workbook workbook = new Workbook();
+        //private Workbook workbook = new Workbook();
 
         private string[] UsbPid = new string[5]
         { 
@@ -751,6 +758,25 @@ namespace NBST
         #endregion
 
         #region "Log functions"
+        private bool IsNewRecord(ModuleInfo newData, ModuleInfo oldData)
+        {
+            if (newData.Imei != oldData.Imei)
+                return true;
+
+            if (newData.Cimi != oldData.Cimi)
+                return true;
+
+            if (newData.Tac != oldData.Tac)
+                return true;
+
+            if (newData.CellID != oldData.CellID)
+                return true;
+
+            if (newData.Apn != oldData.Apn)
+                return true;
+
+            return false;
+        }
 
         private string FileNameGenerate(string prefix)
         {
@@ -759,13 +785,115 @@ namespace NBST
             return s;
         }
 
-        private void WriteExcelFile(ModuleInfo info, int count, int passed, string note)
+        private void SaveInfoLog(string msg)
         {
             if (InvokeRequired)
             {
-                this.Invoke(new Action<ModuleInfo, int, int, string>(WriteExcelFile), new object[] { info, count, passed, note });
+                this.Invoke(new Action<string>(SaveInfoLog), new object[] { msg });
                 return;
             }
+
+            StreamWriter slog = null;
+            string fname = "INT_" + logfileName + ".txt";
+
+            if(!File.Exists(fname))
+            {
+                slog = new StreamWriter(fname);
+                slog.Close();
+            }
+
+            slog = File.AppendText(fname);
+            slog.WriteLine(rtb_Info.Text);
+            slog.Close();
+        }
+
+        private void SaveCmdLog(string msg)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(SaveCmdLog), new object[] {msg});
+                return;
+            }
+
+            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabGraph"];
+
+            string fname = "CMD_" + logfileName + ".txt";
+            StreamWriter slog = null;
+
+            if (!File.Exists(fname))
+            {
+                slog = new StreamWriter(fname);
+                slog.Close();
+            }
+
+            slog = File.AppendText(fname);
+            slog.WriteLine(rtb_Log.Text);
+            slog.Close();
+
+            for (int i = 0; i < 100; i++)
+                Thread.Sleep(10);
+
+            Rectangle bounds = this.Bounds;
+
+            using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height))
+            {
+                using (Graphics g = Graphics.FromImage(bitmap))
+                {
+                    g.CopyFromScreen(new Point(bounds.Left, bounds.Top), Point.Empty, bounds.Size);
+                }
+
+                bitmap.Save("CAP_" + logfileName + ".png", ImageFormat.Png);
+            }
+        }
+
+        private void WriteExcelFile(ModuleInfo info, int count, int failed)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<ModuleInfo, int, int>(WriteExcelFile), new object[] { info, count, failed });
+                return;
+            }
+
+            string s = "\n";
+
+            s += (++line).ToString() + ",";
+            s += "\"" + DateTime.Now.ToShortDateString() + "\",";
+            s += info.Name + ",";
+            s += info.Imei + ",";
+            s += info.Cimi + ",";
+            s += info.Ccid + ",";
+            s += info.Apn + ",";
+
+            try
+            {
+                s += Convert.ToUInt32(info.Tac, 16).ToString() + ",";
+            }
+            catch
+            {
+                s += "Unknown,";
+            }
+
+            try
+            {
+                s += Convert.ToUInt32(info.CellID, 16).ToString() + ",";
+            }
+            catch
+            {
+                s += "Unknown,";
+            }
+
+            s += info.Rsrp + ",";
+            s += info.RsrpQty + ",";
+            s += info.Rsrq + ",";
+            s += info.RsrqQty + ",";
+            s += info.DeviceLat + ",";
+            s += info.DeviceLon + ",";
+            s += info.CellLat + ",";
+            s += info.CellLon + ",";
+            s += "\"" + (count - failed).ToString() + "/" + count.ToString() + "\",";
+            s += "\"" + info.Note + "\"";
+
+            sW.Write(s);
         }
 
         private void ExcelFile_Deinit(string msg)
@@ -778,49 +906,57 @@ namespace NBST
 
             if (sW != null)
             {
-                StreamWriter slog = new StreamWriter(logfileName + ".txt");
-
-                slog.WriteLine(rtb_Log.Text);
-                slog.Close();
-                sW.WriteLine(NBST.Properties.Resources.footer);
-
                 sW.Close();
-                PrintDebug("\nLog file " + logfileName + ".m has been saved");
-                Thread.Sleep(1000);
                 sW = null;
+                SaveCmdLog(null);
+                PrintDebug("\nLog files have been saved");
+                Thread.Sleep(1000);
             }
         }
 
-        private void ExcelFille_Init(string msg)
+        private void ExcelFile_Init(string msg)
         {
             if (InvokeRequired)
             {
-                this.Invoke(new Action<string>(ExcelFille_Init), new object[] { msg });
+                this.Invoke(new Action<string>(ExcelFile_Init), new object[] { msg });
                 return;
             }
 
-            ExcelFile_Deinit(null);
-            logfileName = FileNameGenerate("NBST_");
+            logfileName = FileNameGenerate(null);
 
-            try
+            if (File.Exists("Log.csv"))
+            {
+                StreamReader sR = new StreamReader("Log.csv");
+                string s = sR.ReadToEnd();
+
+                sR.Close();
+                ReplaceStr(ref s, '\r', (char)0x00);
+
+                char[] arr = s.ToCharArray();
+                line = 0;
+
+                foreach (char c in arr)
+                {
+                    if (c == '\n')
+                        line++;
+                }
+
+                if (line > 0)
+                    line--;
+            }
+            else
             {
                 line = 0;
-                sW = new StreamWriter(logfileName + ".m");
-                sW.WriteLine("%{");
-                sW.WriteLine(rtb_Info.Text);
-                sW.WriteLine("%}");
-                sW.WriteLine(NBST.Properties.Resources.header);
-                sW.WriteLine("\nstartTime=" + ToUnixTimeSeconds().ToString() + ";");
-                sW.WriteLine("\na=[");
+                sW = new StreamWriter("Log.csv");
+                sW.Write(NBST.Properties.Resources.csv_header);
+                sW.Close();
+                rtb_Log.Text = "New log file Log.csv has been created";
+            }
 
-                rtb_Log.Text = "New log file " + logfileName + ".m has been created";
-            }
-            catch
-            {
-                PrintDebug("\nFile name \"" + logfileName + "\"error");
-            }
+            sW = File.AppendText("Log.csv");
         }
 
+        /*
         private void WriteLogFile(int rsrp, int rsrq, int rssi, double lat, double lon)
         {
             if (InvokeRequired)
@@ -903,7 +1039,7 @@ namespace NBST
                 PrintDebug("\nFile name \"" + logfileName + "\"error");
             }
         }
-
+        */
         private void InfoAppendText(string msg)
         {
             if (InvokeRequired)
@@ -1756,7 +1892,8 @@ namespace NBST
             }
 
             sW.Close();
-            Log_Deinit(null);
+            //Log_Deinit(null);
+            ExcelFile_Deinit(null);
         }
         #endregion
 
@@ -1774,7 +1911,8 @@ namespace NBST
                 return;
             }
 
-            Log_Deinit(null);
+            //Log_Deinit(null);
+            ExcelFile_Deinit(null);
             bt_Download.Enabled = true;
             bt_Reboot.Enabled = true;
             bt_Scan.Enabled = true;
@@ -2059,14 +2197,16 @@ namespace NBST
             rtb_Log.ScrollToCaret();
 
             if (line >= 1000)
-                Log_Init(null);
+            {
+                //Log_Init(null);
+                SaveCmdLog(null);
+                rtb_Log.Clear();
+            }
         }
 
         private void rtb_Log_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (sW != null)
-                Log_Init(null);
-
+            SaveCmdLog(null);
             rtb_Log.Clear();
         }
 
@@ -2214,32 +2354,12 @@ namespace NBST
                 cout = 0
             };
 
+            ExcelFile_Init(null);
             downloadCxt.Count = 0;
 
             cmdCxt.buffer = new char[4096];
             cmdCxt.donext = 0;
             cmdCxt.findIdx = 0;
-
-            moduleInfo.Name = null;
-            moduleInfo.Imei = null;
-            moduleInfo.Cimi = null;
-            moduleInfo.Ccid = null;
-            moduleInfo.Operator = null;
-            moduleInfo.NetworkType = null;
-            moduleInfo.Rsrp = null;
-            moduleInfo.Rsrq = null;
-            moduleInfo.Tac = null;
-            moduleInfo.CellID = null;
-            moduleInfo.CellLon = null;
-            moduleInfo.CellLat = null;
-            moduleInfo.DeviceLon = null;
-            moduleInfo.DeviceLat = null;
-            moduleInfo.Csq = null;
-            moduleInfo.BitErrRate = null;
-            moduleInfo.Ip = null;
-            moduleInfo.OpApn = null;
-            moduleInfo.OpDns = null;
-            moduleInfo.OpAltDns = null;
 
             threadCxt.DoNext = ThreadTask.INIT_APP;
             threadCxt.ToDo = ThreadTask.INIT_APP;
@@ -2291,8 +2411,33 @@ namespace NBST
                                         InfoAppendText("Done\n");
                                     }
 
+                                    moduleInfo.Name = null;
+                                    moduleInfo.Imei = null;
+                                    moduleInfo.Cimi = null;
+                                    moduleInfo.Ccid = null;
+                                    moduleInfo.Operator = null;
+                                    moduleInfo.NetworkType = null;
+                                    moduleInfo.Rsrp = null;
+                                    moduleInfo.RsrpQty = null;
+                                    moduleInfo.Rsrq = null;
+                                    moduleInfo.RsrqQty = null;
+                                    moduleInfo.Tac = null;
+                                    moduleInfo.CellID = null;
+                                    moduleInfo.CellLon = null;
+                                    moduleInfo.CellLat = null;
+                                    moduleInfo.DeviceLon = null;
+                                    moduleInfo.DeviceLat = null;
+                                    moduleInfo.Csq = null;
+                                    moduleInfo.BitErrRate = null;
+                                    moduleInfo.Ip = null;
+                                    moduleInfo.OpApn = null;
+                                    moduleInfo.OpDns = null;
+                                    moduleInfo.OpAltDns = null;
+                                    moduleInfo.Note = null;
+
                                     Graph_Init(null);
-                                    Log_Init(null);
+                                    SaveInfoLog(null);
+                                    //Log_Init(null);
                                     thisTick = Tick_Get();
                                     threadCxt.DoNext++;
                                 }
@@ -2848,20 +2993,39 @@ namespace NBST
                                 rfCxt.Rsrp.average = (int)(rfCxt.Rsrp.sum / (long)rfCxt.Rsrp.cout);
 
                                 if (rfCxt.Rsrp.average >= -70)
+                                {
+                                    moduleInfo.RsrpQty = "Excellent";
                                     InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Excellent)", Color.Violet);
+                                }
                                 else if (rfCxt.Rsrp.average >= -80)
+                                {
+                                    moduleInfo.RsrpQty = "Good";
                                     InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Good)", Color.Blue);
+                                }
                                 else if (rfCxt.Rsrp.average >= -90)
+                                {
+                                    moduleInfo.RsrpQty = "Normal";
                                     InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Normal)", Color.Green);
+                                }
                                 else if (rfCxt.Rsrp.average >= -100)
+                                {
+                                    moduleInfo.RsrpQty = "Low";
                                     InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Low)", Color.Orange);
+                                }
                                 else if (rfCxt.Rsrp.average >= -110)
+                                {
+                                    moduleInfo.RsrpQty = "Very low";
                                     InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Very low)", Color.OrangeRed);
+                                }
                                 else
+                                {
+                                    moduleInfo.RsrpQty = "Extremely low";
                                     InfoAppendText(rfCxt.Rsrp.average.ToString() + "dBm (Extremely low)", Color.Red);
+                                }
                             }
                             catch
                             {
+                                moduleInfo.RsrpQty = "Unknown";
                                 InfoAppendText("Unknown", Color.Red);
                             }
 
@@ -2875,25 +3039,46 @@ namespace NBST
                                 rfCxt.Rsrq.average = (int)(rfCxt.Rsrq.sum / (long)rfCxt.Rsrq.cout);
 
                                 if (rfCxt.Rsrq.average >= -8)
+                                {
+                                    moduleInfo.RsrqQty = "Excellent";
                                     InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Excellent)", Color.Violet);
+                                }
                                 else if (rfCxt.Rsrq.average > -10)
+                                {
+                                    moduleInfo.RsrqQty = "Good";
                                     InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Good)", Color.Blue);
+                                }
                                 else if (rfCxt.Rsrq.average > -15)
+                                {
+                                    moduleInfo.RsrqQty = "Normal";
                                     InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Normal)", Color.Green);
+                                }
                                 else if (rfCxt.Rsrq.average > -18)
+                                {
+                                    moduleInfo.RsrqQty = "Low";
                                     InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Low)", Color.Orange);
+                                }
                                 else if (rfCxt.Rsrq.average > -20)
+                                {
+                                    moduleInfo.RsrqQty = "Very low";
                                     InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Very low)", Color.OrangeRed);
+                                }
                                 else
+                                {
+                                    moduleInfo.RsrqQty = "Extremely low";
                                     InfoAppendText(rfCxt.Rsrq.average.ToString() + "dB (Extremely low)", Color.Red);
+                                }
                             }
                             catch
                             {
+                                moduleInfo.RsrqQty = "Unknown";
                                 InfoAppendText("Unknown", Color.Red);
                             }
 
                             if ((lat != (-999.0)) && (lon != (-999.0)))
                             {
+                                moduleInfo.CellLat = "0.000000";
+                                moduleInfo.CellLon = "0.000000";
                                 moduleInfo.DeviceLat = lat.ToString("0.000000");
                                 moduleInfo.DeviceLon = lon.ToString("0.000000");
 
@@ -2901,14 +3086,18 @@ namespace NBST
                                 InfoAppendText(tmpStr);
                             }
 
+                            moduleInfo.Note = "Boot time " + BootTime.ToString() + "ms";
                             tmpStr =     "\nBoot time:       " + BootTime.ToString() + " ms";
 
                             if (BootTime >= 30000)
+                            {
                                 tmpStr += " (Slow)";
+                                moduleInfo.Note += " (Slow)";
+                            }
 
                             InfoAppendText(tmpStr);
-                            //WriteExcelFile();
-                            WriteLogFile(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, lat, lon);
+                            //WriteExcelFile(moduleInfo, downloadCxt.Loop, downloadCxt.Failed, tmpStr);
+                            //WriteLogFile(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, lat, lon);
                             PlotData(rfCxt.Rsrp.value, rfCxt.Rsrq.value, rfCxt.Rssi.value, TickStart++);
 
                             if (rfCxt.Count < rfCxt.Loop)
@@ -2922,19 +3111,24 @@ namespace NBST
                                 thisTick = Tick_Get();
                                 threadCxt.DoNext = ThreadTask.CMD_GET_SIGNAL_QUALITY;
                             }
-                            else if (threadCxt.Mode == ThreadMode.RF_TEST)
-                                threadCxt.DoNext = ThreadTask.CLOSE_APP;
                             else
                             {
-                                if (moduleInfo.Ip != null)
-                                {
-                                    rfCxt.Count = 0;
-                                    threadCxt.DoNext++;
-                                }
+                                WriteExcelFile(moduleInfo, downloadCxt.Loop, downloadCxt.Failed);
+
+                                if (threadCxt.Mode == ThreadMode.RF_TEST)
+                                    threadCxt.DoNext = ThreadTask.CLOSE_APP;
                                 else
                                 {
-                                    threadCxt.DoNext = ThreadTask.CLOSE_APP;
-                                    InfoAppendText("\n\nCan not access the internet", Color.Red);
+                                    if (moduleInfo.Ip != null)
+                                    {
+                                        rfCxt.Count = 0;
+                                        threadCxt.DoNext++;
+                                    }
+                                    else
+                                    {
+                                        threadCxt.DoNext = ThreadTask.CLOSE_APP;
+                                        InfoAppendText("\n\nCan not access the internet", Color.Red);
+                                    }
                                 }
                             }
                         }
@@ -3261,7 +3455,9 @@ namespace NBST
             else
                 bt_Download_Update(null);
 
-            Log_Deinit(null);
+            //Log_Deinit(null);
+            SaveInfoLog(null);
+            ExcelFile_Deinit(null);
             threadCxt.Task.Abort();
             threadCxt.Task.Interrupt();
             threadCxt.Task.Abort();
