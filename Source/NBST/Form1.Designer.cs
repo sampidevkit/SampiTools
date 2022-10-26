@@ -35,6 +35,8 @@
             this.cb_ViewMode = new System.Windows.Forms.ComboBox();
             this.zedGraphControl1 = new ZedGraph.ZedGraphControl();
             this.tabLog = new System.Windows.Forms.TabPage();
+            this.ckb_Printable = new System.Windows.Forms.CheckBox();
+            this.ckb_DebugEn = new System.Windows.Forms.CheckBox();
             this.rtb_Log = new System.Windows.Forms.RichTextBox();
             this.rtb_Info = new System.Windows.Forms.RichTextBox();
             this.bt_Scan = new System.Windows.Forms.Button();
@@ -48,7 +50,6 @@
             this.lb_Percent = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.bt_Download = new System.Windows.Forms.Button();
-            this.ckb_DebugEn = new System.Windows.Forms.CheckBox();
             this.cb_Apn = new System.Windows.Forms.ComboBox();
             this.cb_Url = new System.Windows.Forms.ComboBox();
             this.label3 = new System.Windows.Forms.Label();
@@ -58,7 +59,6 @@
             this.label5 = new System.Windows.Forms.Label();
             this.bt_CMD = new System.Windows.Forms.Button();
             this.cb_CMD = new System.Windows.Forms.ComboBox();
-            this.ckb_Printable = new System.Windows.Forms.CheckBox();
             this.nud_RebootWait = new System.Windows.Forms.NumericUpDown();
             this.label6 = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
@@ -68,6 +68,7 @@
             this.lklb_GMaps = new System.Windows.Forms.LinkLabel();
             this.lklb_CellFind = new System.Windows.Forms.LinkLabel();
             this.lklb_LogFolder = new System.Windows.Forms.LinkLabel();
+            this.lklb_Screenshot = new System.Windows.Forms.LinkLabel();
             this.tabCtrl1.SuspendLayout();
             this.tabGraph.SuspendLayout();
             this.tabLog.SuspendLayout();
@@ -97,7 +98,7 @@
             this.tabGraph.Location = new System.Drawing.Point(4, 22);
             this.tabGraph.Name = "tabGraph";
             this.tabGraph.Padding = new System.Windows.Forms.Padding(3);
-            this.tabGraph.Size = new System.Drawing.Size(624, 471);
+            this.tabGraph.Size = new System.Drawing.Size(624, 460);
             this.tabGraph.TabIndex = 0;
             this.tabGraph.Text = "Graph";
             // 
@@ -108,7 +109,7 @@
             this.cb_ViewMode.Items.AddRange(new object[] {
             "Compact",
             "Scroll"});
-            this.cb_ViewMode.Location = new System.Drawing.Point(9, 441);
+            this.cb_ViewMode.Location = new System.Drawing.Point(8, 431);
             this.cb_ViewMode.Name = "cb_ViewMode";
             this.cb_ViewMode.Size = new System.Drawing.Size(81, 21);
             this.cb_ViewMode.TabIndex = 4;
@@ -130,7 +131,7 @@
             this.zedGraphControl1.ScrollMinX = 0D;
             this.zedGraphControl1.ScrollMinY = 0D;
             this.zedGraphControl1.ScrollMinY2 = 0D;
-            this.zedGraphControl1.Size = new System.Drawing.Size(612, 459);
+            this.zedGraphControl1.Size = new System.Drawing.Size(612, 448);
             this.zedGraphControl1.TabIndex = 3;
             this.zedGraphControl1.UseExtendedPrintDialog = true;
             // 
@@ -146,6 +147,36 @@
             this.tabLog.Size = new System.Drawing.Size(624, 460);
             this.tabLog.TabIndex = 1;
             this.tabLog.Text = "Log";
+            // 
+            // ckb_Printable
+            // 
+            this.ckb_Printable.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.ckb_Printable.AutoSize = true;
+            this.ckb_Printable.BackColor = System.Drawing.SystemColors.Info;
+            this.ckb_Printable.Checked = true;
+            this.ckb_Printable.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ckb_Printable.Location = new System.Drawing.Point(531, 10);
+            this.ckb_Printable.Name = "ckb_Printable";
+            this.ckb_Printable.Size = new System.Drawing.Size(67, 17);
+            this.ckb_Printable.TabIndex = 22;
+            this.ckb_Printable.Text = "Printable";
+            this.ckb_Printable.UseVisualStyleBackColor = false;
+            this.ckb_Printable.CheckedChanged += new System.EventHandler(this.ckb_Printable_CheckedChanged);
+            // 
+            // ckb_DebugEn
+            // 
+            this.ckb_DebugEn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.ckb_DebugEn.AutoSize = true;
+            this.ckb_DebugEn.BackColor = System.Drawing.SystemColors.Info;
+            this.ckb_DebugEn.Checked = true;
+            this.ckb_DebugEn.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ckb_DebugEn.Location = new System.Drawing.Point(467, 10);
+            this.ckb_DebugEn.Name = "ckb_DebugEn";
+            this.ckb_DebugEn.Size = new System.Drawing.Size(58, 17);
+            this.ckb_DebugEn.TabIndex = 12;
+            this.ckb_DebugEn.Text = "Debug";
+            this.ckb_DebugEn.UseVisualStyleBackColor = false;
+            this.ckb_DebugEn.CheckedChanged += new System.EventHandler(this.ckb_DebugEn_CheckedChanged);
             // 
             // rtb_Log
             // 
@@ -295,21 +326,6 @@
             this.bt_Download.UseVisualStyleBackColor = true;
             this.bt_Download.Click += new System.EventHandler(this.bt_Download_Click);
             // 
-            // ckb_DebugEn
-            // 
-            this.ckb_DebugEn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.ckb_DebugEn.AutoSize = true;
-            this.ckb_DebugEn.BackColor = System.Drawing.SystemColors.Info;
-            this.ckb_DebugEn.Checked = true;
-            this.ckb_DebugEn.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ckb_DebugEn.Location = new System.Drawing.Point(467, 10);
-            this.ckb_DebugEn.Name = "ckb_DebugEn";
-            this.ckb_DebugEn.Size = new System.Drawing.Size(58, 17);
-            this.ckb_DebugEn.TabIndex = 12;
-            this.ckb_DebugEn.Text = "Debug";
-            this.ckb_DebugEn.UseVisualStyleBackColor = false;
-            this.ckb_DebugEn.CheckedChanged += new System.EventHandler(this.ckb_DebugEn_CheckedChanged);
-            // 
             // cb_Apn
             // 
             this.cb_Apn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
@@ -430,21 +446,6 @@
             this.cb_CMD.Size = new System.Drawing.Size(594, 21);
             this.cb_CMD.TabIndex = 21;
             this.cb_CMD.Text = "AT\\r";
-            // 
-            // ckb_Printable
-            // 
-            this.ckb_Printable.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.ckb_Printable.AutoSize = true;
-            this.ckb_Printable.BackColor = System.Drawing.SystemColors.Info;
-            this.ckb_Printable.Checked = true;
-            this.ckb_Printable.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ckb_Printable.Location = new System.Drawing.Point(531, 10);
-            this.ckb_Printable.Name = "ckb_Printable";
-            this.ckb_Printable.Size = new System.Drawing.Size(67, 17);
-            this.ckb_Printable.TabIndex = 22;
-            this.ckb_Printable.Text = "Printable";
-            this.ckb_Printable.UseVisualStyleBackColor = false;
-            this.ckb_Printable.CheckedChanged += new System.EventHandler(this.ckb_Printable_CheckedChanged);
             // 
             // nud_RebootWait
             // 
@@ -584,12 +585,25 @@
             this.lklb_LogFolder.Text = "Log Folder";
             this.lklb_LogFolder.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lklb_LogFolder_LinkClicked);
             // 
+            // lklb_Screenshot
+            // 
+            this.lklb_Screenshot.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.lklb_Screenshot.AutoSize = true;
+            this.lklb_Screenshot.Location = new System.Drawing.Point(941, 582);
+            this.lklb_Screenshot.Name = "lklb_Screenshot";
+            this.lklb_Screenshot.Size = new System.Drawing.Size(66, 13);
+            this.lklb_Screenshot.TabIndex = 32;
+            this.lklb_Screenshot.TabStop = true;
+            this.lklb_Screenshot.Text = "Screen Shot";
+            this.lklb_Screenshot.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lklb_Screenshot_LinkClicked);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(1019, 601);
+            this.Controls.Add(this.lklb_Screenshot);
             this.Controls.Add(this.lklb_LogFolder);
             this.Controls.Add(this.lklb_CellFind);
             this.Controls.Add(this.lklb_GMaps);
@@ -676,6 +690,7 @@
         private System.Windows.Forms.LinkLabel lklb_GMaps;
         private System.Windows.Forms.LinkLabel lklb_CellFind;
         private System.Windows.Forms.LinkLabel lklb_LogFolder;
+        private System.Windows.Forms.LinkLabel lklb_Screenshot;
     }
 }
 

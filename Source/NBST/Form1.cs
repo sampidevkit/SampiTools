@@ -241,6 +241,8 @@ namespace NBST
         private volatile UInt32 respWait = 250;
         private double lon = -999.0;
         private double lat = -999.0;
+        private string infologStr = null;
+        private string cmdlogStr = null;
         //private Workbook workbook = new Workbook();
 
         private string[] UsbPid = new string[5]
@@ -639,6 +641,7 @@ namespace NBST
         #endregion
 
         #region "Debug functions"
+
         private void PrintDebug(string msg, Color color)
         {
             if (InvokeRequired)
@@ -785,55 +788,22 @@ namespace NBST
             return s;
         }
 
-        private void SaveInfoLog(string msg)
+        private void ScreenShoot(bool full)
         {
             if (InvokeRequired)
             {
-                this.Invoke(new Action<string>(SaveInfoLog), new object[] { msg });
+                this.Invoke(new Action<bool>(ScreenShoot), new object[] { full });
                 return;
             }
-
-            StreamWriter slog = null;
-            string fname = "INT_" + logfileName + ".txt";
-
-            if(!File.Exists(fname))
-            {
-                slog = new StreamWriter(fname);
-                slog.Close();
-            }
-
-            slog = File.AppendText(fname);
-            slog.WriteLine(rtb_Info.Text);
-            slog.Close();
-        }
-
-        private void SaveCmdLog(string msg)
-        {
-            if (InvokeRequired)
-            {
-                this.Invoke(new Action<string>(SaveCmdLog), new object[] {msg});
-                return;
-            }
-
-            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabGraph"];
-
-            string fname = "CMD_" + logfileName + ".txt";
-            StreamWriter slog = null;
-
-            if (!File.Exists(fname))
-            {
-                slog = new StreamWriter(fname);
-                slog.Close();
-            }
-
-            slog = File.AppendText(fname);
-            slog.WriteLine(rtb_Log.Text);
-            slog.Close();
-
-            for (int i = 0; i < 100; i++)
-                Thread.Sleep(10);
 
             Rectangle bounds = this.Bounds;
+            string subfix = "_" + Tick_Get().ToString();
+
+            if (full)
+            {
+                subfix += "_Full";
+                bounds = Screen.PrimaryScreen.Bounds;
+            }
 
             using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height))
             {
@@ -842,8 +812,88 @@ namespace NBST
                     g.CopyFromScreen(new Point(bounds.Left, bounds.Top), Point.Empty, bounds.Size);
                 }
 
-                bitmap.Save("CAP_" + logfileName + ".png", ImageFormat.Png);
+                if (logfileName != null)
+                    bitmap.Save("CAP_" + logfileName + subfix + ".png", ImageFormat.Png);
+                else
+                {
+                    bitmap.Save("CAP_" + FileNameGenerate(null) + subfix + ".png", ImageFormat.Png);
+                }
             }
+        }
+
+        private void SaveInfoLog(string msg)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(SaveInfoLog), new object[] { msg });
+                return;
+            }
+
+            bool cont = true;
+            StreamWriter slog = null;
+            string fname = "INT_" + logfileName + ".txt";
+
+            while (cont)
+            {
+                try
+                {
+                    if (!File.Exists(fname))
+                    {
+                        slog = new StreamWriter(fname);
+                        slog.Close();
+                    }
+
+                    slog = File.AppendText(fname);
+                    slog.WriteLine(rtb_Info.Text);
+                    slog.Close();
+                    cont = false;
+                }
+                catch (Exception ex)
+                {
+                    if (MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.RetryCancel) == DialogResult.Cancel)
+                        cont = false;
+                }
+            }
+        }
+
+        private void SaveCmdLog(string msg)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action<string>(SaveCmdLog), new object[] { msg });
+                return;
+            }
+
+            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabGraph"];
+            tabCtrl1.Update();
+
+            string fname = "CMD_" + logfileName + ".txt";
+            StreamWriter slog = null;
+            bool cont = true;
+
+            while (cont)
+            {
+                try
+                {
+                    if (!File.Exists(fname))
+                    {
+                        slog = new StreamWriter(fname);
+                        slog.Close();
+                    }
+
+                    slog = File.AppendText(fname);
+                    slog.WriteLine(rtb_Log.Text);
+                    slog.Close();
+                    cont = false;
+                }
+                catch (Exception ex)
+                {
+                    if (MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.RetryCancel) == DialogResult.Cancel)
+                        cont = false;
+                }
+            }
+
+            ScreenShoot(false);
         }
 
         private void WriteExcelFile(ModuleInfo info, int count, int failed)
@@ -893,7 +943,23 @@ namespace NBST
             s += "\"" + (count - failed).ToString() + "/" + count.ToString() + "\",";
             s += "\"" + info.Note + "\"";
 
-            sW.Write(s);
+            bool cont = true;
+
+            while (cont)
+            {
+                try
+                {
+                    if (sW != null)
+                        sW.Write(s);
+
+                    cont = false;
+                }
+                catch (Exception ex)
+                {
+                    if (MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.RetryCancel) == DialogResult.Cancel)
+                        cont = false;
+                }
+            }
         }
 
         private void ExcelFile_Deinit(string msg)
@@ -904,13 +970,28 @@ namespace NBST
                 return;
             }
 
-            if (sW != null)
+            bool cont = true;
+
+            while (cont)
             {
-                sW.Close();
-                sW = null;
-                SaveCmdLog(null);
-                PrintDebug("\nLog files have been saved");
-                Thread.Sleep(1000);
+                try
+                {
+                    if (sW != null)
+                    {
+                        sW.Close();
+                        sW = null;
+                        SaveCmdLog(null);
+                        PrintDebug("\nLog files have been saved");
+                        Thread.Sleep(1000);
+                    }
+
+                    cont = false;
+                }
+                catch (Exception ex)
+                {
+                    if (MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.RetryCancel) == DialogResult.Cancel)
+                        cont = false;
+                }
             }
         }
 
@@ -922,124 +1003,56 @@ namespace NBST
                 return;
             }
 
+            bool cont = true;
             logfileName = FileNameGenerate(null);
 
-            if (File.Exists("Log.csv"))
+            while (cont)
             {
-                StreamReader sR = new StreamReader("Log.csv");
-                string s = sR.ReadToEnd();
-
-                sR.Close();
-                ReplaceStr(ref s, '\r', (char)0x00);
-
-                char[] arr = s.ToCharArray();
-                line = 0;
-
-                foreach (char c in arr)
+                try
                 {
-                    if (c == '\n')
-                        line++;
+                    if (File.Exists("Log.csv"))
+                    {
+                        StreamReader sR = new StreamReader("Log.csv");
+                        string s = sR.ReadToEnd();
+
+                        sR.Close();
+                        ReplaceStr(ref s, '\r', (char)0x00);
+
+                        char[] arr = s.ToCharArray();
+                        line = 0;
+
+                        foreach (char c in arr)
+                        {
+                            if (c == '\n')
+                                line++;
+                        }
+
+                        if (line > 0)
+                            line--;
+                    }
+                    else
+                    {
+                        line = 0;
+                        sW = new StreamWriter("Log.csv");
+                        sW.Write(NBST.Properties.Resources.csv_header);
+                        sW.Close();
+                        rtb_Log.Text = "New log file Log.csv has been created";
+                    }
+
+                    sW = File.AppendText("Log.csv");
+                    cont = false;
                 }
-
-                if (line > 0)
-                    line--;
-            }
-            else
-            {
-                line = 0;
-                sW = new StreamWriter("Log.csv");
-                sW.Write(NBST.Properties.Resources.csv_header);
-                sW.Close();
-                rtb_Log.Text = "New log file Log.csv has been created";
-            }
-
-            sW = File.AppendText("Log.csv");
-        }
-
-        /*
-        private void WriteLogFile(int rsrp, int rsrq, int rssi, double lat, double lon)
-        {
-            if (InvokeRequired)
-            {
-                this.Invoke(new Action<int, int, int, double, double>(WriteLogFile), new object[] { rsrp, rsrq, rssi, lat, lon });
-                return;
-            }
-
-            if (sW != null)
-            {
-                line++;
-
-                string s = "\n% ";
-
-                if ((lat != (-999.0)) && (lon != (-999.0)))
-                    s += "https://maps.google.com/maps?hl=en&q=" + lat.ToString("0.000000") + "," + lon.ToString("0.000000") + "\n";
-                else
-                    s += "Can not find your location\n";
-
-                s += line.ToString() + " " + rsrp.ToString() + " " + rsrq.ToString() + " " + rssi.ToString();
-                sW.WriteLine(s);
-
-                s = "\n" + line.ToString("D4") + " ";
-                s += DateTime.Now.ToShortDateString() + ", " + DateTime.Now.ToLongTimeString() + ": ";
-                s += lat.ToString() + ", " + lon.ToString();
-                s += ", RSRP=" + rsrp.ToString() + "dBm, RSRQ=" + rsrq.ToString() + "dB, RSSI=" + rssi.ToString() + "dB";
-                PrintDebug(s);
+                catch (Exception ex)
+                {
+                    if (MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.RetryCancel) == DialogResult.Cancel)
+                    {
+                        sW = null;
+                        cont = false;
+                    }
+                }
             }
         }
 
-        private void Log_Deinit(string msg)
-        {
-            if (InvokeRequired)
-            {
-                this.Invoke(new Action<string>(Log_Deinit), new object[] { msg });
-                return;
-            }
-
-            if (sW != null)
-            {
-                StreamWriter slog = new StreamWriter(logfileName + ".txt");
-
-                slog.WriteLine(rtb_Log.Text);
-                slog.Close();
-                sW.WriteLine(NBST.Properties.Resources.footer);
-                sW.WriteLine("%{");
-                sW.WriteLine(rtb_Info.Text);
-                sW.WriteLine("%}");
-                sW.Close();
-                PrintDebug("\nLog file " + logfileName + ".m has been saved");
-                Thread.Sleep(1000);
-                //rtb_Log.Clear();
-                sW = null;
-            }
-        }
-
-        private void Log_Init(string msg)
-        {
-            if (InvokeRequired)
-            {
-                this.Invoke(new Action<string>(Log_Init), new object[] { msg });
-                return;
-            }
-
-            Log_Deinit(null);
-            logfileName = FileNameGenerate("NBST_");
-
-            try
-            {
-                sW = new StreamWriter(logfileName + ".m");
-                sW.WriteLine(NBST.Properties.Resources.header);
-                sW.WriteLine("\nstartTime=" + ToUnixTimeSeconds().ToString() + ";");
-                sW.WriteLine("\na=[");
-
-                rtb_Log.Text = "New log file " + logfileName + ".m has been created";
-                line = 0;
-            }
-            catch
-            {
-                PrintDebug("\nFile name \"" + logfileName + "\"error");
-            }
-        }
-        */
         private void InfoAppendText(string msg)
         {
             if (InvokeRequired)
@@ -1792,14 +1805,14 @@ namespace NBST
             {
                 StreamReader sRUsbDevice = new StreamReader("SupportedDevices.txt");
                 string deviceStr = sRUsbDevice.ReadToEnd();
-                
+
                 sRUsbDevice.Close();
                 ReplaceStr(ref deviceStr, '\r', (char)0x00);
 
                 char[] deviceArr = deviceStr.ToCharArray();
                 int lineCount = 1;
 
-                foreach(char c in deviceArr)
+                foreach (char c in deviceArr)
                 {
                     if (c == '\n')
                         lineCount++;
@@ -1948,6 +1961,8 @@ namespace NBST
                 if (bt_Download.Text == "Download")
                 {
                     tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
+                    tabCtrl1.Update();
+
                     bt_RFTest.Enabled = false;
                     bt_Scan.Enabled = false;
                     bt_Reboot.Enabled = false;
@@ -1976,6 +1991,7 @@ namespace NBST
                 if (bt_RFTest.Text == "RF Test")
                 {
                     tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabGraph"];
+                    tabCtrl1.Update();
                     bt_Download.Enabled = false;
                     bt_Reboot.Enabled = false;
                     bt_Scan.Enabled = false;
@@ -1996,6 +2012,8 @@ namespace NBST
         private void bt_Reboot_Click(object sender, EventArgs e)
         {
             tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabLog"];
+            tabCtrl1.Update();
+
             bt_Download.Enabled = false;
             bt_Reboot.Enabled = false;
             bt_Scan.Enabled = false;
@@ -2367,7 +2385,7 @@ namespace NBST
             GeoCoordinateWatcher watcher = new GeoCoordinateWatcher();
             UInt32 gpsTick = Tick_Get();
             UInt32 thisTick = rebootWait + Tick_Get();
-            
+
             InfoWriteText("Reading module info... ");
 
             while (threadCxt.Enbale == 1)
@@ -3085,9 +3103,17 @@ namespace NBST
                                 tmpStr = "\nLocation:        " + moduleInfo.DeviceLat + "," + moduleInfo.DeviceLon;
                                 InfoAppendText(tmpStr);
                             }
+                            else
+                            {
+                                moduleInfo.CellLat = "0.000000";
+                                moduleInfo.CellLon = "0.000000";
+                                moduleInfo.DeviceLat = "0.000000";
+                                moduleInfo.DeviceLon = "0.000000";
+                                InfoAppendText("\nCan not locate your position");
+                            }
 
                             moduleInfo.Note = "Boot time " + BootTime.ToString() + "ms";
-                            tmpStr =     "\nBoot time:       " + BootTime.ToString() + " ms";
+                            tmpStr = "\nBoot time:       " + BootTime.ToString() + " ms";
 
                             if (BootTime >= 30000)
                             {
@@ -3505,6 +3531,11 @@ namespace NBST
         {
             lklb_LogFolder.LinkVisited = true;
             System.Diagnostics.Process.Start("explorer.exe", System.IO.Path.GetDirectoryName(Application.ExecutablePath));
+        }
+
+        private void lklb_Screenshot_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            ScreenShoot(true);
         }
         #endregion
 

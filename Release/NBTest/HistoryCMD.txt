@@ -1,0 +1,7 @@
+AT+CFUN=4\r
+AT#GPIO=3,1,0,1\r
+AT#GPIO=3,1,1,1\r
+AT+CPIN?\r
+AT#WS46=1\r
+AT+WS46=28\r
+AT\r
