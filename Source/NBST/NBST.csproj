@@ -105,6 +105,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="picture-icon.png" />
+    <None Include="broadcast-station-icon.png" />
+    <None Include="flag-blue-icon.png" />
+    <None Include="folder-icon.png" />
     <Content Include="License-LGPL.txt" />
     <Content Include="Martz90-Hex-Radio.ico" />
   </ItemGroup>

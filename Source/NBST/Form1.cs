@@ -241,8 +241,6 @@ namespace NBST
         private volatile UInt32 respWait = 250;
         private double lon = -999.0;
         private double lat = -999.0;
-        private string infologStr = null;
-        private string cmdlogStr = null;
         //private Workbook workbook = new Workbook();
 
         private string[] UsbPid = new string[5]
@@ -796,6 +794,11 @@ namespace NBST
                 return;
             }
 
+            TabPage tab = tabCtrl1.SelectedTab;
+
+            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabGraph"];
+            tabCtrl1.Update();
+
             Rectangle bounds = this.Bounds;
             string subfix = "_" + Tick_Get().ToString();
 
@@ -819,6 +822,9 @@ namespace NBST
                     bitmap.Save("CAP_" + FileNameGenerate(null) + subfix + ".png", ImageFormat.Png);
                 }
             }
+
+            tabCtrl1.SelectedTab = tab;
+            tabCtrl1.Update();
         }
 
         private void SaveInfoLog(string msg)
@@ -831,7 +837,7 @@ namespace NBST
 
             bool cont = true;
             StreamWriter slog = null;
-            string fname = "INT_" + logfileName + ".txt";
+            string fname = "INF_" + logfileName + ".txt";
 
             while (cont)
             {
@@ -854,6 +860,8 @@ namespace NBST
                         cont = false;
                 }
             }
+
+            ScreenShoot(false);
         }
 
         private void SaveCmdLog(string msg)
@@ -863,9 +871,6 @@ namespace NBST
                 this.Invoke(new Action<string>(SaveCmdLog), new object[] { msg });
                 return;
             }
-
-            tabCtrl1.SelectedTab = tabCtrl1.TabPages["tabGraph"];
-            tabCtrl1.Update();
 
             string fname = "CMD_" + logfileName + ".txt";
             StreamWriter slog = null;
@@ -893,7 +898,7 @@ namespace NBST
                 }
             }
 
-            ScreenShoot(false);
+            //ScreenShoot(false);
         }
 
         private void WriteExcelFile(ModuleInfo info, int count, int failed)
@@ -1999,7 +2004,7 @@ namespace NBST
                     cb_Apn.Enabled = false;
                     cb_Dns.Enabled = false;
                     bt_RFTest.Text = "Stop";
-                    Thread_Init(ThreadMode.RF_TEST, 60, 1000);
+                    Thread_Init(ThreadMode.RF_TEST, 300, 1000);
                 }
                 else
                 {
@@ -2453,9 +2458,9 @@ namespace NBST
                                     moduleInfo.OpAltDns = null;
                                     moduleInfo.Note = null;
 
-                                    Graph_Init(null);
                                     SaveInfoLog(null);
                                     //Log_Init(null);
+                                    Graph_Init(null);
                                     thisTick = Tick_Get();
                                     threadCxt.DoNext++;
                                 }
@@ -2466,7 +2471,7 @@ namespace NBST
                                 }
                             }
                             else
-                                Thread.Sleep(250);
+                                Thread.Sleep(500);
                         }
                         break;
 
@@ -2614,7 +2619,7 @@ namespace NBST
                                 else
                                 {
                                     threadCxt.DoNext--;
-                                    Thread.Sleep(250);
+                                    Thread.Sleep(500);
                                 }
                             }
                         }
@@ -2640,7 +2645,7 @@ namespace NBST
                                     }
                                 }
 
-                                Thread.Sleep(250);
+                                Thread.Sleep(500);
                             }
                         }
                         break;
@@ -3535,6 +3540,11 @@ namespace NBST
 
         private void lklb_Screenshot_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
+            if (lklb_Screenshot.LinkVisited == false)
+                lklb_Screenshot.LinkVisited = true;
+            else
+                lklb_Screenshot.LinkVisited = false;
+
             ScreenShoot(true);
         }
         #endregion

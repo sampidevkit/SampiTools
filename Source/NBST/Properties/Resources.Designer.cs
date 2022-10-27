@@ -61,6 +61,16 @@ namespace NBST.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap broadcast_station_icon {
+            get {
+                object obj = ResourceManager.GetObject("broadcast-station-icon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to No,Time,Device Name,IMEI,CIMI,CCID,APN,TAC,Cell ID,RSRP,RSRP State,RSRQ,RSRQ State,Device LAT,Device LON,Cell LAT,Cell LON,Download Success,Note.
         /// </summary>
         internal static string csv_header {
@@ -70,50 +80,32 @@ namespace NBST.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to ];
-        ///
-        ///line=a(:,1);
-        ///rsrp=a(:,2);
-        ///rsrq=a(:,3);
-        ///rssi=a(:,4);
-        ///Ts=datetime(startTime,&apos;ConvertFrom&apos;,&apos;posixtime&apos;, &apos;Format&apos;, &apos;yyyy-MM-dd HH:mm:ss&apos;);
-        ///
-        ///for i=2:1:length(a)
-        ///    Ts=[Ts, datetime(startTime+i,&apos;ConvertFrom&apos;,&apos;posixtime&apos;, &apos;Format&apos;, &apos;yyyy-MM-dd HH:mm:ss&apos;)];
-        ///end
-        ///
-        ///RP_Idx=1;
-        ///RP_Sum=rsrp(1);
-        ///rpAve=[rsrp(1)];
-        ///
-        ///for i=2:1:length(rsrp)
-        ///    RP_Idx=RP_Idx+1;
-        ///    RP_Sum=RP_Sum+rsrp(i);
-        ///    rpAve=[rpAve, RP_Sum/RP_Idx];
-        ///end
-        ///
-        ///RQ_Idx=1;
-        ///RQ_Sum=rsrq(1);
-        ///rqAve=[rsrq(1)];
-        ///
-        ///for i=2:1:length(rsrq)
-        ///     [rest of string was truncated]&quot;;.
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static string footer {
+        internal static System.Drawing.Bitmap flag_blue_icon {
             get {
-                return ResourceManager.GetString("footer", resourceCulture);
+                object obj = ResourceManager.GetObject("flag-blue-icon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to clc;
-        ///clear all;
-        ///clf;
-        ///close all;.
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static string header {
+        internal static System.Drawing.Bitmap folder_icon {
             get {
-                return ResourceManager.GetString("header", resourceCulture);
+                object obj = ResourceManager.GetObject("folder-icon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap picture_icon {
+            get {
+                object obj = ResourceManager.GetObject("picture-icon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
     }

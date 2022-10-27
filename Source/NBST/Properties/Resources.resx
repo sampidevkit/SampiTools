@@ -120,66 +120,17 @@
   <data name="csv_header" xml:space="preserve">
     <value>No,Time,Device Name,IMEI,CIMI,CCID,APN,TAC,Cell ID,RSRP,RSRP State,RSRQ,RSRQ State,Device LAT,Device LON,Cell LAT,Cell LON,Download Success,Note</value>
   </data>
-  <data name="footer" xml:space="preserve">
-    <value>];
-
-line=a(:,1);
-rsrp=a(:,2);
-rsrq=a(:,3);
-rssi=a(:,4);
-Ts=datetime(startTime,'ConvertFrom','posixtime', 'Format', 'yyyy-MM-dd HH:mm:ss');
-
-for i=2:1:length(a)
-    Ts=[Ts, datetime(startTime+i,'ConvertFrom','posixtime', 'Format', 'yyyy-MM-dd HH:mm:ss')];
-end
-
-RP_Idx=1;
-RP_Sum=rsrp(1);
-rpAve=[rsrp(1)];
-
-for i=2:1:length(rsrp)
-    RP_Idx=RP_Idx+1;
-    RP_Sum=RP_Sum+rsrp(i);
-    rpAve=[rpAve, RP_Sum/RP_Idx];
-end
-
-RQ_Idx=1;
-RQ_Sum=rsrq(1);
-rqAve=[rsrq(1)];
-
-for i=2:1:length(rsrq)
-    RQ_Idx=RQ_Idx+1;
-    RQ_Sum=RQ_Sum+rsrq(i);
-    rqAve=[rqAve, RQ_Sum/RQ_Idx];
-end
-
-SI_Idx=1;
-SI_Sum=rssi(1);
-siAve=[rssi(1)];
-
-for i=2:1:length(rssi)
-    SI_Idx=SI_Idx+1;
-    SI_Sum=SI_Sum+rssi(i);
-    siAve=[siAve, SI_Sum/SI_Idx];
-end
-
-plot(Ts, rsrp);
-hold on;
-plot(Ts, rsrq);
-hold on;
-plot(Ts, rssi);
-hold on;
-plot(Ts, rpAve);
-hold on;
-plot(Ts, rqAve);
-hold on;
-plot(Ts, siAve);
-legend('RSRP', 'RSRQ', 'RSSI', 'RSRP Average', 'RSRQ Average', 'RSSI Average');</value>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="broadcast-station-icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\broadcast-station-icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="header" xml:space="preserve">
-    <value>clc;
-clear all;
-clf;
-close all;</value>
+  <data name="flag-blue-icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\flag-blue-icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="folder-icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\folder-icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="picture-icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\picture-icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>
