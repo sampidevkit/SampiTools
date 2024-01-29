@@ -79,6 +79,11 @@
             this.bt_DfuStart = new System.Windows.Forms.Button();
             this.bt_DfuStop = new System.Windows.Forms.Button();
             this.tabCalc = new System.Windows.Forms.TabPage();
+            this.rbt_Bin = new System.Windows.Forms.RadioButton();
+            this.rbt_Hex = new System.Windows.Forms.RadioButton();
+            this.rbt_Dec = new System.Windows.Forms.RadioButton();
+            this.bt_NotB = new System.Windows.Forms.Button();
+            this.ckb_Sign = new System.Windows.Forms.CheckBox();
             this.label16 = new System.Windows.Forms.Label();
             this.label15 = new System.Windows.Forms.Label();
             this.bt_ShiftLeft = new System.Windows.Forms.Button();
@@ -120,11 +125,6 @@
             this.picHomePage = new System.Windows.Forms.PictureBox();
             this.picDisconnected = new System.Windows.Forms.PictureBox();
             this.lb_OpenLog = new System.Windows.Forms.Label();
-            this.ckb_Sign = new System.Windows.Forms.CheckBox();
-            this.bt_NotB = new System.Windows.Forms.Button();
-            this.rbt_Dec = new System.Windows.Forms.RadioButton();
-            this.rbt_Hex = new System.Windows.Forms.RadioButton();
-            this.rbt_Bin = new System.Windows.Forms.RadioButton();
             this.lb_Notic = new System.Windows.Forms.Label();
             this.timer2 = new System.Windows.Forms.Timer(this.components);
             this.tabControl1.SuspendLayout();
@@ -286,7 +286,8 @@
             "FT232RL",
             "xE866",
             "ME910G1",
-            "SAMPI"});
+            "SAMPI",
+            "MPLAB DV"});
             this.cb_Pid.Location = new System.Drawing.Point(48, 7);
             this.cb_Pid.Name = "cb_Pid";
             this.cb_Pid.Size = new System.Drawing.Size(201, 23);
@@ -820,6 +821,57 @@
             this.tabCalc.Text = "Calculator";
             this.tabCalc.UseVisualStyleBackColor = true;
             // 
+            // rbt_Bin
+            // 
+            this.rbt_Bin.AutoSize = true;
+            this.rbt_Bin.Location = new System.Drawing.Point(542, 201);
+            this.rbt_Bin.Name = "rbt_Bin";
+            this.rbt_Bin.Size = new System.Drawing.Size(40, 17);
+            this.rbt_Bin.TabIndex = 33;
+            this.rbt_Bin.Text = "Bin";
+            this.rbt_Bin.UseVisualStyleBackColor = true;
+            // 
+            // rbt_Hex
+            // 
+            this.rbt_Hex.AutoSize = true;
+            this.rbt_Hex.Location = new System.Drawing.Point(492, 201);
+            this.rbt_Hex.Name = "rbt_Hex";
+            this.rbt_Hex.Size = new System.Drawing.Size(44, 17);
+            this.rbt_Hex.TabIndex = 32;
+            this.rbt_Hex.Text = "Hex";
+            this.rbt_Hex.UseVisualStyleBackColor = true;
+            // 
+            // rbt_Dec
+            // 
+            this.rbt_Dec.AutoSize = true;
+            this.rbt_Dec.Checked = true;
+            this.rbt_Dec.Location = new System.Drawing.Point(441, 201);
+            this.rbt_Dec.Name = "rbt_Dec";
+            this.rbt_Dec.Size = new System.Drawing.Size(45, 17);
+            this.rbt_Dec.TabIndex = 31;
+            this.rbt_Dec.TabStop = true;
+            this.rbt_Dec.Text = "Dec";
+            this.rbt_Dec.UseVisualStyleBackColor = true;
+            // 
+            // bt_NotB
+            // 
+            this.bt_NotB.Location = new System.Drawing.Point(256, 198);
+            this.bt_NotB.Name = "bt_NotB";
+            this.bt_NotB.Size = new System.Drawing.Size(45, 23);
+            this.bt_NotB.TabIndex = 30;
+            this.bt_NotB.Text = "~B";
+            this.bt_NotB.UseVisualStyleBackColor = true;
+            // 
+            // ckb_Sign
+            // 
+            this.ckb_Sign.AutoSize = true;
+            this.ckb_Sign.Location = new System.Drawing.Point(542, 177);
+            this.ckb_Sign.Name = "ckb_Sign";
+            this.ckb_Sign.Size = new System.Drawing.Size(47, 17);
+            this.ckb_Sign.TabIndex = 26;
+            this.ckb_Sign.Text = "Sign";
+            this.ckb_Sign.UseVisualStyleBackColor = true;
+            // 
             // label16
             // 
             this.label16.AutoSize = true;
@@ -1278,57 +1330,6 @@
             this.lb_OpenLog.TabIndex = 23;
             this.lb_OpenLog.Text = "Open Log";
             this.lb_OpenLog.Click += new System.EventHandler(this.lb_OpenLog_Click);
-            // 
-            // ckb_Sign
-            // 
-            this.ckb_Sign.AutoSize = true;
-            this.ckb_Sign.Location = new System.Drawing.Point(542, 177);
-            this.ckb_Sign.Name = "ckb_Sign";
-            this.ckb_Sign.Size = new System.Drawing.Size(47, 17);
-            this.ckb_Sign.TabIndex = 26;
-            this.ckb_Sign.Text = "Sign";
-            this.ckb_Sign.UseVisualStyleBackColor = true;
-            // 
-            // bt_NotB
-            // 
-            this.bt_NotB.Location = new System.Drawing.Point(256, 198);
-            this.bt_NotB.Name = "bt_NotB";
-            this.bt_NotB.Size = new System.Drawing.Size(45, 23);
-            this.bt_NotB.TabIndex = 30;
-            this.bt_NotB.Text = "~B";
-            this.bt_NotB.UseVisualStyleBackColor = true;
-            // 
-            // rbt_Dec
-            // 
-            this.rbt_Dec.AutoSize = true;
-            this.rbt_Dec.Checked = true;
-            this.rbt_Dec.Location = new System.Drawing.Point(441, 201);
-            this.rbt_Dec.Name = "rbt_Dec";
-            this.rbt_Dec.Size = new System.Drawing.Size(45, 17);
-            this.rbt_Dec.TabIndex = 31;
-            this.rbt_Dec.TabStop = true;
-            this.rbt_Dec.Text = "Dec";
-            this.rbt_Dec.UseVisualStyleBackColor = true;
-            // 
-            // rbt_Hex
-            // 
-            this.rbt_Hex.AutoSize = true;
-            this.rbt_Hex.Location = new System.Drawing.Point(492, 201);
-            this.rbt_Hex.Name = "rbt_Hex";
-            this.rbt_Hex.Size = new System.Drawing.Size(44, 17);
-            this.rbt_Hex.TabIndex = 32;
-            this.rbt_Hex.Text = "Hex";
-            this.rbt_Hex.UseVisualStyleBackColor = true;
-            // 
-            // rbt_Bin
-            // 
-            this.rbt_Bin.AutoSize = true;
-            this.rbt_Bin.Location = new System.Drawing.Point(542, 201);
-            this.rbt_Bin.Name = "rbt_Bin";
-            this.rbt_Bin.Size = new System.Drawing.Size(40, 17);
-            this.rbt_Bin.TabIndex = 33;
-            this.rbt_Bin.Text = "Bin";
-            this.rbt_Bin.UseVisualStyleBackColor = true;
             // 
             // lb_Notic
             // 

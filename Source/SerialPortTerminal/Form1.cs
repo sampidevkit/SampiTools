@@ -7,6 +7,9 @@ using System.Windows.Forms;
 using System.Reflection;
 using System.IO;
 using System.Text;
+using System.Diagnostics;
+using SerialPortTerminal.Properties;
+using System.Resources;
 
 namespace Form1
 {
@@ -1219,6 +1222,10 @@ namespace Form1
                 notifyIcon1.Visible = false;
             }
 
+            rtb_Log.Size = new System.Drawing.Size(603, 451);
+            rtb_Log.Location = new System.Drawing.Point(9, 109);
+            tabControl1.Size = new System.Drawing.Size(603, 95);
+
             cb_Baud.SelectedIndex = 9;
             cb_DfuBaud.SelectedIndex = 9;
             Get_Port2();
@@ -1370,6 +1377,8 @@ namespace Form1
                 Pid = "VID_1BC7&PID_110A";
             else if (cb_Pid.Text == "SAMPI")
                 Pid = "VID_0C00&PID_0123";
+            else if (cb_Pid.Text == "MPLAB DV")
+                Pid = "VID_03EB&PID_2175";
             else // USB CDC
                 Pid = "PID_000A";
 

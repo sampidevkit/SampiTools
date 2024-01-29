@@ -61,12 +61,44 @@ namespace SerialPortTerminal.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to @echo off
+        ///
+        ///rmdir /s /q &quot;%appdata%\mplab_ipe&quot;
+        ///rmdir /s /q &quot;%appdata%\mplab_ide&quot;
+        ///del /f /s /q &quot;%localappdata%\Temp\*.*&quot;
+        ///del /f /s /q &quot;%localappdata%\ZaloPC\*.*&quot;
+        ///del /f /s /q &quot;C:\Windows\Temp\*.*&quot;
+        ///del /f /s /q &quot;C:\Windows\prefetch\*.*&quot;
+        ///del /f /s /q &quot;C:\Windows\servicing\LCU\*.*&quot;
+        ///
+        ///echo Done..
+        /// </summary>
+        internal static string CleanTemp {
+            get {
+                return ResourceManager.GetString("CleanTemp", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         internal static System.Drawing.Bitmap home_icon {
             get {
                 object obj = ResourceManager.GetObject("home-icon", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to rmdir /s /q &quot;%localappdata%\mplab_ipe&quot;
+        ///rmdir /s /q &quot;%localappdata%\mplab_ide&quot;
+        ///
+        ///rmdir /s /q &quot;%appdata%\mplab_ipe&quot;
+        ///rmdir /s /q &quot;%appdata%\mplab_ide&quot;.
+        /// </summary>
+        internal static string mplabx_reset {
+            get {
+                return ResourceManager.GetString("mplabx_reset", resourceCulture);
             }
         }
         
