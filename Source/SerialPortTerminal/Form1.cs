@@ -630,9 +630,11 @@ namespace Form1
             int found = 0;
             string[] ports;
 
+            cb_Port2.Items.Clear();
+            cb_Port2.Items.Add("Internal");
+
             try
             {
-                cb_Port2.Items.Clear();
                 ports = SerialPort.GetPortNames();
 
                 foreach (string port in ports)
@@ -643,22 +645,14 @@ namespace Form1
                         found++;
                     }
                 }
-
-                //if (found == 0)
-                //{
-                cb_Port2.Items.Add("Internal");
-                    //DebugLog("\n\nEmpty COM port", Color.OrangeRed);
-                //}
-
-                cb_Port2.SelectedIndex = 0;
             }
             catch (Exception e)
             {
-                cb_Port2.Items.Add("Internal");
-                cb_Port2.SelectedIndex = 0;
                 while (DebugWait) ;
                 DebugLog("\n\n[Get_Port2]\n" + e.ToString(), Color.Red);
             }
+
+            cb_Port2.SelectedIndex = 0;
 
             return found;
         }
@@ -1222,6 +1216,11 @@ namespace Form1
                 notifyIcon1.Visible = false;
             }
 
+            string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+            this.Text += " v." + $"{version}";
+            this.Update();
+
             rtb_Log.Size = new System.Drawing.Size(603, 451);
             rtb_Log.Location = new System.Drawing.Point(9, 109);
             tabControl1.Size = new System.Drawing.Size(603, 95);
@@ -1232,11 +1231,6 @@ namespace Form1
             Get_DfuPort();
             Scan_UsbPort();
             USBCDC_Is_Ready(null);
-
-            string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-
-            this.Text += " v."+$"{version}";
-            this.Update();
         }
 
         private void cb_Port1_MouseClick(object sender, MouseEventArgs e)

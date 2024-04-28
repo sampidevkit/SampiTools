@@ -1333,6 +1333,7 @@
             // 
             // lb_Notic
             // 
+            this.lb_Notic.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lb_Notic.AutoSize = true;
             this.lb_Notic.ForeColor = System.Drawing.Color.Tomato;
             this.lb_Notic.Location = new System.Drawing.Point(128, 573);
@@ -1364,6 +1365,7 @@
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.rtb_Log);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
             this.Name = "FormSPT";
             this.Text = "SPT-Serial Port Terminal";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
