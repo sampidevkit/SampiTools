@@ -31,10 +31,6 @@ namespace Form1
         private FileStream DfuStream = null;
         private StreamReader DfuReader = null;
         private char[] ScriptData = null;
-        // Buffer
-        //private RingBuffer RingBuffer2 = new RingBuffer();
-        //private RingBuffer.RingTxBuf Port2TxBuf;
-        //private RingBuffer.RingRxBuf Port2RxBuf;
         // Threads
         private static Thread Thread_Task;
         private static string Pid = "PID_000A";
