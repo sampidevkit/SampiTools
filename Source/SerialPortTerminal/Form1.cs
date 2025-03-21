@@ -10,6 +10,7 @@ using System.Text;
 using System.Diagnostics;
 using SerialPortTerminal.Properties;
 using System.Resources;
+using Utils;
 
 namespace Form1
 {
@@ -22,7 +23,7 @@ namespace Form1
             public long TotalLength;
             public long NumOfLine;
         }
-
+        private Utils.Utils Utils = new Utils.Utils();
         private FileInfo HexFileDetail;
         private string HexFilePath = null;
         private FileInfo ScriptFileDetail;
@@ -33,7 +34,6 @@ namespace Form1
         private char[] ScriptData = null;
         // Threads
         private static Thread Thread_Task;
-        private static string Pid = "PID_000A";
         private volatile bool DebugWait = false;
         private volatile bool InternalPort = true;
         private volatile bool AppBusy = false;
@@ -42,51 +42,6 @@ namespace Form1
         #endregion
 
         #region User's Functions
-
-        private bool IsBin(string s)
-        {
-            char[] arr = s.ToCharArray();
-
-            foreach (char c in arr)
-            {
-                if ((c != '0') && (c != '1'))
-                    return false;
-            }
-
-            return true;
-        }
-
-        private bool IsDec(string s)
-        {
-            char[] arr = s.ToCharArray();
-
-            foreach(char c in arr)
-            {
-                if ((c > '9') || (c < '0'))
-                    return false;
-            }
-
-            return true;
-        }
-
-        private bool IsHex(string s)
-        {
-            char[] arr = s.ToCharArray();
-
-            foreach (char c in arr)
-            {
-                if ((c > '9') || (c < '0'))
-                {
-                    if ((c < 'A') || (c > 'F'))
-                    {
-                        if ((c < 'a') || (c > 'f'))
-                            return false;
-                    }
-                }
-            }
-
-            return true;
-        }
 
         private string Parse_COMPort(string str)
         {
@@ -125,54 +80,15 @@ namespace Form1
             return s;
         }
 
-        private void ReplaceCharArray(ref char[] ChrArr, char oldChar, char newChar)
-        {
-            int i, j;
-            int len = ChrArr.Length;
-
-            for (i = 0; i < len; i++)
-            {
-                if (ChrArr[i] == oldChar)
-                {
-                    if (newChar != (char)0x00) 
-                        ChrArr[i] = newChar;
-                    else
-                    {
-                        for (j = i; j < (len - 1); j++)
-                            ChrArr[j] = ChrArr[j + 1];
-
-                        ChrArr[j] = (char)0x00;
-                        len--;
-                    }
-                }
-            }
-
-            char[] newChrArr=new char[len];
-
-            for (i = 0; i < len; i++)
-                newChrArr[i] = ChrArr[i];
-
-            ChrArr = null;
-            ChrArr = newChrArr;
-        }
-
-        private void RemoveStr(ref string Str, char oldChar, char newChar)
-        {
-            char[] Arr = Str.ToCharArray();
-
-            ReplaceCharArray(ref Arr, oldChar, newChar);
-            Str = new string(Arr);
-        }
-
         private void ClearLog()
         {
             string logpath = "Log " + DateTime.Now.ToLongDateString() + DateTime.Now.ToLongTimeString();
             char[] logpathchr = logpath.ToCharArray();
 
-            ReplaceCharArray(ref logpathchr, '/', (char)0x00);
-            ReplaceCharArray(ref logpathchr, '\\', (char)0x00);
-            ReplaceCharArray(ref logpathchr, ':', (char)0x00);
-            ReplaceCharArray(ref logpathchr, '.', (char)0x00);
+            Utils.ReplaceCharArray(ref logpathchr, '/', (char)0x00);
+            Utils.ReplaceCharArray(ref logpathchr, '\\', (char)0x00);
+            Utils.ReplaceCharArray(ref logpathchr, ':', (char)0x00);
+            Utils.ReplaceCharArray(ref logpathchr, '.', (char)0x00);
             logpath = new string(logpathchr) + ".txt";
             //DebugLog(logpath, Color.Green);
             StreamWriter sw = File.CreateText(logpath);
@@ -182,26 +98,6 @@ namespace Form1
             lb_Notic.Text = logpath + " has been created";
             lb_Notic.Visible = true;
             timer2.Start();
-        }
-
-        private bool Is_ASCII_Printable_Character(byte b, ref long Line)
-        {
-            if ((b >= 0x20) && (b <= 0x7F))
-                return true;
-            else if (b == '\r')
-                return true;
-            else if (b == '\n')
-            {
-                Line++;
-                return true;
-            }
-            else if (b == 0x09)// tab value
-                return true;
-            else
-            {
-                Line = 0;
-                return false;
-            }
         }
 
         private bool CheckFileFormat(string HexFilePath, out FileInfo fileInfo)
@@ -215,7 +111,7 @@ namespace Form1
 
             for (i = 0; i < fileInfo.TotalLength; i++)
             {
-                if (!Is_ASCII_Printable_Character(reader.ReadByte(), ref fileInfo.NumOfLine)) 
+                if (!Utils.Is_ASCII_Printable_Character(reader.ReadByte(), ref fileInfo.NumOfLine)) 
                 {
                     fileInfo.NumOfLine = 0;
                     fileInfo.TotalLength = 0;
@@ -313,17 +209,19 @@ namespace Form1
 
         private void SendCmdString()
         {
-            string cmdStr = tbx_CmdStart.Text + tbx_CmdData.Text + tbx_CmdStop.Text;
+            string cmdStr = rtb_CmdData.Text;
+
+            if(ckb_CR.Checked)
+                cmdStr += "\r";
+
+            if (ckb_LF.Checked)
+                cmdStr += "\n";
+
             char[] cmdChr = cmdStr.ToCharArray();
-            //cmdStr.Replace("\\r", "\r");
-            //cmdStr.Replace("\\n", "\n");
-            //cmdStr.Replace("\\a", "\a");
-            //return cmdStr;
 
             try
             {
                 while (DebugWait) ;
-                //DebugLog("\nTX: " + GetCmdString(), Color.Blue);
                 DebugLog("\nTX: " + cmdStr, Color.Blue);
                 serialCdc.Write(new string(MakeFrame(cmdChr, cmdChr.Length)));
                 DebugLog("\nRX: ", Color.Green);
@@ -333,24 +231,6 @@ namespace Form1
                 while (DebugWait) ;
                 DebugLog("\nCan not write to Port 1", Color.Red);
             }
-        }
-
-        private int Char2Integer(char[] pChr, int offset, int len)
-        {
-            int i;
-            int value = 0;
-
-            for (i = 0; i < len; i++) 
-            {
-                value *= 10;
-
-                if ((pChr[offset + i] >= '0') && (pChr[offset + i] <= '9'))
-                    value += (int)(pChr[offset + i] - '0');
-                else
-                    return (-1);
-            }
-
-            return value;
         }
 
         private void SendScript()
@@ -368,11 +248,6 @@ namespace Form1
                 i++;
             }
 
-            //while (DebugWait) ;
-            //DebugLog("\n-->i=" + i.ToString() + ", idx=" + scriptLineIdx.ToString(), Color.Red);
-            //scriptLineIdx += (i+1);
-
-            
             char[] cmdChr = new char[i];
 
             for (i = 0; i < cmdChr.Length; i++)
@@ -385,7 +260,7 @@ namespace Form1
             }
             else if (cmdChr[0] == '$') // delay
             {
-                int newInterval = Char2Integer(cmdChr, 1, cmdChr.Length - 2);
+                int newInterval = Utils.Char2Integer(cmdChr, 1, cmdChr.Length - 2);
 
                 if (newInterval == (-1))
                 {
@@ -529,11 +404,10 @@ namespace Form1
 
         private void Disable_Uart_Components()
         {
-            cb_Pid.Enabled = false;
             cb_Baud.Enabled = false;
             cb_DfuBaud.Enabled = false;
-            cb_Port1.Enabled = false;
-            cb_Port2.Enabled = false;
+            bt_SetPort1.Enabled = false;
+            bt_SetPort2.Enabled = false;
             cb_DfuPort.Enabled = false;
             bt_FwdScan.Enabled = false;
             bt_DfuScan.Enabled = false;
@@ -543,11 +417,10 @@ namespace Form1
 
         private void Enable_Uart_Components()
         {
-            cb_Pid.Enabled = true;
             cb_Baud.Enabled = true;
             cb_DfuBaud.Enabled = true;
-            cb_Port1.Enabled = true;
-            cb_Port2.Enabled = true;
+            bt_SetPort1.Enabled = true;
+            bt_SetPort2.Enabled = true;
             cb_DfuPort.Enabled = true;
             bt_FwdScan.Enabled = true;
             bt_DfuScan.Enabled = true;
@@ -557,77 +430,14 @@ namespace Form1
         #endregion
 
         #region App Forward
-        private int Get_Port1()
-        {
-            string[] ports;
-            int found = 0;
-            string deviceid = null;
-            string portlist = null;
 
-            try
-            {
-                cb_Port1.Items.Clear();
-                ports = SerialPort.GetPortNames();
-                ManagementObjectSearcher deviceList = new ManagementObjectSearcher("SELECT * FROM Win32_PnPEntity WHERE Caption like '%(COM%'");// new
-
-                if (deviceList != null)
-                {
-                    foreach (ManagementObject device in deviceList.Get())
-                    {
-                        //DebugLog("\n" + device.ToString(), Color.Black);
-
-                        if (device["DeviceID"].ToString().Contains(Pid))
-                        {
-                            deviceid = Parse_COMPort(device["Caption"].ToString()); // new
-
-                            if (portlist == null)
-                            {
-                                found++;
-                                portlist += deviceid;
-
-                                if (deviceid != cb_Port2.Text)
-                                    cb_Port1.Items.Add(deviceid);
-                                //DebugLog("\n" + deviceid, Color.Green);
-                            }
-                            else if (!portlist.Contains(deviceid))
-                            {
-                                found++;
-                                portlist += deviceid;
-
-                                if (deviceid != cb_Port2.Text)
-                                    cb_Port1.Items.Add(deviceid);
-                                //DebugLog("\n" + deviceid, Color.Green);
-                            }
-                        }
-                    }
-                }
-
-                if (found == 0)
-                {
-                    cb_Port1.Items.Add("Empty");
-                    //DebugLog("\n\nEmpty COM port", Color.OrangeRed);
-                }
-
-                cb_Port1.SelectedIndex = 0;
-            }
-            catch (Exception e)
-            {
-                cb_Port1.Items.Add("Empty");
-                cb_Port1.SelectedIndex = 0;
-                while (DebugWait) ;
-                DebugLog("\n\n[Get_Port1]\n" + e.ToString(), Color.Red);
-            }
-
-            return found;
-        }
-
-        private int Get_Port2()
+        private int Get_Port()
         {
             int found = 0;
             string[] ports;
 
-            cb_Port2.Items.Clear();
-            cb_Port2.Items.Add("Internal");
+            bt_SetPort2.Items.Clear();
+            bt_SetPort2.Items.Add("Internal");
 
             try
             {
@@ -635,9 +445,9 @@ namespace Form1
 
                 foreach (string port in ports)
                 {
-                    if (port != cb_Port1.Text)
+                    if (port != bt_SetPort1.Text)
                     {
-                        cb_Port2.Items.Add(port);
+                        bt_SetPort2.Items.Add(port);
                         found++;
                     }
                 }
@@ -648,7 +458,7 @@ namespace Form1
                 DebugLog("\n\n[Get_Port2]\n" + e.ToString(), Color.Red);
             }
 
-            cb_Port2.SelectedIndex = 0;
+            bt_SetPort2.SelectedIndex = 0;
 
             return found;
         }
@@ -656,10 +466,10 @@ namespace Form1
         private bool FwdPort_Is_Closed()
         {
             // Check USB first
-            if (!USBCDC_Is_Ready(cb_Port1.Text))
+            if (!USBCDC_Is_Ready(bt_SetPort1.Text))
                 return true;
 
-            if (!Port_Is_Present(cb_Port2.Text))
+            if (!Port_Is_Present(bt_SetPort2.Text))
                 return true;
 
             return false;
@@ -674,7 +484,7 @@ namespace Form1
         {
             bool success = false;
 
-            if (cb_Port1.Text == "Empty") //((cb_Port1.Text == "Empty") || (cb_Port2.Text == "Empty"))
+            if (bt_SetPort1.Text == "Empty") //((bt_SetPort1.Text == "Empty") || (bt_SetPort2.Text == "Empty"))
             {
                 MessageBox.Show("Port1 is not empty!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
@@ -682,7 +492,7 @@ namespace Form1
 
             try
             {
-                if (Port_Is_Present(cb_Port1.Text))
+                if (Port_Is_Present(bt_SetPort1.Text))
                 {
                     if (serialCdc.IsOpen)
                     {
@@ -691,14 +501,14 @@ namespace Form1
                         serialCdc.Close();
                     }
 
-                    serialCdc.PortName = cb_Port1.Text;
+                    serialCdc.PortName = bt_SetPort1.Text;
                 }
                 else
                     return false;
 
                 if (InternalPort == false)
                 {
-                    if (Port_Is_Present(cb_Port2.Text))
+                    if (Port_Is_Present(bt_SetPort2.Text))
                     {
                         if (serialForward.IsOpen)
                         {
@@ -707,7 +517,7 @@ namespace Form1
                             serialForward.Close();
                         }
 
-                        serialForward.PortName = cb_Port2.Text;
+                        serialForward.PortName = bt_SetPort2.Text;
                     }
                     else
                         return false;
@@ -781,7 +591,7 @@ namespace Form1
         {
             bool success = false;
 
-            if (cb_Port1.Text != "Empty")//((cb_Port1.Text != "Empty") && (cb_Port2.Text != "Empty"))
+            if (bt_SetPort1.Text != "Empty")//((bt_SetPort1.Text != "Empty") && (bt_SetPort2.Text != "Empty"))
             {
                 if (Open_Fwd_Connection())
                 {
@@ -1229,12 +1039,12 @@ namespace Form1
             USBCDC_Is_Ready(null);
         }
 
-        private void cb_Port1_MouseClick(object sender, MouseEventArgs e)
+        private void bt_SetPort1_MouseClick(object sender, MouseEventArgs e)
         {
             Get_Port1();
         }
 
-        private void cb_Port2_MouseClick(object sender, MouseEventArgs e)
+        private void bt_SetPort2_MouseClick(object sender, MouseEventArgs e)
         {
             Get_Port2();
         }
@@ -1265,9 +1075,9 @@ namespace Form1
             }
         }
 
-        private void cb_Port1_TextChanged(object sender, EventArgs e)
+        private void bt_SetPort1_TextChanged(object sender, EventArgs e)
         {
-            if ((cb_Port1.Text == cb_Port2.Text) && (cb_Port1.Text != "Empty"))
+            if ((bt_SetPort1.Text == bt_SetPort2.Text) && (bt_SetPort1.Text != "Empty"))
                 Get_Port2();
         }
 
@@ -1346,33 +1156,6 @@ namespace Form1
                 this.ShowInTaskbar = true;
                 notifyIcon1.Visible = false;
             }
-        }
-
-        private void rtb_Log_DoubleClick(object sender, EventArgs e)
-        {
-            rtb_Log.Clear();
-        }
-
-        private void cb_Pid_TextChanged(object sender, EventArgs e)
-        {
-            if (cb_Pid.Text == "VCP")
-                Pid = "VID_04D8&PID_0057";
-            else if (cb_Pid.Text == "CP2102N")
-                Pid = "VID_10C4&PID_EA60";
-            else if (cb_Pid.Text == "FT232RL")
-                Pid = "VID_0403+PID_6001";
-            else if (cb_Pid.Text == "xE866")
-                Pid = "VID_1BC7&PID_0021";
-            else if (cb_Pid.Text == "ME910G1")
-                Pid = "VID_1BC7&PID_110A";
-            else if (cb_Pid.Text == "SAMPI")
-                Pid = "VID_0C00&PID_0123";
-            else if (cb_Pid.Text == "MPLAB DV")
-                Pid = "VID_03EB&PID_2175";
-            else // USB CDC
-                Pid = "PID_000A";
-
-            Get_Port1();
         }
 
         private void rtb_Log_MouseDoubleClick(object sender, MouseEventArgs e)
@@ -1506,9 +1289,9 @@ namespace Form1
             System.Diagnostics.Process.Start("https://github.com/sampidevkit/");
         }
 
-        private void cb_Port2_SelectedIndexChanged(object sender, EventArgs e)
+        private void bt_SetPort2_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (cb_Port2.Text == "Internal")
+            if (bt_SetPort2.Text == "Internal")
             {
                 bt_Send.Enabled = true;
                 InternalPort = true;
@@ -1523,7 +1306,7 @@ namespace Form1
         private void bt_Send_Click(object sender, EventArgs e)
         {
             tbx_CmdStart.Enabled = false;
-            tbx_CmdData.Enabled = false;
+            rtb_CmdData.Enabled = false;
             tbx_CmdStop.Enabled = false;
             ckb_Loop.Enabled = false;
             ckb_Script.Enabled = false;
@@ -1542,7 +1325,7 @@ namespace Form1
                     SendCmdString();
 
                 tbx_CmdStart.Enabled = true;
-                tbx_CmdData.Enabled = true;
+                rtb_CmdData.Enabled = true;
                 tbx_CmdStop.Enabled = true;
                 ckb_Loop.Enabled = true;
                 ckb_Script.Enabled = true;
@@ -1573,7 +1356,7 @@ namespace Form1
             }
 
             tbx_CmdStart.Enabled = true;
-            tbx_CmdData.Enabled = true;
+            rtb_CmdData.Enabled = true;
             tbx_CmdStop.Enabled = true;
             ckb_Loop.Enabled = true;
             ckb_Script.Enabled = true;
@@ -1581,7 +1364,7 @@ namespace Form1
             if ((ckb_Script.Checked == true) || (ckb_Loop.Checked == true))
             {
                 tbx_CmdStart.Enabled = false;
-                tbx_CmdData.Enabled = false;
+                rtb_CmdData.Enabled = false;
                 tbx_CmdStop.Enabled = false;
             }
 
@@ -1604,13 +1387,13 @@ namespace Form1
                 if (ckb_Loop.Checked == true)
                 {
                     tbx_CmdStart.Enabled = false;
-                    tbx_CmdData.Enabled = false;
+                    rtb_CmdData.Enabled = false;
                     tbx_CmdStop.Enabled = false;
                 }
                 else
                 {
                     tbx_CmdStart.Enabled = true;
-                    tbx_CmdData.Enabled = true;
+                    rtb_CmdData.Enabled = true;
                     tbx_CmdStop.Enabled = true;
                 }
             }
@@ -1622,7 +1405,7 @@ namespace Form1
             {
                 scriptLineIdx = 0;
                 ScriptFilePath = openFileDialog2.FileName;
-                tbx_CmdData.Text = ScriptFilePath;
+                rtb_CmdData.Text = ScriptFilePath;
 
                 if (CheckFileFormat(ScriptFilePath, out ScriptFileDetail))
                 {
@@ -1639,7 +1422,7 @@ namespace Form1
                 {
                     ScriptData = null;
                     ScriptFilePath = null;
-                    tbx_CmdData.Text = null;
+                    rtb_CmdData.Text = null;
                     MessageBox.Show("File is not in text format", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -1652,7 +1435,7 @@ namespace Form1
 
             if (ckb_Loop.Checked == false)
             {
-                tbx_CmdData.Enabled = !ckb_Script.Checked;
+                rtb_CmdData.Enabled = !ckb_Script.Checked;
                 tbx_CmdStart.Enabled = !ckb_Script.Checked;
                 tbx_CmdStop.Enabled = !ckb_Script.Checked;
             }

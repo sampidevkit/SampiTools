@@ -35,9 +35,9 @@
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.lb_Status = new System.Windows.Forms.Label();
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
-            this.label1 = new System.Windows.Forms.Label();
+            this.lb_Port1 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
+            this.lb_Port2 = new System.Windows.Forms.Label();
             this.cb_Baud = new System.Windows.Forms.ComboBox();
             this.rtb_Log = new System.Windows.Forms.RichTextBox();
             this.lkl_Homepage = new System.Windows.Forms.LinkLabel();
@@ -46,9 +46,22 @@
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabForward = new System.Windows.Forms.TabPage();
+            this.rtb_CmdData = new System.Windows.Forms.RichTextBox();
+            this.bt_SetPort2 = new System.Windows.Forms.Button();
+            this.bt_SetPort1 = new System.Windows.Forms.Button();
+            this.ckb_Script = new System.Windows.Forms.CheckBox();
+            this.nud_Interval = new System.Windows.Forms.NumericUpDown();
+            this.ckb_LF = new System.Windows.Forms.CheckBox();
+            this.ckb_CR = new System.Windows.Forms.CheckBox();
+            this.ckb_Loop = new System.Windows.Forms.CheckBox();
+            this.bt_Script = new System.Windows.Forms.Button();
+            this.bt_Send = new System.Windows.Forms.Button();
+            this.bt_StopSend = new System.Windows.Forms.Button();
             this.bt_FwdStart = new System.Windows.Forms.Button();
             this.bt_FwdStop = new System.Windows.Forms.Button();
             this.bt_FwdScan = new System.Windows.Forms.Button();
+            this.cb_Port = new System.Windows.Forms.ComboBox();
+            this.label4 = new System.Windows.Forms.Label();
             this.tabDfu = new System.Windows.Forms.TabPage();
             this.nud_FrameDelay = new System.Windows.Forms.NumericUpDown();
             this.label8 = new System.Windows.Forms.Label();
@@ -77,20 +90,9 @@
             this.lb_OpenLog = new System.Windows.Forms.Label();
             this.lb_Notic = new System.Windows.Forms.Label();
             this.timer2 = new System.Windows.Forms.Timer(this.components);
-            this.ckb_Script = new System.Windows.Forms.CheckBox();
-            this.nud_Interval = new System.Windows.Forms.NumericUpDown();
-            this.ckb_LF = new System.Windows.Forms.CheckBox();
-            this.ckb_CR = new System.Windows.Forms.CheckBox();
-            this.ckb_Loop = new System.Windows.Forms.CheckBox();
-            this.label10 = new System.Windows.Forms.Label();
-            this.tbx_CmdData = new System.Windows.Forms.TextBox();
-            this.bt_Script = new System.Windows.Forms.Button();
-            this.bt_Send = new System.Windows.Forms.Button();
-            this.bt_StopSend = new System.Windows.Forms.Button();
-            this.bt_SetPort1 = new System.Windows.Forms.Button();
-            this.bt_SetPort2 = new System.Windows.Forms.Button();
             this.tabControl1.SuspendLayout();
             this.tabForward.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_Interval)).BeginInit();
             this.tabDfu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nud_FrameDelay)).BeginInit();
             this.tabTools.SuspendLayout();
@@ -98,7 +100,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.picConnected)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picHomePage)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picDisconnected)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nud_Interval)).BeginInit();
             this.SuspendLayout();
             // 
             // serialCdc
@@ -154,35 +155,35 @@
             this.notifyIcon1.Visible = true;
             this.notifyIcon1.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.notifyIcon1_MouseDoubleClick);
             // 
-            // label1
+            // lb_Port1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(135, 10);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(42, 15);
-            this.label1.TabIndex = 2;
-            this.label1.Text = "Port 1:";
+            this.lb_Port1.AutoSize = true;
+            this.lb_Port1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lb_Port1.Location = new System.Drawing.Point(173, 9);
+            this.lb_Port1.Name = "lb_Port1";
+            this.lb_Port1.Size = new System.Drawing.Size(79, 15);
+            this.lb_Port1.TabIndex = 2;
+            this.lb_Port1.Text = "Port 1: Empty";
             // 
             // label3
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label3.Location = new System.Drawing.Point(3, 42);
+            this.label3.Location = new System.Drawing.Point(6, 42);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(39, 15);
             this.label3.TabIndex = 2;
             this.label3.Text = "Baud:";
             // 
-            // label2
+            // lb_Port2
             // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(135, 42);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(42, 15);
-            this.label2.TabIndex = 3;
-            this.label2.Text = "Port 2:";
+            this.lb_Port2.AutoSize = true;
+            this.lb_Port2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lb_Port2.Location = new System.Drawing.Point(173, 41);
+            this.lb_Port2.Name = "lb_Port2";
+            this.lb_Port2.Size = new System.Drawing.Size(79, 15);
+            this.lb_Port2.TabIndex = 3;
+            this.lb_Port2.Text = "Port 2: Empty";
             // 
             // cb_Baud
             // 
@@ -201,9 +202,9 @@
             "115200",
             "128000",
             "256000"});
-            this.cb_Baud.Location = new System.Drawing.Point(48, 39);
+            this.cb_Baud.Location = new System.Drawing.Point(51, 38);
             this.cb_Baud.Name = "cb_Baud";
-            this.cb_Baud.Size = new System.Drawing.Size(81, 23);
+            this.cb_Baud.Size = new System.Drawing.Size(68, 23);
             this.cb_Baud.TabIndex = 4;
             this.cb_Baud.Text = "9600";
             // 
@@ -213,11 +214,11 @@
             | System.Windows.Forms.AnchorStyles.Left)));
             this.rtb_Log.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
             this.rtb_Log.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.rtb_Log.Location = new System.Drawing.Point(9, 270);
+            this.rtb_Log.Location = new System.Drawing.Point(9, 257);
             this.rtb_Log.Name = "rtb_Log";
             this.rtb_Log.ReadOnly = true;
             this.rtb_Log.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.rtb_Log.Size = new System.Drawing.Size(388, 290);
+            this.rtb_Log.Size = new System.Drawing.Size(388, 303);
             this.rtb_Log.TabIndex = 10;
             this.rtb_Log.Text = "";
             this.rtb_Log.TextChanged += new System.EventHandler(this.rtb_Log_TextChanged);
@@ -265,13 +266,14 @@
             this.tabControl1.Location = new System.Drawing.Point(9, 8);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(392, 256);
+            this.tabControl1.Size = new System.Drawing.Size(392, 243);
             this.tabControl1.SizeMode = System.Windows.Forms.TabSizeMode.Fixed;
             this.tabControl1.TabIndex = 18;
             this.tabControl1.SelectedIndexChanged += new System.EventHandler(this.tabControl1_SelectedIndexChanged);
             // 
             // tabForward
             // 
+            this.tabForward.Controls.Add(this.rtb_CmdData);
             this.tabForward.Controls.Add(this.bt_SetPort2);
             this.tabForward.Controls.Add(this.bt_SetPort1);
             this.tabForward.Controls.Add(this.ckb_Script);
@@ -279,8 +281,6 @@
             this.tabForward.Controls.Add(this.ckb_LF);
             this.tabForward.Controls.Add(this.ckb_CR);
             this.tabForward.Controls.Add(this.ckb_Loop);
-            this.tabForward.Controls.Add(this.label10);
-            this.tabForward.Controls.Add(this.tbx_CmdData);
             this.tabForward.Controls.Add(this.bt_Script);
             this.tabForward.Controls.Add(this.bt_Send);
             this.tabForward.Controls.Add(this.bt_StopSend);
@@ -288,16 +288,152 @@
             this.tabForward.Controls.Add(this.bt_FwdStop);
             this.tabForward.Controls.Add(this.bt_FwdScan);
             this.tabForward.Controls.Add(this.label3);
+            this.tabForward.Controls.Add(this.cb_Port);
             this.tabForward.Controls.Add(this.cb_Baud);
-            this.tabForward.Controls.Add(this.label2);
-            this.tabForward.Controls.Add(this.label1);
+            this.tabForward.Controls.Add(this.lb_Port2);
+            this.tabForward.Controls.Add(this.label4);
+            this.tabForward.Controls.Add(this.lb_Port1);
             this.tabForward.Location = new System.Drawing.Point(4, 22);
             this.tabForward.Name = "tabForward";
             this.tabForward.Padding = new System.Windows.Forms.Padding(3);
-            this.tabForward.Size = new System.Drawing.Size(384, 230);
+            this.tabForward.Size = new System.Drawing.Size(384, 217);
             this.tabForward.TabIndex = 0;
             this.tabForward.Text = "Forward";
             this.tabForward.UseVisualStyleBackColor = true;
+            // 
+            // rtb_CmdData
+            // 
+            this.rtb_CmdData.BackColor = System.Drawing.SystemColors.Control;
+            this.rtb_CmdData.Font = new System.Drawing.Font("Consolas", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.rtb_CmdData.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(0)))), ((int)(((byte)(192)))));
+            this.rtb_CmdData.Location = new System.Drawing.Point(6, 93);
+            this.rtb_CmdData.Name = "rtb_CmdData";
+            this.rtb_CmdData.Size = new System.Drawing.Size(311, 116);
+            this.rtb_CmdData.TabIndex = 38;
+            this.rtb_CmdData.Text = "AT";
+            // 
+            // bt_SetPort2
+            // 
+            this.bt_SetPort2.Location = new System.Drawing.Point(125, 38);
+            this.bt_SetPort2.Name = "bt_SetPort2";
+            this.bt_SetPort2.Size = new System.Drawing.Size(42, 23);
+            this.bt_SetPort2.TabIndex = 37;
+            this.bt_SetPort2.Text = ">>>";
+            this.bt_SetPort2.UseVisualStyleBackColor = true;
+            // 
+            // bt_SetPort1
+            // 
+            this.bt_SetPort1.ImageList = this.imageList1;
+            this.bt_SetPort1.Location = new System.Drawing.Point(125, 6);
+            this.bt_SetPort1.Name = "bt_SetPort1";
+            this.bt_SetPort1.Size = new System.Drawing.Size(42, 23);
+            this.bt_SetPort1.TabIndex = 37;
+            this.bt_SetPort1.Text = ">>>";
+            this.bt_SetPort1.UseVisualStyleBackColor = true;
+            // 
+            // ckb_Script
+            // 
+            this.ckb_Script.AutoSize = true;
+            this.ckb_Script.Location = new System.Drawing.Point(182, 67);
+            this.ckb_Script.Name = "ckb_Script";
+            this.ckb_Script.Size = new System.Drawing.Size(53, 17);
+            this.ckb_Script.TabIndex = 33;
+            this.ckb_Script.Text = "Script";
+            this.ckb_Script.UseVisualStyleBackColor = true;
+            this.ckb_Script.CheckedChanged += new System.EventHandler(this.ckb_Script_CheckedChanged);
+            // 
+            // nud_Interval
+            // 
+            this.nud_Interval.Location = new System.Drawing.Point(323, 67);
+            this.nud_Interval.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.nud_Interval.Minimum = new decimal(new int[] {
+            100,
+            0,
+            0,
+            0});
+            this.nud_Interval.Name = "nud_Interval";
+            this.nud_Interval.Size = new System.Drawing.Size(55, 20);
+            this.nud_Interval.TabIndex = 34;
+            this.nud_Interval.Value = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            0});
+            // 
+            // ckb_LF
+            // 
+            this.ckb_LF.AutoSize = true;
+            this.ckb_LF.Location = new System.Drawing.Point(118, 67);
+            this.ckb_LF.Name = "ckb_LF";
+            this.ckb_LF.Size = new System.Drawing.Size(38, 17);
+            this.ckb_LF.TabIndex = 30;
+            this.ckb_LF.Text = "LF";
+            this.ckb_LF.UseVisualStyleBackColor = true;
+            // 
+            // ckb_CR
+            // 
+            this.ckb_CR.AutoSize = true;
+            this.ckb_CR.Checked = true;
+            this.ckb_CR.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.ckb_CR.Location = new System.Drawing.Point(51, 67);
+            this.ckb_CR.Name = "ckb_CR";
+            this.ckb_CR.Size = new System.Drawing.Size(41, 17);
+            this.ckb_CR.TabIndex = 31;
+            this.ckb_CR.Text = "CR";
+            this.ckb_CR.UseVisualStyleBackColor = true;
+            // 
+            // ckb_Loop
+            // 
+            this.ckb_Loop.AutoSize = true;
+            this.ckb_Loop.Location = new System.Drawing.Point(262, 67);
+            this.ckb_Loop.Name = "ckb_Loop";
+            this.ckb_Loop.Size = new System.Drawing.Size(50, 17);
+            this.ckb_Loop.TabIndex = 32;
+            this.ckb_Loop.Text = "Loop";
+            this.ckb_Loop.UseVisualStyleBackColor = true;
+            // 
+            // bt_Script
+            // 
+            this.bt_Script.Enabled = false;
+            this.bt_Script.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_Script.ForeColor = System.Drawing.Color.Red;
+            this.bt_Script.ImageIndex = 8;
+            this.bt_Script.ImageList = this.imageList1;
+            this.bt_Script.Location = new System.Drawing.Point(323, 93);
+            this.bt_Script.Name = "bt_Script";
+            this.bt_Script.Size = new System.Drawing.Size(55, 55);
+            this.bt_Script.TabIndex = 36;
+            this.bt_Script.UseVisualStyleBackColor = true;
+            // 
+            // bt_Send
+            // 
+            this.bt_Send.Enabled = false;
+            this.bt_Send.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_Send.ForeColor = System.Drawing.Color.Red;
+            this.bt_Send.ImageIndex = 5;
+            this.bt_Send.ImageList = this.imageList1;
+            this.bt_Send.Location = new System.Drawing.Point(323, 154);
+            this.bt_Send.Name = "bt_Send";
+            this.bt_Send.Size = new System.Drawing.Size(55, 55);
+            this.bt_Send.TabIndex = 29;
+            this.bt_Send.UseVisualStyleBackColor = true;
+            // 
+            // bt_StopSend
+            // 
+            this.bt_StopSend.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.bt_StopSend.ForeColor = System.Drawing.Color.Red;
+            this.bt_StopSend.ImageIndex = 1;
+            this.bt_StopSend.ImageList = this.imageList1;
+            this.bt_StopSend.Location = new System.Drawing.Point(323, 154);
+            this.bt_StopSend.Name = "bt_StopSend";
+            this.bt_StopSend.Size = new System.Drawing.Size(55, 55);
+            this.bt_StopSend.TabIndex = 35;
+            this.bt_StopSend.UseVisualStyleBackColor = true;
+            this.bt_StopSend.Visible = false;
             // 
             // bt_FwdStart
             // 
@@ -305,7 +441,7 @@
             this.bt_FwdStart.ForeColor = System.Drawing.Color.Red;
             this.bt_FwdStart.ImageIndex = 0;
             this.bt_FwdStart.ImageList = this.imageList1;
-            this.bt_FwdStart.Location = new System.Drawing.Point(331, 6);
+            this.bt_FwdStart.Location = new System.Drawing.Point(323, 6);
             this.bt_FwdStart.Name = "bt_FwdStart";
             this.bt_FwdStart.Size = new System.Drawing.Size(55, 55);
             this.bt_FwdStart.TabIndex = 5;
@@ -318,7 +454,7 @@
             this.bt_FwdStop.ForeColor = System.Drawing.Color.Red;
             this.bt_FwdStop.ImageIndex = 1;
             this.bt_FwdStop.ImageList = this.imageList1;
-            this.bt_FwdStop.Location = new System.Drawing.Point(331, 6);
+            this.bt_FwdStop.Location = new System.Drawing.Point(323, 6);
             this.bt_FwdStop.Name = "bt_FwdStop";
             this.bt_FwdStop.Size = new System.Drawing.Size(55, 55);
             this.bt_FwdStop.TabIndex = 12;
@@ -332,12 +468,45 @@
             this.bt_FwdScan.ForeColor = System.Drawing.Color.Red;
             this.bt_FwdScan.ImageIndex = 3;
             this.bt_FwdScan.ImageList = this.imageList1;
-            this.bt_FwdScan.Location = new System.Drawing.Point(270, 7);
+            this.bt_FwdScan.Location = new System.Drawing.Point(262, 6);
             this.bt_FwdScan.Name = "bt_FwdScan";
             this.bt_FwdScan.Size = new System.Drawing.Size(55, 55);
             this.bt_FwdScan.TabIndex = 13;
             this.bt_FwdScan.UseVisualStyleBackColor = true;
             this.bt_FwdScan.Click += new System.EventHandler(this.bt_FwdScan_Click);
+            // 
+            // cb_Port
+            // 
+            this.cb_Port.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cb_Port.FormattingEnabled = true;
+            this.cb_Port.Items.AddRange(new object[] {
+            "1200",
+            "2400",
+            "4800",
+            "9600",
+            "14400",
+            "19200",
+            "38400",
+            "56000",
+            "57600",
+            "115200",
+            "128000",
+            "256000"});
+            this.cb_Port.Location = new System.Drawing.Point(51, 6);
+            this.cb_Port.Name = "cb_Port";
+            this.cb_Port.Size = new System.Drawing.Size(68, 23);
+            this.cb_Port.TabIndex = 4;
+            this.cb_Port.Text = "Empty";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label4.Location = new System.Drawing.Point(13, 10);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(32, 15);
+            this.label4.TabIndex = 2;
+            this.label4.Text = "Port:";
             // 
             // tabDfu
             // 
@@ -357,7 +526,7 @@
             this.tabDfu.Location = new System.Drawing.Point(4, 22);
             this.tabDfu.Name = "tabDfu";
             this.tabDfu.Padding = new System.Windows.Forms.Padding(3);
-            this.tabDfu.Size = new System.Drawing.Size(384, 230);
+            this.tabDfu.Size = new System.Drawing.Size(384, 217);
             this.tabDfu.TabIndex = 1;
             this.tabDfu.Text = "DFU";
             // 
@@ -517,7 +686,7 @@
             this.tabTools.Location = new System.Drawing.Point(4, 22);
             this.tabTools.Name = "tabTools";
             this.tabTools.Padding = new System.Windows.Forms.Padding(3);
-            this.tabTools.Size = new System.Drawing.Size(384, 230);
+            this.tabTools.Size = new System.Drawing.Size(384, 217);
             this.tabTools.TabIndex = 4;
             this.tabTools.Text = "Tools";
             this.tabTools.UseVisualStyleBackColor = true;
@@ -666,7 +835,7 @@
             this.lb_Notic.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lb_Notic.AutoSize = true;
             this.lb_Notic.ForeColor = System.Drawing.Color.Tomato;
-            this.lb_Notic.Location = new System.Drawing.Point(17, 278);
+            this.lb_Notic.Location = new System.Drawing.Point(19, 267);
             this.lb_Notic.Name = "lb_Notic";
             this.lb_Notic.Size = new System.Drawing.Size(168, 13);
             this.lb_Notic.TabIndex = 24;
@@ -677,149 +846,6 @@
             // 
             this.timer2.Interval = 2000;
             this.timer2.Tick += new System.EventHandler(this.timer2_Tick);
-            // 
-            // ckb_Script
-            // 
-            this.ckb_Script.AutoSize = true;
-            this.ckb_Script.Location = new System.Drawing.Point(161, 175);
-            this.ckb_Script.Name = "ckb_Script";
-            this.ckb_Script.Size = new System.Drawing.Size(53, 17);
-            this.ckb_Script.TabIndex = 33;
-            this.ckb_Script.Text = "Script";
-            this.ckb_Script.UseVisualStyleBackColor = true;
-            // 
-            // nud_Interval
-            // 
-            this.nud_Interval.Location = new System.Drawing.Point(48, 137);
-            this.nud_Interval.Maximum = new decimal(new int[] {
-            10000,
-            0,
-            0,
-            0});
-            this.nud_Interval.Minimum = new decimal(new int[] {
-            100,
-            0,
-            0,
-            0});
-            this.nud_Interval.Name = "nud_Interval";
-            this.nud_Interval.Size = new System.Drawing.Size(97, 20);
-            this.nud_Interval.TabIndex = 34;
-            this.nud_Interval.Value = new decimal(new int[] {
-            1000,
-            0,
-            0,
-            0});
-            // 
-            // ckb_LF
-            // 
-            this.ckb_LF.AutoSize = true;
-            this.ckb_LF.Location = new System.Drawing.Point(87, 175);
-            this.ckb_LF.Name = "ckb_LF";
-            this.ckb_LF.Size = new System.Drawing.Size(38, 17);
-            this.ckb_LF.TabIndex = 30;
-            this.ckb_LF.Text = "LF";
-            this.ckb_LF.UseVisualStyleBackColor = true;
-            // 
-            // ckb_CR
-            // 
-            this.ckb_CR.AutoSize = true;
-            this.ckb_CR.Checked = true;
-            this.ckb_CR.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ckb_CR.Location = new System.Drawing.Point(10, 175);
-            this.ckb_CR.Name = "ckb_CR";
-            this.ckb_CR.Size = new System.Drawing.Size(41, 17);
-            this.ckb_CR.TabIndex = 31;
-            this.ckb_CR.Text = "CR";
-            this.ckb_CR.UseVisualStyleBackColor = true;
-            // 
-            // ckb_Loop
-            // 
-            this.ckb_Loop.AutoSize = true;
-            this.ckb_Loop.Location = new System.Drawing.Point(75, 207);
-            this.ckb_Loop.Name = "ckb_Loop";
-            this.ckb_Loop.Size = new System.Drawing.Size(50, 17);
-            this.ckb_Loop.TabIndex = 32;
-            this.ckb_Loop.Text = "Loop";
-            this.ckb_Loop.UseVisualStyleBackColor = true;
-            // 
-            // label10
-            // 
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(9, 87);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(33, 13);
-            this.label10.TabIndex = 28;
-            this.label10.Text = "Data:";
-            // 
-            // tbx_CmdData
-            // 
-            this.tbx_CmdData.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
-            this.tbx_CmdData.Font = new System.Drawing.Font("Consolas", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.tbx_CmdData.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(0)))), ((int)(((byte)(192)))));
-            this.tbx_CmdData.Location = new System.Drawing.Point(48, 81);
-            this.tbx_CmdData.MaxLength = 256;
-            this.tbx_CmdData.Name = "tbx_CmdData";
-            this.tbx_CmdData.Size = new System.Drawing.Size(307, 25);
-            this.tbx_CmdData.TabIndex = 27;
-            this.tbx_CmdData.Text = "AT";
-            // 
-            // bt_Script
-            // 
-            this.bt_Script.Enabled = false;
-            this.bt_Script.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_Script.ForeColor = System.Drawing.Color.Red;
-            this.bt_Script.ImageIndex = 8;
-            this.bt_Script.ImageList = this.imageList1;
-            this.bt_Script.Location = new System.Drawing.Point(245, 117);
-            this.bt_Script.Name = "bt_Script";
-            this.bt_Script.Size = new System.Drawing.Size(55, 55);
-            this.bt_Script.TabIndex = 36;
-            this.bt_Script.UseVisualStyleBackColor = true;
-            // 
-            // bt_Send
-            // 
-            this.bt_Send.Enabled = false;
-            this.bt_Send.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_Send.ForeColor = System.Drawing.Color.Red;
-            this.bt_Send.ImageIndex = 5;
-            this.bt_Send.ImageList = this.imageList1;
-            this.bt_Send.Location = new System.Drawing.Point(323, 117);
-            this.bt_Send.Name = "bt_Send";
-            this.bt_Send.Size = new System.Drawing.Size(55, 55);
-            this.bt_Send.TabIndex = 29;
-            this.bt_Send.UseVisualStyleBackColor = true;
-            // 
-            // bt_StopSend
-            // 
-            this.bt_StopSend.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.bt_StopSend.ForeColor = System.Drawing.Color.Red;
-            this.bt_StopSend.ImageIndex = 1;
-            this.bt_StopSend.ImageList = this.imageList1;
-            this.bt_StopSend.Location = new System.Drawing.Point(323, 117);
-            this.bt_StopSend.Name = "bt_StopSend";
-            this.bt_StopSend.Size = new System.Drawing.Size(55, 55);
-            this.bt_StopSend.TabIndex = 35;
-            this.bt_StopSend.UseVisualStyleBackColor = true;
-            this.bt_StopSend.Visible = false;
-            // 
-            // bt_SetPort1
-            // 
-            this.bt_SetPort1.ImageList = this.imageList1;
-            this.bt_SetPort1.Location = new System.Drawing.Point(152, 104);
-            this.bt_SetPort1.Name = "bt_SetPort1";
-            this.bt_SetPort1.Size = new System.Drawing.Size(81, 23);
-            this.bt_SetPort1.TabIndex = 37;
-            this.bt_SetPort1.Text = "Set Port 1";
-            this.bt_SetPort1.UseVisualStyleBackColor = true;
-            // 
-            // bt_SetPort2
-            // 
-            this.bt_SetPort2.Location = new System.Drawing.Point(152, 133);
-            this.bt_SetPort2.Name = "bt_SetPort2";
-            this.bt_SetPort2.Size = new System.Drawing.Size(81, 23);
-            this.bt_SetPort2.TabIndex = 37;
-            this.bt_SetPort2.Text = "Set Port 2";
-            this.bt_SetPort2.UseVisualStyleBackColor = true;
             // 
             // FormSPT
             // 
@@ -847,6 +873,7 @@
             this.tabControl1.ResumeLayout(false);
             this.tabForward.ResumeLayout(false);
             this.tabForward.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nud_Interval)).EndInit();
             this.tabDfu.ResumeLayout(false);
             this.tabDfu.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nud_FrameDelay)).EndInit();
@@ -856,7 +883,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.picConnected)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.picHomePage)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.picDisconnected)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nud_Interval)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -868,9 +894,9 @@
         private System.Windows.Forms.Button bt_FwdStart;
         private System.Windows.Forms.Label lb_Status;
         private System.Windows.Forms.NotifyIcon notifyIcon1;
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label lb_Port1;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label lb_Port2;
         private System.Windows.Forms.ComboBox cb_Baud;
         private System.Windows.Forms.RichTextBox rtb_Log;
         private System.Windows.Forms.LinkLabel lkl_Homepage;
@@ -915,13 +941,14 @@
         private System.Windows.Forms.CheckBox ckb_LF;
         private System.Windows.Forms.CheckBox ckb_CR;
         private System.Windows.Forms.CheckBox ckb_Loop;
-        private System.Windows.Forms.Label label10;
-        private System.Windows.Forms.TextBox tbx_CmdData;
         private System.Windows.Forms.Button bt_Script;
         private System.Windows.Forms.Button bt_Send;
         private System.Windows.Forms.Button bt_StopSend;
         private System.Windows.Forms.Button bt_SetPort2;
         private System.Windows.Forms.Button bt_SetPort1;
+        private System.Windows.Forms.ComboBox cb_Port;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.RichTextBox rtb_CmdData;
     }
 }
 
