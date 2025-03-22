@@ -30,8 +30,8 @@
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormSPT));
-            this.serialCdc = new System.IO.Ports.SerialPort(this.components);
-            this.serialForward = new System.IO.Ports.SerialPort(this.components);
+            this.serial_Port1 = new System.IO.Ports.SerialPort(this.components);
+            this.serial_Port2 = new System.IO.Ports.SerialPort(this.components);
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.lb_Status = new System.Windows.Forms.Label();
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
@@ -46,6 +46,8 @@
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabForward = new System.Windows.Forms.TabPage();
+            this.pictureBox2 = new System.Windows.Forms.PictureBox();
+            this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.rtb_CmdData = new System.Windows.Forms.RichTextBox();
             this.bt_SetPort2 = new System.Windows.Forms.Button();
             this.bt_SetPort1 = new System.Windows.Forms.Button();
@@ -92,6 +94,8 @@
             this.timer2 = new System.Windows.Forms.Timer(this.components);
             this.tabControl1.SuspendLayout();
             this.tabForward.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_Interval)).BeginInit();
             this.tabDfu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nud_FrameDelay)).BeginInit();
@@ -102,19 +106,19 @@
             ((System.ComponentModel.ISupportInitialize)(this.picDisconnected)).BeginInit();
             this.SuspendLayout();
             // 
-            // serialCdc
+            // serial_Port1
             // 
-            this.serialCdc.DtrEnable = true;
-            this.serialCdc.RtsEnable = true;
-            this.serialCdc.WriteBufferSize = 4096;
-            this.serialCdc.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(this.serialPort1_DataReceived);
+            this.serial_Port1.DtrEnable = true;
+            this.serial_Port1.RtsEnable = true;
+            this.serial_Port1.WriteBufferSize = 4096;
+            this.serial_Port1.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(this.serialPort1_DataReceived);
             // 
-            // serialForward
+            // serial_Port2
             // 
-            this.serialForward.DtrEnable = true;
-            this.serialForward.RtsEnable = true;
-            this.serialForward.WriteBufferSize = 4096;
-            this.serialForward.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(this.serialPort2_DataReceived);
+            this.serial_Port2.DtrEnable = true;
+            this.serial_Port2.RtsEnable = true;
+            this.serial_Port2.WriteBufferSize = 4096;
+            this.serial_Port2.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(this.serialPort2_DataReceived);
             // 
             // imageList1
             // 
@@ -159,11 +163,11 @@
             // 
             this.lb_Port1.AutoSize = true;
             this.lb_Port1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lb_Port1.Location = new System.Drawing.Point(173, 9);
+            this.lb_Port1.Location = new System.Drawing.Point(202, 9);
             this.lb_Port1.Name = "lb_Port1";
-            this.lb_Port1.Size = new System.Drawing.Size(79, 15);
+            this.lb_Port1.Size = new System.Drawing.Size(41, 15);
             this.lb_Port1.TabIndex = 2;
-            this.lb_Port1.Text = "Port 1: Empty";
+            this.lb_Port1.Text = "Empty";
             // 
             // label3
             // 
@@ -179,11 +183,11 @@
             // 
             this.lb_Port2.AutoSize = true;
             this.lb_Port2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lb_Port2.Location = new System.Drawing.Point(173, 41);
+            this.lb_Port2.Location = new System.Drawing.Point(202, 42);
             this.lb_Port2.Name = "lb_Port2";
-            this.lb_Port2.Size = new System.Drawing.Size(79, 15);
+            this.lb_Port2.Size = new System.Drawing.Size(41, 15);
             this.lb_Port2.TabIndex = 3;
-            this.lb_Port2.Text = "Port 2: Empty";
+            this.lb_Port2.Text = "Empty";
             // 
             // cb_Baud
             // 
@@ -218,7 +222,7 @@
             this.rtb_Log.Name = "rtb_Log";
             this.rtb_Log.ReadOnly = true;
             this.rtb_Log.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.rtb_Log.Size = new System.Drawing.Size(388, 303);
+            this.rtb_Log.Size = new System.Drawing.Size(392, 303);
             this.rtb_Log.TabIndex = 10;
             this.rtb_Log.Text = "";
             this.rtb_Log.TextChanged += new System.EventHandler(this.rtb_Log_TextChanged);
@@ -273,6 +277,8 @@
             // 
             // tabForward
             // 
+            this.tabForward.Controls.Add(this.pictureBox2);
+            this.tabForward.Controls.Add(this.pictureBox1);
             this.tabForward.Controls.Add(this.rtb_CmdData);
             this.tabForward.Controls.Add(this.bt_SetPort2);
             this.tabForward.Controls.Add(this.bt_SetPort1);
@@ -301,6 +307,28 @@
             this.tabForward.Text = "Forward";
             this.tabForward.UseVisualStyleBackColor = true;
             // 
+            // pictureBox2
+            // 
+            this.pictureBox2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.pictureBox2.Image = global::SerialPortTerminal.Properties.Resources.Port2;
+            this.pictureBox2.Location = new System.Drawing.Point(173, 38);
+            this.pictureBox2.Name = "pictureBox2";
+            this.pictureBox2.Size = new System.Drawing.Size(23, 23);
+            this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBox2.TabIndex = 25;
+            this.pictureBox2.TabStop = false;
+            // 
+            // pictureBox1
+            // 
+            this.pictureBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.pictureBox1.Image = global::SerialPortTerminal.Properties.Resources.Port1;
+            this.pictureBox1.Location = new System.Drawing.Point(173, 6);
+            this.pictureBox1.Name = "pictureBox1";
+            this.pictureBox1.Size = new System.Drawing.Size(23, 23);
+            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBox1.TabIndex = 25;
+            this.pictureBox1.TabStop = false;
+            // 
             // rtb_CmdData
             // 
             this.rtb_CmdData.BackColor = System.Drawing.SystemColors.Control;
@@ -314,22 +342,25 @@
             // 
             // bt_SetPort2
             // 
+            this.bt_SetPort2.BackgroundImage = global::SerialPortTerminal.Properties.Resources.Forward_icon;
+            this.bt_SetPort2.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this.bt_SetPort2.Location = new System.Drawing.Point(125, 38);
             this.bt_SetPort2.Name = "bt_SetPort2";
             this.bt_SetPort2.Size = new System.Drawing.Size(42, 23);
             this.bt_SetPort2.TabIndex = 37;
-            this.bt_SetPort2.Text = ">>>";
             this.bt_SetPort2.UseVisualStyleBackColor = true;
+            this.bt_SetPort2.Click += new System.EventHandler(this.bt_SetPort2_Click);
             // 
             // bt_SetPort1
             // 
-            this.bt_SetPort1.ImageList = this.imageList1;
+            this.bt_SetPort1.BackgroundImage = global::SerialPortTerminal.Properties.Resources.Forward_icon;
+            this.bt_SetPort1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this.bt_SetPort1.Location = new System.Drawing.Point(125, 6);
             this.bt_SetPort1.Name = "bt_SetPort1";
             this.bt_SetPort1.Size = new System.Drawing.Size(42, 23);
             this.bt_SetPort1.TabIndex = 37;
-            this.bt_SetPort1.Text = ">>>";
             this.bt_SetPort1.UseVisualStyleBackColor = true;
+            this.bt_SetPort1.Click += new System.EventHandler(this.bt_SetPort1_Click);
             // 
             // ckb_Script
             // 
@@ -774,7 +805,7 @@
             // 
             this.pic_OpenLog.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.pic_OpenLog.Image = global::SerialPortTerminal.Properties.Resources.text_x_log_icon;
-            this.pic_OpenLog.Location = new System.Drawing.Point(189, 566);
+            this.pic_OpenLog.Location = new System.Drawing.Point(156, 566);
             this.pic_OpenLog.Name = "pic_OpenLog";
             this.pic_OpenLog.Size = new System.Drawing.Size(29, 26);
             this.pic_OpenLog.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
@@ -823,7 +854,7 @@
             this.lb_OpenLog.AutoSize = true;
             this.lb_OpenLog.BackColor = System.Drawing.Color.Transparent;
             this.lb_OpenLog.ForeColor = System.Drawing.Color.Blue;
-            this.lb_OpenLog.Location = new System.Drawing.Point(224, 573);
+            this.lb_OpenLog.Location = new System.Drawing.Point(191, 573);
             this.lb_OpenLog.Name = "lb_OpenLog";
             this.lb_OpenLog.Size = new System.Drawing.Size(54, 13);
             this.lb_OpenLog.TabIndex = 23;
@@ -835,7 +866,7 @@
             this.lb_Notic.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lb_Notic.AutoSize = true;
             this.lb_Notic.ForeColor = System.Drawing.Color.Tomato;
-            this.lb_Notic.Location = new System.Drawing.Point(19, 267);
+            this.lb_Notic.Location = new System.Drawing.Point(14, 541);
             this.lb_Notic.Name = "lb_Notic";
             this.lb_Notic.Size = new System.Drawing.Size(168, 13);
             this.lb_Notic.TabIndex = 24;
@@ -873,6 +904,8 @@
             this.tabControl1.ResumeLayout(false);
             this.tabForward.ResumeLayout(false);
             this.tabForward.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_Interval)).EndInit();
             this.tabDfu.ResumeLayout(false);
             this.tabDfu.PerformLayout();
@@ -889,8 +922,8 @@
         }
 
         #endregion
-        private System.IO.Ports.SerialPort serialCdc;
-        private System.IO.Ports.SerialPort serialForward;
+        private System.IO.Ports.SerialPort serial_Port1;
+        private System.IO.Ports.SerialPort serial_Port2;
         private System.Windows.Forms.Button bt_FwdStart;
         private System.Windows.Forms.Label lb_Status;
         private System.Windows.Forms.NotifyIcon notifyIcon1;
@@ -949,6 +982,8 @@
         private System.Windows.Forms.ComboBox cb_Port;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.RichTextBox rtb_CmdData;
+        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.PictureBox pictureBox2;
     }
 }
 

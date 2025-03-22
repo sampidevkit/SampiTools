@@ -11,12 +11,25 @@ using System.Diagnostics;
 using SerialPortTerminal.Properties;
 using System.Resources;
 using Utils;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace Form1
 {
     public partial class FormSPT : Form
     {
         #region Variables
+        enum DfuStt : ushort
+        {
+            CHECK_CLOSE_PORT=0,
+            OPEN_PORT, // 1
+            READ_LINE, // 2
+            CHECK_OPEN_PORT, // 3
+            SEND_DATA, // 4
+            WAIT_RESPONSE, // 5
+            CHECK_RESPONSE, // 6
+            ERROR // 7
+        }
+
         // File IO
         private struct FileInfo
         {
@@ -42,43 +55,6 @@ namespace Form1
         #endregion
 
         #region User's Functions
-
-        private string Parse_COMPort(string str)
-        {
-            // ...(COM10)
-            int i, j, k;
-            string s = null;
-            char[] arr = str.ToCharArray();
-
-            for (i = 0; i < (arr.Length - 4); i++)
-            {
-                if ((arr[i] == 'C') && (arr[i + 1] == 'O') && (arr[i + 2] == 'M'))
-                {
-                    i += 3;
-                    break;
-                }
-            }
-
-            for (j = i, k = 0; j < arr.Length; j++)
-            {
-                if (arr[j] == ')')
-                {
-                    if (j > i)
-                        s = "COM" + k.ToString();
-
-                    break;
-                }
-
-                if ((arr[j] >= '0') && (arr[j] <= '9'))
-                {
-                    k *= 10;
-                    k += (int)(arr[j] - '0');
-                }
-
-            }
-
-            return s;
-        }
 
         private void ClearLog()
         {
@@ -223,7 +199,7 @@ namespace Form1
             {
                 while (DebugWait) ;
                 DebugLog("\nTX: " + cmdStr, Color.Blue);
-                serialCdc.Write(new string(MakeFrame(cmdChr, cmdChr.Length)));
+                serial_Port1.Write(new string(MakeFrame(cmdChr, cmdChr.Length)));
                 DebugLog("\nRX: ", Color.Green);
             }
             catch
@@ -293,7 +269,7 @@ namespace Form1
                     while (DebugWait) ;
                     //DebugLog("\nTX: " + GetCmdString(), Color.Blue);
                     DebugLog("\nTX: " + cmdStr, Color.Blue);
-                    serialCdc.Write(new string(MakeFrame(cmdChr, cmdChr.Length)));
+                    serial_Port1.Write(new string(MakeFrame(cmdChr, cmdChr.Length)));
                     DebugLog("\nRX: ", Color.Green);
                     scriptLineIdx += (cmdChr.Length + 1);
                 }
@@ -315,40 +291,6 @@ namespace Form1
             DebugWait = false;
         }
 
-        private bool USBCDC_Is_Ready(string PortName)
-        {
-            string deviceid = null;
-
-            if (PortName == null)
-                return false;
-
-            try
-            {
-                ManagementObjectSearcher deviceList = new ManagementObjectSearcher("root\\WMI", "SELECT * FROM MSSerial_PortName");
-
-                if (deviceList != null)
-                {
-                    foreach (ManagementObject device in deviceList.Get())// Check present device with supported list
-                    {
-                        if (device["InstanceName"].ToString().Contains(Pid))
-                        {
-                            deviceid = device["PortName"].ToString();
-
-                            if (deviceid.Contains(PortName))
-                                return true;
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                while (DebugWait) ;
-                DebugLog("\n\n[USBCDC_Is_Ready]\n" + e.ToString(), Color.Red);
-            }
-
-            return false;
-        }
-
         private bool Port_Is_Present(string PortName)
         {
             string[] ports;
@@ -365,41 +307,6 @@ namespace Form1
             }
 
             return false;
-        }
-
-        private void Scan_UsbPort()
-        {
-            int found = 0;
-
-            cb_Pid.SelectedIndex = 0;
-
-            while (found == 0)
-            {
-                found = Get_Port1();
-
-                if (found == 0)
-                {
-                    try
-                    {
-                        if (cb_Pid.SelectedIndex < (cb_Pid.Items.Count - 1))
-                            cb_Pid.SelectedIndex++;
-                        else
-                        {
-                            cb_Pid.SelectedIndex = 0;
-                            while (DebugWait) ;
-                            DebugLog("\n\nNo USB serial port", Color.OrangeRed);
-                            break;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        cb_Pid.SelectedIndex = 0;
-                        while (DebugWait) ;
-                        DebugLog("\n\n[Scan_UsbPort]\n" + ex.ToString() + "\n\nNo USB serial port", Color.Red);
-                        break;
-                    }
-                }
-            }
         }
 
         private void Disable_Uart_Components()
@@ -431,45 +338,12 @@ namespace Form1
 
         #region App Forward
 
-        private int Get_Port()
-        {
-            int found = 0;
-            string[] ports;
-
-            bt_SetPort2.Items.Clear();
-            bt_SetPort2.Items.Add("Internal");
-
-            try
-            {
-                ports = SerialPort.GetPortNames();
-
-                foreach (string port in ports)
-                {
-                    if (port != bt_SetPort1.Text)
-                    {
-                        bt_SetPort2.Items.Add(port);
-                        found++;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                while (DebugWait) ;
-                DebugLog("\n\n[Get_Port2]\n" + e.ToString(), Color.Red);
-            }
-
-            bt_SetPort2.SelectedIndex = 0;
-
-            return found;
-        }
-
         private bool FwdPort_Is_Closed()
         {
-            // Check USB first
-            if (!USBCDC_Is_Ready(bt_SetPort1.Text))
+            if (!Port_Is_Present(serial_Port1.PortName))
                 return true;
 
-            if (!Port_Is_Present(bt_SetPort2.Text))
+            if (!Port_Is_Present(serial_Port2.PortName))
                 return true;
 
             return false;
@@ -484,54 +358,48 @@ namespace Form1
         {
             bool success = false;
 
-            if (bt_SetPort1.Text == "Empty") //((bt_SetPort1.Text == "Empty") || (bt_SetPort2.Text == "Empty"))
-            {
-                MessageBox.Show("Port1 is not empty!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
-            }
-
             try
             {
-                if (Port_Is_Present(bt_SetPort1.Text))
+                if (Port_Is_Present(lb_Port1.Text))
                 {
-                    if (serialCdc.IsOpen)
+                    if (serial_Port1.IsOpen)
                     {
-                        serialCdc.DtrEnable = false;
-                        serialCdc.Dispose();
-                        serialCdc.Close();
+                        serial_Port1.DtrEnable = false;
+                        serial_Port1.Dispose();
+                        serial_Port1.Close();
                     }
 
-                    serialCdc.PortName = bt_SetPort1.Text;
+                    serial_Port1.PortName = lb_Port1.Text;
                 }
                 else
                     return false;
 
                 if (InternalPort == false)
                 {
-                    if (Port_Is_Present(bt_SetPort2.Text))
+                    if (Port_Is_Present(lb_Port2.Text))
                     {
-                        if (serialForward.IsOpen)
+                        if (serial_Port2.IsOpen)
                         {
-                            serialForward.DtrEnable = false;
-                            serialForward.Dispose();
-                            serialForward.Close();
+                            serial_Port2.DtrEnable = false;
+                            serial_Port2.Dispose();
+                            serial_Port2.Close();
                         }
 
-                        serialForward.PortName = bt_SetPort2.Text;
+                        serial_Port2.PortName = lb_Port2.Text;
                     }
                     else
                         return false;
                 }
 
-                serialCdc.BaudRate = int.Parse(cb_Baud.Text);
-                serialCdc.Open();
-                serialCdc.DtrEnable = true;
+                serial_Port1.BaudRate = int.Parse(cb_Baud.Text);
+                serial_Port1.Open();
+                serial_Port1.DtrEnable = true;
 
                 if (InternalPort == false)
                 {
-                    serialForward.BaudRate = serialCdc.BaudRate;
-                    serialForward.Open();
-                    serialForward.DtrEnable = true;
+                    serial_Port2.BaudRate = serial_Port1.BaudRate;
+                    serial_Port2.Open();
+                    serial_Port2.DtrEnable = true;
                 }
 
                 lb_Status.Text = "Forwarding...";
@@ -557,18 +425,18 @@ namespace Form1
         {
             try
             {
-                if (serialCdc.IsOpen)
+                if (serial_Port1.IsOpen)
                 {
-                    serialCdc.DtrEnable = false;
-                    serialCdc.Dispose();
-                    serialCdc.Close();
+                    serial_Port1.DtrEnable = false;
+                    serial_Port1.Dispose();
+                    serial_Port1.Close();
                 }
 
-                if (serialForward.IsOpen)
+                if (serial_Port2.IsOpen)
                 {
-                    serialForward.DtrEnable = false;
-                    serialForward.Dispose();
-                    serialForward.Close();
+                    serial_Port2.DtrEnable = false;
+                    serial_Port2.Dispose();
+                    serial_Port2.Close();
                 }
 
                 lb_Status.Text = "No Connection";
@@ -591,7 +459,7 @@ namespace Form1
         {
             bool success = false;
 
-            if (bt_SetPort1.Text != "Empty")//((bt_SetPort1.Text != "Empty") && (bt_SetPort2.Text != "Empty"))
+            if ((lb_Port1.Text != "Empty") && (lb_Port2.Text != "Empty"))
             {
                 if (Open_Fwd_Connection())
                 {
@@ -599,11 +467,7 @@ namespace Form1
                     Thread_Task.Start();
                     success = true;
                 }
-                else
-                    Scan_UsbPort();
             }
-            else
-                Scan_UsbPort();
 
             return success;
         }
@@ -689,37 +553,39 @@ namespace Form1
         #endregion
 
         #region App Device Firmware Update
-        private void Get_DfuPort()
+        private void Get_Port()
         {
+            int found = 0;
             string[] ports;
+
+            cb_Port.Items.Clear();
+            cb_Port.Items.Add("Internal");
+            cb_DfuPort.Items.Clear();
+            cb_DfuPort.Items.Add("Empty");
 
             try
             {
-                cb_DfuPort.Items.Clear();
                 ports = SerialPort.GetPortNames();
 
                 foreach (string port in ports)
                 {
+                    cb_Port.Items.Add(port);
                     cb_DfuPort.Items.Add(port);
+                    found++;
                 }
-
-                cb_DfuPort.SelectedIndex = 0;
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                cb_DfuPort.Items.Add("Empty");
-                cb_DfuPort.SelectedIndex = 0;
                 while (DebugWait) ;
-                DebugLog("\n\n[Get_DfuPort]\n" + e.ToString(), Color.Red);
+                DebugLog("\n\n[Get_Port]\n" + ex.ToString(), Color.Red);
             }
+
+            cb_Port.SelectedIndex = 0;
+            cb_DfuPort.SelectedIndex = 0;
         }
 
         private bool DfuPort_Is_Closed()
         {
-            // Check USB first
-            if (USBCDC_Is_Ready(cb_DfuPort.Text))
-                return false;
-
             if (Port_Is_Present(cb_DfuPort.Text))
                 return false;
 
@@ -838,7 +704,7 @@ namespace Form1
                 bool Resend = false;
                 int LineCount = 0;
                 int Count = 0;
-                int DoNext = 1;
+                DfuStt DoNext = DfuStt.OPEN_PORT;
                 string Data = null;
                 int BuffLen = 0;
                 byte[] Buff = new byte[4096];
@@ -853,7 +719,7 @@ namespace Form1
                     {
                         switch (DoNext)
                         {
-                            case 0: // Check closed port
+                            case DfuStt.CHECK_CLOSE_PORT: // Check closed port
                                 Enable_Uart_Components();
                                 bt_DfuStart.Visible = true;
                                 bt_DfuStop.Visible = false;
@@ -871,39 +737,39 @@ namespace Form1
                                 App_Dfu_Deinit();
                                 break;
 
-                            case 1: // Open port
+                            case DfuStt.OPEN_PORT: // Open port
                                 if (Open_Dfu_Connection())
                                 {
-                                    DoNext++;
+                                    DoNext = DfuStt.READ_LINE;
                                     LineCount = 0;
                                     while (DebugWait) ;
                                     DebugLog("\n\nPort openned", Color.Green);
                                 }
                                 else
-                                    DoNext--;
+                                    DoNext = DfuStt.CHECK_CLOSE_PORT;
                                 break;
 
-                            case 2: // Read 1 line
+                            case DfuStt.READ_LINE: // Read 1 line
                                 LineCount++;
                                 Data = DfuReader.ReadLine();
 
                                 if (Data != null)
                                 {
                                     Resend = false;
-                                    DoNext++;
+                                    DoNext = DfuStt.CHECK_OPEN_PORT;
                                 }
                                 else
-                                    DoNext = 0;
+                                    DoNext = DfuStt.CHECK_CLOSE_PORT;
                                 break;
 
-                            case 3: // Check openned port
+                            case DfuStt.CHECK_OPEN_PORT: // Check opened port
                                 if (DfuPort_Is_Openned())
-                                    DoNext++;
+                                    DoNext = DfuStt.SEND_DATA;
                                 else
-                                    DoNext=0;
+                                    DoNext= DfuStt.CHECK_CLOSE_PORT;
                                 break;
 
-                            case 4: // Send data
+                            case DfuStt.SEND_DATA: // Send data
                                 serialDfu.WriteLine(Data);
 
                                 if (Resend)
@@ -921,10 +787,10 @@ namespace Form1
                                 }
 
                                 Count = 0;
-                                DoNext++;
+                                DoNext = DfuStt.WAIT_RESPONSE;
                                 break;
 
-                            case 5: // Waiting for response
+                            case DfuStt.WAIT_RESPONSE: // Waiting for response
                                 if (++Count < (3000 / Tdelay)) 
                                 {
                                     BuffLen = 0;
@@ -943,19 +809,19 @@ namespace Form1
 
                                     if (BuffLen > 0) 
                                     {
-                                        DoNext++;
+                                        DoNext = DfuStt.CHECK_RESPONSE;
                                         break;
                                     }
                                 }
                                 else
-                                    DoNext = 0;
+                                    DoNext = DfuStt.CHECK_CLOSE_PORT;
                                 break;
 
-                            case 6:
+                            case DfuStt.CHECK_RESPONSE: // Check response
                                 if ((Buff[0] == 'A') // New version
                                     || ((Buff[0] == 'O') && (Buff[1] == 'K'))) // Old version
                                 {
-                                    DoNext = 2;
+                                    DoNext = DfuStt.READ_LINE;
                                     //while (DebugWait) ;
                                     //DebugLog("\nRX: OK", Color.Green);
                                 }
@@ -970,7 +836,7 @@ namespace Form1
                                         barr[i] = Buff[i];
 
                                     str = ENC.GetString(barr);
-                                    DoNext = 4;
+                                    DoNext = DfuStt.SEND_DATA;
                                     Resend = true;
                                     while (DebugWait) ;
                                     DebugLog("\nRX: " + str, Color.Green);
@@ -980,12 +846,12 @@ namespace Form1
                                 {
                                     while (DebugWait) ;
                                     DebugLog("\nResponse ERROR", Color.OrangeRed);
-                                    DoNext = 0;
+                                    DoNext = DfuStt.CHECK_CLOSE_PORT;
                                 }
                                 break;
 
-                            default:
-                                DoNext = 0;
+                            default: // Error
+                                DoNext = DfuStt.CHECK_CLOSE_PORT;
                                 break;
                         }
                     }
@@ -1027,26 +893,13 @@ namespace Form1
             this.Text += " v." + $"{version}";
             this.Update();
 
-            rtb_Log.Size = new System.Drawing.Size(603, 451);
-            rtb_Log.Location = new System.Drawing.Point(9, 109);
-            tabControl1.Size = new System.Drawing.Size(603, 95);
+            rtb_Log.Size = new System.Drawing.Size(392, 303);
+            rtb_Log.Location = new System.Drawing.Point(9, 257);
+            tabControl1.Size = new System.Drawing.Size(392, 243);
 
             cb_Baud.SelectedIndex = 9;
             cb_DfuBaud.SelectedIndex = 9;
-            Get_Port2();
-            Get_DfuPort();
-            Scan_UsbPort();
-            USBCDC_Is_Ready(null);
-        }
-
-        private void bt_SetPort1_MouseClick(object sender, MouseEventArgs e)
-        {
-            Get_Port1();
-        }
-
-        private void bt_SetPort2_MouseClick(object sender, MouseEventArgs e)
-        {
-            Get_Port2();
+            Get_Port();
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -1075,12 +928,6 @@ namespace Form1
             }
         }
 
-        private void bt_SetPort1_TextChanged(object sender, EventArgs e)
-        {
-            if ((bt_SetPort1.Text == bt_SetPort2.Text) && (bt_SetPort1.Text != "Empty"))
-                Get_Port2();
-        }
-
         private void serialPort1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             byte[] temp;
@@ -1091,12 +938,12 @@ namespace Form1
 
             try
             {
-                byte2read = serialCdc.BytesToRead;// Get number of bytes of received buffer
+                byte2read = serial_Port1.BytesToRead;// Get number of bytes of received buffer
                 temp = new byte[byte2read];// Create array to save data in received buffer
-                serialCdc.Read(temp, 0, byte2read);// Read buffer data, save to array
+                serial_Port1.Read(temp, 0, byte2read);// Read buffer data, save to array
 
                 if (InternalPort == false)
-                    serialForward.Write(temp, 0, byte2read);// Forward to serialport 2
+                    serial_Port2.Write(temp, 0, byte2read);// Forward to serialport 2
                 else
                     WriteInternalData(temp, byte2read);
             }
@@ -1120,10 +967,10 @@ namespace Form1
 
             try
             {
-                byte2read = serialForward.BytesToRead;// Get number of bytes of received buffer
+                byte2read = serial_Port2.BytesToRead;// Get number of bytes of received buffer
                 temp = new byte[byte2read];// Create array to save data in received buffer
-                serialForward.Read(temp, 0, byte2read);// Read buffer data, save to array
-                serialCdc.Write(temp, 0, byte2read);// Forward to serialport 1
+                serial_Port2.Read(temp, 0, byte2read);// Read buffer data, save to array
+                serial_Port1.Write(temp, 0, byte2read);// Forward to serialport 1
             }
             catch (Exception ex)
             {
@@ -1198,12 +1045,12 @@ namespace Form1
 
         private void bt_DfuScan_Click(object sender, EventArgs e)
         {
-            Get_DfuPort();
+            Get_Port();
         }
 
         private void cb_DfuPort_MouseClick(object sender, MouseEventArgs e)
         {
-            Get_DfuPort();
+            Get_Port();
         }
 
         private void bt_DfuStop_Click(object sender, EventArgs e)
@@ -1262,9 +1109,7 @@ namespace Form1
 
         private void bt_FwdScan_Click(object sender, EventArgs e)
         {
-            //Get_Port1();
-            Scan_UsbPort();
-            Get_Port2();
+            Get_Port();
         }
 
         private void lb_OpenLog_Click(object sender, EventArgs e)
@@ -1291,7 +1136,7 @@ namespace Form1
 
         private void bt_SetPort2_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (bt_SetPort2.Text == "Internal")
+            if (lb_Port2.Text == "Internal")
             {
                 bt_Send.Enabled = true;
                 InternalPort = true;
@@ -1305,9 +1150,7 @@ namespace Form1
 
         private void bt_Send_Click(object sender, EventArgs e)
         {
-            tbx_CmdStart.Enabled = false;
             rtb_CmdData.Enabled = false;
-            tbx_CmdStop.Enabled = false;
             ckb_Loop.Enabled = false;
             ckb_Script.Enabled = false;
 
@@ -1324,9 +1167,7 @@ namespace Form1
                 else
                     SendCmdString();
 
-                tbx_CmdStart.Enabled = true;
                 rtb_CmdData.Enabled = true;
-                tbx_CmdStop.Enabled = true;
                 ckb_Loop.Enabled = true;
                 ckb_Script.Enabled = true;
             }
@@ -1355,17 +1196,13 @@ namespace Form1
                 
             }
 
-            tbx_CmdStart.Enabled = true;
             rtb_CmdData.Enabled = true;
-            tbx_CmdStop.Enabled = true;
             ckb_Loop.Enabled = true;
             ckb_Script.Enabled = true;
 
             if ((ckb_Script.Checked == true) || (ckb_Loop.Checked == true))
             {
-                tbx_CmdStart.Enabled = false;
                 rtb_CmdData.Enabled = false;
-                tbx_CmdStop.Enabled = false;
             }
 
             ckb_Loop.Enabled = true;
@@ -1386,15 +1223,11 @@ namespace Form1
             {
                 if (ckb_Loop.Checked == true)
                 {
-                    tbx_CmdStart.Enabled = false;
                     rtb_CmdData.Enabled = false;
-                    tbx_CmdStop.Enabled = false;
                 }
                 else
                 {
-                    tbx_CmdStart.Enabled = true;
                     rtb_CmdData.Enabled = true;
-                    tbx_CmdStop.Enabled = true;
                 }
             }
         }
@@ -1436,8 +1269,6 @@ namespace Form1
             if (ckb_Loop.Checked == false)
             {
                 rtb_CmdData.Enabled = !ckb_Script.Checked;
-                tbx_CmdStart.Enabled = !ckb_Script.Checked;
-                tbx_CmdStop.Enabled = !ckb_Script.Checked;
             }
         }
 
@@ -1446,404 +1277,28 @@ namespace Form1
             switch (tabControl1.SelectedIndex)
             {
                 case 0:
-                case 1:
-                case 2:
-                    rtb_Log.Size = new System.Drawing.Size(603, 451);
-                    rtb_Log.Location = new System.Drawing.Point(9, 109);
-                    tabControl1.Size = new System.Drawing.Size(603, 95);
+                    rtb_Log.Size = new System.Drawing.Size(392, 303);
+                    rtb_Log.Location = new System.Drawing.Point(9, 257);
+                    tabControl1.Size = new System.Drawing.Size(392, 243);
                     break;
 
-                case 3:
-                    rtb_Log.Size = new System.Drawing.Size(603, 290);
-                    rtb_Log.Location = new System.Drawing.Point(9, 270);
-                    tabControl1.Size = new System.Drawing.Size(603, 256);
+                case 1:
+                    rtb_Log.Size = new System.Drawing.Size(392, 416);
+                    rtb_Log.Location = new System.Drawing.Point(9, 144);
+                    tabControl1.Size = new System.Drawing.Size(392, 130);
+                    break;
+
+                case 2:
+                    rtb_Log.Size = new System.Drawing.Size(392, 425);
+                    rtb_Log.Location = new System.Drawing.Point(9, 135);
+                    tabControl1.Size = new System.Drawing.Size(392, 121);
                     break;
 
                 default:
-                    rtb_Log.Size = new System.Drawing.Size(603, 426);
-                    rtb_Log.Location = new System.Drawing.Point(9, 134);
-                    tabControl1.Size = new System.Drawing.Size(603, 120);
                     break;
             }
         }
 
-        #endregion
-
-        #region Calculator
-        private UInt64 NumA = 0, NumB = 0;
-        private bool tbNumALock = false;
-        private bool tbNumBLock = false;
-
-        private bool BinParse(string s, ref UInt64 val)
-        {
-            RemoveStr(ref s, ' ', (char)0x00);
-            RemoveStr(ref s, '.', (char)0x00);
-
-            if (!IsBin(s))
-            {
-                MessageBox.Show("Error", "Incorrect binary format");
-                return false;
-            }
-
-            if (s.Length > 64)
-            {
-                MessageBox.Show("Error", "Maximum length of binary number is 64");
-                return false;
-            }
-
-            char[] arr = s.ToCharArray();
-            val = 0;
-
-            foreach(char c in arr)
-            {
-                val <<= 1;
-
-                if (c == '1')
-                    val |= 1;
-            }
-
-            return true;
-        }
-
-        private bool DecParse(string s, ref UInt64 val)
-        {
-            RemoveStr(ref s, ' ', (char)0x00);
-            RemoveStr(ref s, '.', (char)0x00);
-
-            if (!IsDec(s))
-            {
-                MessageBox.Show("Error", "Incorrect decimal format");
-                return false;
-            }
-
-            if (s.Length > 20)
-            {
-                MessageBox.Show("Error", "Maximum length of decimal number is 20");
-                return false;
-            }
-
-            try
-            {
-                val = UInt64.Parse(s);
-            }
-            catch
-            {
-
-            }
-
-            return true;
-        }
-
-        private bool HexParse(string s, ref UInt64 val)
-        {
-            RemoveStr(ref s, ' ', (char)0x00);
-            RemoveStr(ref s, '.', (char)0x00);
-
-            if (!IsHex(s))
-            {
-                MessageBox.Show("Error", "Incorrect hexadecimal format");
-                return false;
-            }
-
-            if (s.Length > 16)
-            {
-                MessageBox.Show("Error", "Maximum length of hexadecimal number is 16");
-                return false;
-            }
-
-            char[] arr = s.ToCharArray();
-            val = 0;
-
-            foreach (char c in arr)
-            {
-                val <<= 4;
-
-                if (c <= '9')
-                    val |= ((UInt32)(c - '0'));
-                else if (c >= 'A')
-                    val |= ((UInt32)(c - 'A') + 10);
-                else
-                    val |= ((UInt32)(c - 'a') + 10);
-            }
-
-            return true;
-        }
-
-        private string DisplayBin(UInt64 val)
-        {
-            string s = null;
-            int i, j, k;
-            //DebugLog("\nval=" + val.ToString(), Color.Red);
-
-            for (i = 0, j = -1; i < 64; i++) 
-            {
-                if ((val & 0x8000000000000000) > 0)
-                {
-                    s += "1";
-
-                    if (j == (-1))
-                    {
-                        j = 64 - i;
-
-                        if ((j % 8) > 0)
-                            j = ((j / 8) + 1) * 8;
-
-                        //DebugLog("\nJ=" + j.ToString(), Color.Red);
-                    }
-                }
-                else
-                    s += "0";
-
-                val <<= 1;
-            }
-
-            if (j == (-1))
-            {
-                s = "0";
-                return s;
-            }    
-
-            char[] sArr = s.ToCharArray();
-
-            if (j > 8)
-                k = (j - 8) / 8;
-            else
-                k = 0;
-
-            char[] arr = new char[i + k];
-
-            for (i = 0, k = 0; i < j; i++, k++)
-            {
-                if ((i > 0) && ((i % 8) == 0))
-                    arr[k++] = '.';
-
-                arr[k] = sArr[64 - j + i];
-                
-            }
-
-            s = new string(arr);
-
-            return s;
-        }
-
-        private string DisplayDec(UInt64 val)
-        {
-            string s = null;
-            int i, j, k;
-
-            for (i = 0, j = -1; i < 64; i++)
-            {
-                if ((val & 0x8000000000000000) > 0)
-                {
-                    s += "1";
-
-                    if (j == (-1))
-                    {
-                        j = 64 - i;
-
-                        if ((j % 8) > 0)
-                            j = ((j / 8) + 1) * 8;
-
-                        //DebugLog("\nJ=" + j.ToString(), Color.Red);
-                    }
-                }
-                else
-                    s += "0";
-
-                val <<= 1;
-            }
-
-            if (j == (-1))
-            {
-                s = "0";
-                return s;
-            }
-
-            char[] sArr = s.ToCharArray();
-
-            if (j > 8)
-                k = (j - 8) / 8;
-            else
-                k = 0;
-
-            char[] arr = new char[i + k];
-
-            for (i = 0, k = 0; i < j; i++, k++)
-            {
-                if ((i > 0) && ((i % 8) == 0))
-                    arr[k++] = '.';
-
-                arr[k] = sArr[64 - j + i];
-
-            }
-
-            s = new string(arr);
-
-            return s;
-        }
-
-        private string DisplayHex(UInt64 val)
-        {
-            string s = null;
-            int i, j, k;
-            //DebugLog("\nval=" + val.ToString(), Color.Red);
-
-            for (i = 0, j = -1; i < 64; i++)
-            {
-                if ((val & 0x8000000000000000) > 0)
-                {
-                    s += "1";
-
-                    if (j == (-1))
-                    {
-                        j = 64 - i;
-
-                        if ((j % 8) > 0)
-                            j = ((j / 8) + 1) * 8;
-
-                        //DebugLog("\nJ=" + j.ToString(), Color.Red);
-                    }
-                }
-                else
-                    s += "0";
-
-                val <<= 1;
-            }
-
-            if (j == (-1))
-            {
-                s = "0";
-                return s;
-            }
-
-            char[] sArr = s.ToCharArray();
-
-            if (j > 8)
-                k = (j - 8) / 8;
-            else
-                k = 0;
-
-            char[] arr = new char[i + k];
-
-            for (i = 0, k = 0; i < j; i++, k++)
-            {
-                if ((i > 0) && ((i % 8) == 0))
-                    arr[k++] = '.';
-
-                arr[k] = sArr[64 - j + i];
-
-            }
-
-            s = new string(arr);
-
-            return s;
-        }
-
-        private void tb_DecA_TextChanged(object sender, EventArgs e)
-        {
-            if (tbNumALock == false)
-            {
-                tbNumALock = true;
-
-                if (DecParse(tb_DecA.Text, ref NumA))
-                {
-                    tb_BinA.Text = DisplayBin(NumA);
-                    tb_HexA.Text = DisplayHex(NumA);
-                }
-
-                tbNumALock = false;
-            }
-        }
-
-        private void tb_HexA_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void tb_BinA_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void tb_DecB_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void tb_HexB_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void tb_BinB_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_Add_Click(object sender, EventArgs e)
-        {
-            UInt64 rslt = NumA + NumB;
-
-            DebugLog("\n" + DisplayDec(NumA) + " + " + DisplayDec(NumB) + " = " + DisplayDec(rslt), Color.Blue);
-            DebugLog("\n" + DisplayHex(NumA) + " + " + DisplayHex(NumB) + " = " + DisplayHex(rslt), Color.Blue);
-            DebugLog("\n" + DisplayBin(NumA) + " + " + DisplayBin(NumB) + " = " + DisplayBin(rslt), Color.Blue);
-
-        }
-
-        private void bt_Sub_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_Mul_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_Div_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_Mod_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_And_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_Or_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_Xor_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_NotA_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_NotB_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_Float_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void bt_Sign_Click(object sender, EventArgs e)
-        {
-
-        }
         #endregion
 
         #region Shortcuts
@@ -1862,69 +1317,35 @@ namespace Form1
             System.Diagnostics.Process.Start("diskmgmt.msc");
         }
 
-        private void bt_CleanTemp_Click(object sender, EventArgs e)
-        {
-
-        }
-
         private void timer2_Tick(object sender, EventArgs e)
         {
             lb_Notic.Visible = false;
         }
-
-        private void tb_DecA_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            Clipboard.SetText(tb_DecA.Text);
-            lb_Notic.Text = "Dec A text has been copied to clipboard";
-            lb_Notic.Visible = true;
-            timer2.Start();
-            
-        }
-
-        private void tb_DecB_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            Clipboard.SetText(tb_DecB.Text);
-            lb_Notic.Text = "Dec B text has been copied to clipboard";
-            lb_Notic.Visible = true;
-            timer2.Start();
-        }
-
-        private void tb_HexA_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            Clipboard.SetText(tb_HexA.Text);
-            lb_Notic.Text = "Hex A text has been copied to clipboard";
-            lb_Notic.Visible = true;
-            timer2.Start();
-        }
-
-        private void tb_HexB_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            Clipboard.SetText(tb_HexB.Text);
-            lb_Notic.Text = "Hex B text has been copied to clipboard";
-            lb_Notic.Visible = true;
-            timer2.Start();
-        }
-
-        private void tb_BinA_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            Clipboard.SetText(tb_BinA.Text);
-            lb_Notic.Text = "Bin A text has been copied to clipboard";
-            lb_Notic.Visible = true;
-            timer2.Start();
-        }
-
-        private void tb_BinB_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            Clipboard.SetText(tb_BinB.Text);
-            lb_Notic.Text = "Bin B text has been copied to clipboard";
-            lb_Notic.Visible = true;
-            timer2.Start();
-        }
-
-        private void bt_ResetMPLAB_Click(object sender, EventArgs e)
-        {
-
-        }
+        
         #endregion
+
+        private void bt_SetPort1_Click(object sender, EventArgs e)
+        {
+            if (cb_Port.Items.Count > 0)
+            {
+                lb_Port1.Text = cb_Port.Text;
+                cb_Port.Items.RemoveAt(cb_Port.SelectedIndex);
+
+                if (cb_Port.Items.Count > 0)
+                    cb_Port.SelectedIndex = 0;
+            }
+        }
+ 
+        private void bt_SetPort2_Click(object sender, EventArgs e)
+        {
+            if (cb_Port.Items.Count > 0)
+            {
+                lb_Port2.Text = cb_Port.Text;
+                cb_Port.Items.RemoveAt(cb_Port.SelectedIndex);
+
+                if (cb_Port.Items.Count > 0)
+                    cb_Port.SelectedIndex = 0;
+            }
+        }
     }
 }

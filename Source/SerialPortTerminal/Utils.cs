@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Utils
 {
@@ -129,5 +130,271 @@ namespace Utils
 
             return value;
         }
+
+        public bool BinParse(string s, ref UInt64 val)
+        {
+            RemoveStr(ref s, ' ', (char)0x00);
+            RemoveStr(ref s, '.', (char)0x00);
+
+            if (!IsBin(s))
+            {
+                MessageBox.Show("Error", "Incorrect binary format");
+                return false;
+            }
+
+            if (s.Length > 64)
+            {
+                MessageBox.Show("Error", "Maximum length of binary number is 64");
+                return false;
+            }
+
+            char[] arr = s.ToCharArray();
+            val = 0;
+
+            foreach (char c in arr)
+            {
+                val <<= 1;
+
+                if (c == '1')
+                    val |= 1;
+            }
+
+            return true;
+        }
+
+        public bool DecParse(string s, ref UInt64 val)
+        {
+            RemoveStr(ref s, ' ', (char)0x00);
+            RemoveStr(ref s, '.', (char)0x00);
+
+            if (!IsDec(s))
+            {
+                MessageBox.Show("Error", "Incorrect decimal format");
+                return false;
+            }
+
+            if (s.Length > 20)
+            {
+                MessageBox.Show("Error", "Maximum length of decimal number is 20");
+                return false;
+            }
+
+            try
+            {
+                val = UInt64.Parse(s);
+            }
+            catch
+            {
+
+            }
+
+            return true;
+        }
+
+        public bool HexParse(string s, ref UInt64 val)
+        {
+            RemoveStr(ref s, ' ', (char)0x00);
+            RemoveStr(ref s, '.', (char)0x00);
+
+            if (!IsHex(s))
+            {
+                MessageBox.Show("Error", "Incorrect hexadecimal format");
+                return false;
+            }
+
+            if (s.Length > 16)
+            {
+                MessageBox.Show("Error", "Maximum length of hexadecimal number is 16");
+                return false;
+            }
+
+            char[] arr = s.ToCharArray();
+            val = 0;
+
+            foreach (char c in arr)
+            {
+                val <<= 4;
+
+                if (c <= '9')
+                    val |= ((UInt32)(c - '0'));
+                else if (c >= 'A')
+                    val |= ((UInt32)(c - 'A') + 10);
+                else
+                    val |= ((UInt32)(c - 'a') + 10);
+            }
+
+            return true;
+        }
+
+        public string DisplayBin(UInt64 val)
+        {
+            string s = null;
+            int i, j, k;
+            //DebugLog("\nval=" + val.ToString(), Color.Red);
+
+            for (i = 0, j = -1; i < 64; i++)
+            {
+                if ((val & 0x8000000000000000) > 0)
+                {
+                    s += "1";
+
+                    if (j == (-1))
+                    {
+                        j = 64 - i;
+
+                        if ((j % 8) > 0)
+                            j = ((j / 8) + 1) * 8;
+
+                        //DebugLog("\nJ=" + j.ToString(), Color.Red);
+                    }
+                }
+                else
+                    s += "0";
+
+                val <<= 1;
+            }
+
+            if (j == (-1))
+            {
+                s = "0";
+                return s;
+            }
+
+            char[] sArr = s.ToCharArray();
+
+            if (j > 8)
+                k = (j - 8) / 8;
+            else
+                k = 0;
+
+            char[] arr = new char[i + k];
+
+            for (i = 0, k = 0; i < j; i++, k++)
+            {
+                if ((i > 0) && ((i % 8) == 0))
+                    arr[k++] = '.';
+
+                arr[k] = sArr[64 - j + i];
+
+            }
+
+            s = new string(arr);
+
+            return s;
+        }
+
+        public string DisplayDec(UInt64 val)
+        {
+            string s = null;
+            int i, j, k;
+
+            for (i = 0, j = -1; i < 64; i++)
+            {
+                if ((val & 0x8000000000000000) > 0)
+                {
+                    s += "1";
+
+                    if (j == (-1))
+                    {
+                        j = 64 - i;
+
+                        if ((j % 8) > 0)
+                            j = ((j / 8) + 1) * 8;
+
+                        //DebugLog("\nJ=" + j.ToString(), Color.Red);
+                    }
+                }
+                else
+                    s += "0";
+
+                val <<= 1;
+            }
+
+            if (j == (-1))
+            {
+                s = "0";
+                return s;
+            }
+
+            char[] sArr = s.ToCharArray();
+
+            if (j > 8)
+                k = (j - 8) / 8;
+            else
+                k = 0;
+
+            char[] arr = new char[i + k];
+
+            for (i = 0, k = 0; i < j; i++, k++)
+            {
+                if ((i > 0) && ((i % 8) == 0))
+                    arr[k++] = '.';
+
+                arr[k] = sArr[64 - j + i];
+
+            }
+
+            s = new string(arr);
+
+            return s;
+        }
+
+        public string DisplayHex(UInt64 val)
+        {
+            string s = null;
+            int i, j, k;
+            //DebugLog("\nval=" + val.ToString(), Color.Red);
+
+            for (i = 0, j = -1; i < 64; i++)
+            {
+                if ((val & 0x8000000000000000) > 0)
+                {
+                    s += "1";
+
+                    if (j == (-1))
+                    {
+                        j = 64 - i;
+
+                        if ((j % 8) > 0)
+                            j = ((j / 8) + 1) * 8;
+
+                        //DebugLog("\nJ=" + j.ToString(), Color.Red);
+                    }
+                }
+                else
+                    s += "0";
+
+                val <<= 1;
+            }
+
+            if (j == (-1))
+            {
+                s = "0";
+                return s;
+            }
+
+            char[] sArr = s.ToCharArray();
+
+            if (j > 8)
+                k = (j - 8) / 8;
+            else
+                k = 0;
+
+            char[] arr = new char[i + k];
+
+            for (i = 0, k = 0; i < j; i++, k++)
+            {
+                if ((i > 0) && ((i % 8) == 0))
+                    arr[k++] = '.';
+
+                arr[k] = sArr[64 - j + i];
+
+            }
+
+            s = new string(arr);
+
+            return s;
+        }
+
     }
 }

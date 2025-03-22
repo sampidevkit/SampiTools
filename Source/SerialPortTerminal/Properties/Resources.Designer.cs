@@ -82,6 +82,16 @@ namespace SerialPortTerminal.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap Forward_icon {
+            get {
+                object obj = ResourceManager.GetObject("Forward-icon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap home_icon {
             get {
                 object obj = ResourceManager.GetObject("home-icon", resourceCulture);
@@ -128,6 +138,26 @@ namespace SerialPortTerminal.Properties {
         internal static System.Drawing.Bitmap plug_disconnect_prohibition_icon1 {
             get {
                 object obj = ResourceManager.GetObject("plug-disconnect-prohibition-icon1", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap Port1 {
+            get {
+                object obj = ResourceManager.GetObject("Port1", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap Port2 {
+            get {
+                object obj = ResourceManager.GetObject("Port2", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

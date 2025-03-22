@@ -137,6 +137,9 @@
     <None Include="home-icon.png" />
     <None Include="plug-connect-icon.png" />
     <Content Include="Custom-Icon-Design-Flatastic-11-Connection.ico" />
+    <None Include="Port1.png" />
+    <None Include="Port2.png" />
+    <None Include="Forward-icon.png" />
     <Content Include="Praveen-Minimal-Outline-Next.ico" />
   </ItemGroup>
   <ItemGroup>
