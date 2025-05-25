@@ -185,9 +185,9 @@
             this.lb_Port2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lb_Port2.Location = new System.Drawing.Point(202, 42);
             this.lb_Port2.Name = "lb_Port2";
-            this.lb_Port2.Size = new System.Drawing.Size(41, 15);
+            this.lb_Port2.Size = new System.Drawing.Size(48, 15);
             this.lb_Port2.TabIndex = 3;
-            this.lb_Port2.Text = "Empty";
+            this.lb_Port2.Text = "Internal";
             // 
             // cb_Baud
             // 
@@ -429,7 +429,6 @@
             // 
             // bt_Script
             // 
-            this.bt_Script.Enabled = false;
             this.bt_Script.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.bt_Script.ForeColor = System.Drawing.Color.Red;
             this.bt_Script.ImageIndex = 8;
@@ -442,7 +441,6 @@
             // 
             // bt_Send
             // 
-            this.bt_Send.Enabled = false;
             this.bt_Send.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.bt_Send.ForeColor = System.Drawing.Color.Red;
             this.bt_Send.ImageIndex = 5;

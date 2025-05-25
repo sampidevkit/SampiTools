@@ -825,7 +825,7 @@ namespace Form1
                                     //while (DebugWait) ;
                                     //DebugLog("\nRX: OK", Color.Green);
                                 }
-                                else if ((Buff[0] == 'N') // New version
+                                else if ((Buff[0] == 'K') // New version
                                     || ((Buff[0] == 'E') && (Buff[1] == 'R')))  // Old version
                                 {
                                     int i;
@@ -841,11 +841,21 @@ namespace Form1
                                     while (DebugWait) ;
                                     DebugLog("\nRX: " + str, Color.Green);
                                     DebugLog("\nERROR", Color.OrangeRed);
+
+                                    if(Buff[0] == 'K')
+                                    {
+                                        if (Buff[1] == 'R')
+                                            DebugLog(" while reading data", Color.OrangeRed);
+                                        else if (Buff[1] == 'W')
+                                            DebugLog(" while writing data", Color.OrangeRed);
+                                        else
+                                            DebugLog(" unknown code: " + Buff[0].ToString("X2"), Color.OrangeRed);
+                                    }
                                 }
                                 else
                                 {
                                     while (DebugWait) ;
-                                    DebugLog("\nResponse ERROR", Color.OrangeRed);
+                                    DebugLog("\nResponse incorrect code: " + Buff[0].ToString("X2"), Color.OrangeRed);
                                     DoNext = DfuStt.CHECK_CLOSE_PORT;
                                 }
                                 break;
@@ -1136,16 +1146,7 @@ namespace Form1
 
         private void bt_SetPort2_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (lb_Port2.Text == "Internal")
-            {
-                bt_Send.Enabled = true;
-                InternalPort = true;
-            }
-            else
-            {
-                bt_Send.Enabled = false;
-                InternalPort = false;
-            }
+
         }
 
         private void bt_Send_Click(object sender, EventArgs e)
@@ -1328,11 +1329,18 @@ namespace Form1
         {
             if (cb_Port.Items.Count > 0)
             {
-                lb_Port1.Text = cb_Port.Text;
-                cb_Port.Items.RemoveAt(cb_Port.SelectedIndex);
+                if (cb_Port.Text != "Internal")
+                {
+                    lb_Port1.Text = cb_Port.Text;
+                    cb_Port.Items.RemoveAt(cb_Port.SelectedIndex);
 
-                if (cb_Port.Items.Count > 0)
-                    cb_Port.SelectedIndex = 0;
+                    if (cb_Port.Items.Count > 0)
+                        cb_Port.SelectedIndex = 0;
+                }
+                else
+                {
+                    MessageBox.Show("You can not set Internal port as Port 1!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
  
@@ -1345,6 +1353,19 @@ namespace Form1
 
                 if (cb_Port.Items.Count > 0)
                     cb_Port.SelectedIndex = 0;
+
+                if (lb_Port2.Text == "Internal")
+                {
+                    bt_Send.Enabled = true;
+                    bt_Script.Enabled = true;
+                    InternalPort = true;
+                }
+                else
+                {
+                    bt_Send.Enabled = false;
+                    bt_Script.Enabled = false;
+                    InternalPort = false;
+                }
             }
         }
     }
