@@ -92,6 +92,7 @@
             this.lb_OpenLog = new System.Windows.Forms.Label();
             this.lb_Notic = new System.Windows.Forms.Label();
             this.timer2 = new System.Windows.Forms.Timer(this.components);
+            this.ckb_TS = new System.Windows.Forms.CheckBox();
             this.tabControl1.SuspendLayout();
             this.tabForward.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
@@ -109,15 +110,19 @@
             // serial_Port1
             // 
             this.serial_Port1.DtrEnable = true;
+            this.serial_Port1.ReadTimeout = 10;
             this.serial_Port1.RtsEnable = true;
             this.serial_Port1.WriteBufferSize = 4096;
+            this.serial_Port1.WriteTimeout = 10;
             this.serial_Port1.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(this.serialPort1_DataReceived);
             // 
             // serial_Port2
             // 
             this.serial_Port2.DtrEnable = true;
+            this.serial_Port2.ReadTimeout = 10;
             this.serial_Port2.RtsEnable = true;
             this.serial_Port2.WriteBufferSize = 4096;
+            this.serial_Port2.WriteTimeout = 10;
             this.serial_Port2.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(this.serialPort2_DataReceived);
             // 
             // imageList1
@@ -185,9 +190,9 @@
             this.lb_Port2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lb_Port2.Location = new System.Drawing.Point(202, 42);
             this.lb_Port2.Name = "lb_Port2";
-            this.lb_Port2.Size = new System.Drawing.Size(48, 15);
+            this.lb_Port2.Size = new System.Drawing.Size(41, 15);
             this.lb_Port2.TabIndex = 3;
-            this.lb_Port2.Text = "Internal";
+            this.lb_Port2.Text = "Empty";
             // 
             // cb_Baud
             // 
@@ -248,12 +253,12 @@
             // 
             // tb_FilePath
             // 
-            this.tb_FilePath.Font = new System.Drawing.Font("Consolas", 11.25F);
+            this.tb_FilePath.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tb_FilePath.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(0)))), ((int)(((byte)(192)))));
             this.tb_FilePath.Location = new System.Drawing.Point(41, 70);
             this.tb_FilePath.Name = "tb_FilePath";
             this.tb_FilePath.ReadOnly = true;
-            this.tb_FilePath.Size = new System.Drawing.Size(337, 25);
+            this.tb_FilePath.Size = new System.Drawing.Size(337, 23);
             this.tb_FilePath.TabIndex = 16;
             this.tb_FilePath.Text = "Empty";
             this.tb_FilePath.TextChanged += new System.EventHandler(this.tb_FilePath_TextChanged);
@@ -277,6 +282,7 @@
             // 
             // tabForward
             // 
+            this.tabForward.Controls.Add(this.ckb_TS);
             this.tabForward.Controls.Add(this.pictureBox2);
             this.tabForward.Controls.Add(this.pictureBox1);
             this.tabForward.Controls.Add(this.rtb_CmdData);
@@ -365,7 +371,7 @@
             // ckb_Script
             // 
             this.ckb_Script.AutoSize = true;
-            this.ckb_Script.Location = new System.Drawing.Point(182, 67);
+            this.ckb_Script.Location = new System.Drawing.Point(191, 67);
             this.ckb_Script.Name = "ckb_Script";
             this.ckb_Script.Size = new System.Drawing.Size(53, 17);
             this.ckb_Script.TabIndex = 33;
@@ -398,7 +404,7 @@
             // ckb_LF
             // 
             this.ckb_LF.AutoSize = true;
-            this.ckb_LF.Location = new System.Drawing.Point(118, 67);
+            this.ckb_LF.Location = new System.Drawing.Point(135, 67);
             this.ckb_LF.Name = "ckb_LF";
             this.ckb_LF.Size = new System.Drawing.Size(38, 17);
             this.ckb_LF.TabIndex = 30;
@@ -410,7 +416,7 @@
             this.ckb_CR.AutoSize = true;
             this.ckb_CR.Checked = true;
             this.ckb_CR.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.ckb_CR.Location = new System.Drawing.Point(51, 67);
+            this.ckb_CR.Location = new System.Drawing.Point(76, 67);
             this.ckb_CR.Name = "ckb_CR";
             this.ckb_CR.Size = new System.Drawing.Size(41, 17);
             this.ckb_CR.TabIndex = 31;
@@ -450,6 +456,7 @@
             this.bt_Send.Size = new System.Drawing.Size(55, 55);
             this.bt_Send.TabIndex = 29;
             this.bt_Send.UseVisualStyleBackColor = true;
+            this.bt_Send.Click += new System.EventHandler(this.bt_Send_Click);
             // 
             // bt_StopSend
             // 
@@ -876,6 +883,16 @@
             this.timer2.Interval = 2000;
             this.timer2.Tick += new System.EventHandler(this.timer2_Tick);
             // 
+            // ckb_TS
+            // 
+            this.ckb_TS.AutoSize = true;
+            this.ckb_TS.Location = new System.Drawing.Point(9, 67);
+            this.ckb_TS.Name = "ckb_TS";
+            this.ckb_TS.Size = new System.Drawing.Size(49, 17);
+            this.ckb_TS.TabIndex = 39;
+            this.ckb_TS.Text = "Time";
+            this.ckb_TS.UseVisualStyleBackColor = true;
+            // 
             // FormSPT
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -982,6 +999,7 @@
         private System.Windows.Forms.RichTextBox rtb_CmdData;
         private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.PictureBox pictureBox2;
+        private System.Windows.Forms.CheckBox ckb_TS;
     }
 }
 

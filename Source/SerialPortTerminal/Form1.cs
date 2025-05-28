@@ -20,7 +20,7 @@ namespace Form1
         #region Variables
         enum DfuStt : ushort
         {
-            CHECK_CLOSE_PORT=0,
+            CHECK_CLOSE_PORT = 0,
             OPEN_PORT, // 1
             READ_LINE, // 2
             CHECK_OPEN_PORT, // 3
@@ -50,6 +50,7 @@ namespace Form1
         private volatile bool DebugWait = false;
         private volatile bool InternalPort = true;
         private volatile bool AppBusy = false;
+        private volatile bool FirstRx = true;
         // Common
         UTF8Encoding ENC = new System.Text.UTF8Encoding();
         #endregion
@@ -87,7 +88,7 @@ namespace Form1
 
             for (i = 0; i < fileInfo.TotalLength; i++)
             {
-                if (!Utils.Is_ASCII_Printable_Character(reader.ReadByte(), ref fileInfo.NumOfLine)) 
+                if (!Utils.Is_ASCII_Printable_Character(reader.ReadByte(), ref fileInfo.NumOfLine))
                 {
                     fileInfo.NumOfLine = 0;
                     fileInfo.TotalLength = 0;
@@ -109,7 +110,7 @@ namespace Form1
 
             for (i = 0, j = 0; i < len; i++)
             {
-                switch(pChr[i])
+                switch (pChr[i])
                 {
                     case '\\':
                         if (lat == true)
@@ -179,7 +180,17 @@ namespace Form1
             }
 
             while (DebugWait) ;
-            //DebugLog("\nRX: " + sdata, Color.Green);
+
+            if (FirstRx == true)
+            {
+                FirstRx = false;
+
+                if (ckb_TS.Checked)
+                    DebugLog("\n[" + ((DateTime.Now.Ticks / 10000) & 0xFFFFFF).ToString("D8") + "] RX: ", Color.Green);
+                else
+                    DebugLog("\nRX: ", Color.Green);
+            }
+
             DebugLog(sdata, Color.Green);
         }
 
@@ -187,7 +198,7 @@ namespace Form1
         {
             string cmdStr = rtb_CmdData.Text;
 
-            if(ckb_CR.Checked)
+            if (ckb_CR.Checked)
                 cmdStr += "\r";
 
             if (ckb_LF.Checked)
@@ -198,9 +209,14 @@ namespace Form1
             try
             {
                 while (DebugWait) ;
-                DebugLog("\nTX: " + cmdStr, Color.Blue);
+
+                if (ckb_TS.Checked)
+                    DebugLog("\n[" + ((DateTime.Now.Ticks / 10000) & 0xFFFFFF).ToString("D8") + "] TX: " + cmdStr, Color.Blue);
+                else
+                    DebugLog("\nTX: " + cmdStr, Color.Blue);
+
+                FirstRx = true;
                 serial_Port1.Write(new string(MakeFrame(cmdChr, cmdChr.Length)));
-                DebugLog("\nRX: ", Color.Green);
             }
             catch
             {
@@ -267,10 +283,14 @@ namespace Form1
                     string cmdStr = new string(cmdChr);
 
                     while (DebugWait) ;
-                    //DebugLog("\nTX: " + GetCmdString(), Color.Blue);
-                    DebugLog("\nTX: " + cmdStr, Color.Blue);
+
+                    if (ckb_TS.Checked)
+                        DebugLog("\n[" + ((DateTime.Now.Ticks / 10000) & 0xFFFFFF).ToString("D8") + "] TX: ", Color.Blue);
+                    else
+                        DebugLog("\nTX: " + cmdStr, Color.Blue);
+
+                    FirstRx = true;
                     serial_Port1.Write(new string(MakeFrame(cmdChr, cmdChr.Length)));
-                    DebugLog("\nRX: ", Color.Green);
                     scriptLineIdx += (cmdChr.Length + 1);
                 }
                 catch
@@ -279,7 +299,7 @@ namespace Form1
                     DebugLog("\nCan not write to Port 1", Color.Red);
                 }
             }
-            
+
         }
 
         private void DebugLog(string Msg, Color color)
@@ -295,7 +315,7 @@ namespace Form1
         {
             string[] ports;
 
-            if (InternalPort == true) 
+            if (InternalPort == true)
                 return true;
 
             ports = SerialPort.GetPortNames();
@@ -766,18 +786,20 @@ namespace Form1
                                 if (DfuPort_Is_Openned())
                                     DoNext = DfuStt.SEND_DATA;
                                 else
-                                    DoNext= DfuStt.CHECK_CLOSE_PORT;
+                                    DoNext = DfuStt.CHECK_CLOSE_PORT;
                                 break;
 
                             case DfuStt.SEND_DATA: // Send data
                                 serialDfu.WriteLine(Data);
+                                while (DebugWait) ;
+                                DebugLog("\nTX " + LineCount.ToString("D8") + ": " + Data, Color.OrangeRed);
 
                                 if (Resend)
                                 {
-                                    while (DebugWait) ;
-                                    DebugLog("\nTX " + LineCount.ToString("D8") + ": " + Data, Color.OrangeRed);
+                                   // while (DebugWait) ;
+                                    //DebugLog("\nTX " + LineCount.ToString("D8") + ": " + Data, Color.OrangeRed);
                                 }
-                                else if (Per != ((100 * LineCount) / HexFileDetail.NumOfLine)) 
+                                else if (Per != ((100 * LineCount) / HexFileDetail.NumOfLine))
                                 {
                                     Per = (100 * LineCount) / (int)HexFileDetail.NumOfLine;
 
@@ -787,30 +809,41 @@ namespace Form1
                                 }
 
                                 Count = 0;
+                                BuffLen = 0;
                                 DoNext = DfuStt.WAIT_RESPONSE;
                                 break;
 
                             case DfuStt.WAIT_RESPONSE: // Waiting for response
-                                if (++Count < (3000 / Tdelay)) 
+                                if (++Count < (5000 / Tdelay))
                                 {
-                                    BuffLen = 0;
-
-                                    while (serialDfu.BytesToRead > 0)
+                                    if (serialDfu.BytesToRead > 0)
                                     {
                                         int i;
-                                        int tmp = serialDfu.BytesToRead;
 
-                                        for (i = 0; i < tmp; i++)
-                                            Buff[BuffLen + i] = (byte)serialDfu.ReadByte();
+                                        if (BuffLen == 0)
+                                        {
+                                            for (i = 0; i < Buff.Length; i++)
+                                                Buff[i] = 0;
 
-                                        BuffLen += tmp;
-                                        Thread.Sleep(1);
-                                    }
+                                            while (DebugWait) ;
+                                            DebugLog("\nRX: ", Color.Green);
+                                        }
 
-                                    if (BuffLen > 0) 
-                                    {
-                                        DoNext = DfuStt.CHECK_RESPONSE;
-                                        break;
+                                        for (i = 0; i < serialDfu.BytesToRead; i++)
+                                        {
+                                            int c;
+
+                                            if (BuffLen >= Buff.Length)
+                                                BuffLen = 0;
+
+                                            c = serialDfu.ReadByte();
+                                            Buff[BuffLen++] = (byte)c;
+                                            while (DebugWait) ;
+                                            DebugLog(new String((char)c, 1), Color.Green);
+                                        }
+
+                                        if (BuffLen >= 2)
+                                            DoNext = DfuStt.CHECK_RESPONSE;
                                     }
                                 }
                                 else
@@ -818,44 +851,33 @@ namespace Form1
                                 break;
 
                             case DfuStt.CHECK_RESPONSE: // Check response
-                                if ((Buff[0] == 'A') // New version
+                                if (((Buff[0] == 'A') && (Buff[1] == '\r')) // New version
                                     || ((Buff[0] == 'O') && (Buff[1] == 'K'))) // Old version
                                 {
                                     DoNext = DfuStt.READ_LINE;
-                                    //while (DebugWait) ;
-                                    //DebugLog("\nRX: OK", Color.Green);
                                 }
-                                else if ((Buff[0] == 'K') // New version
-                                    || ((Buff[0] == 'E') && (Buff[1] == 'R')))  // Old version
+                                else if (((Buff[0] == 'K') && (Buff[1] == '\r')) // New version
+                                    || ((Buff[0] == 'E') && (Buff[1] == 'R'))) // Old version
                                 {
-                                    int i;
-                                    string str;
-                                    byte[] barr = new byte[BuffLen];
-
-                                    for (i = 0; i < BuffLen; i++)
-                                        barr[i] = Buff[i];
-
-                                    str = ENC.GetString(barr);
                                     DoNext = DfuStt.SEND_DATA;
                                     Resend = true;
                                     while (DebugWait) ;
-                                    DebugLog("\nRX: " + str, Color.Green);
-                                    DebugLog("\nERROR", Color.OrangeRed);
+                                    DebugLog("\nERROR ", Color.Green);
 
-                                    if(Buff[0] == 'K')
+                                    if (Buff[0] == 'K')
                                     {
                                         if (Buff[1] == 'R')
-                                            DebugLog(" while reading data", Color.OrangeRed);
+                                            DebugLog("while reading data", Color.OrangeRed);
                                         else if (Buff[1] == 'W')
                                             DebugLog(" while writing data", Color.OrangeRed);
                                         else
-                                            DebugLog(" unknown code: " + Buff[0].ToString("X2"), Color.OrangeRed);
+                                            DebugLog("unknown code: " + Buff[0].ToString("X2"), Color.OrangeRed);
                                     }
                                 }
                                 else
                                 {
                                     while (DebugWait) ;
-                                    DebugLog("\nResponse incorrect code: " + Buff[0].ToString("X2"), Color.OrangeRed);
+                                    DebugLog("\nResponse incorrect code: " + Buff[0].ToString("X2") + Buff[1].ToString("X2"), Color.OrangeRed);
                                     DoNext = DfuStt.CHECK_CLOSE_PORT;
                                 }
                                 break;
@@ -864,14 +886,14 @@ namespace Form1
                                 DoNext = DfuStt.CHECK_CLOSE_PORT;
                                 break;
                         }
+
+                        Thread.Sleep(Tdelay);
                     }
                     catch //(Exception e)
                     {
                         //while (DebugWait) ;
                         //DebugLog("\n\n[App_Forward-while(true)]\n" + e.ToString(), Color.Red);
                     }
-
-                    Thread.Sleep(Tdelay);
                 }
             }
             catch //(Exception e)
@@ -910,11 +932,12 @@ namespace Form1
             cb_Baud.SelectedIndex = 9;
             cb_DfuBaud.SelectedIndex = 9;
             Get_Port();
+            Port2_Selection();
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (bt_FwdScan.Enabled == false) 
+            if (bt_FwdScan.Enabled == false)
             {
                 App_Forward_Deinit();
                 Enable_Uart_Components();
@@ -925,7 +948,7 @@ namespace Form1
 
                 Thread.Sleep(1000);
             }
-            else if (bt_DfuStop.Visible == true) 
+            else if (bt_DfuStop.Visible == true)
             {
                 App_Dfu_Deinit();
                 Enable_Uart_Components();
@@ -1027,13 +1050,13 @@ namespace Form1
             // scroll it automatically
             rtb_Log.ScrollToCaret();
 
-            if(rtb_Log.Text.Length>= 2147483647)
+            if (rtb_Log.Text.Length >= 2147483647)
                 ClearLog();
         }
 
         private void bt_Browse_Click(object sender, EventArgs e)
         {
-            if(openFileDialog1.ShowDialog() == DialogResult.OK)
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 HexFilePath = openFileDialog1.FileName;
                 tb_FilePath.Text = HexFilePath;
@@ -1124,7 +1147,7 @@ namespace Form1
 
         private void lb_OpenLog_Click(object sender, EventArgs e)
         {
-            System.Diagnostics.Process.Start(Directory.GetCurrentDirectory()); 
+            System.Diagnostics.Process.Start(Directory.GetCurrentDirectory());
         }
 
         private void pic_OpenLog_Click(object sender, EventArgs e)
@@ -1194,7 +1217,7 @@ namespace Form1
             }
             catch
             {
-                
+
             }
 
             rtb_CmdData.Enabled = true;
@@ -1322,7 +1345,7 @@ namespace Form1
         {
             lb_Notic.Visible = false;
         }
-        
+
         #endregion
 
         private void bt_SetPort1_Click(object sender, EventArgs e)
@@ -1343,8 +1366,8 @@ namespace Form1
                 }
             }
         }
- 
-        private void bt_SetPort2_Click(object sender, EventArgs e)
+
+        private void Port2_Selection()
         {
             if (cb_Port.Items.Count > 0)
             {
@@ -1367,6 +1390,11 @@ namespace Form1
                     InternalPort = false;
                 }
             }
+        }
+
+        private void bt_SetPort2_Click(object sender, EventArgs e)
+        {
+            Port2_Selection();
         }
     }
 }
