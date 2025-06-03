@@ -851,28 +851,16 @@ namespace Form1
                                 break;
 
                             case DfuStt.CHECK_RESPONSE: // Check response
-                                if (((Buff[0] == 'A') && (Buff[1] == '\r')) // New version
-                                    || ((Buff[0] == 'O') && (Buff[1] == 'K'))) // Old version
+                                if (Buff[0] == 'A')
                                 {
                                     DoNext = DfuStt.READ_LINE;
                                 }
-                                else if (((Buff[0] == 'K') && (Buff[1] == '\r')) // New version
-                                    || ((Buff[0] == 'E') && (Buff[1] == 'R'))) // Old version
+                                else if (Buff[0] == 'K')
                                 {
                                     DoNext = DfuStt.SEND_DATA;
                                     Resend = true;
                                     while (DebugWait) ;
                                     DebugLog("\nERROR ", Color.Green);
-
-                                    if (Buff[0] == 'K')
-                                    {
-                                        if (Buff[1] == 'R')
-                                            DebugLog("while reading data", Color.OrangeRed);
-                                        else if (Buff[1] == 'W')
-                                            DebugLog(" while writing data", Color.OrangeRed);
-                                        else
-                                            DebugLog("unknown code: " + Buff[0].ToString("X2"), Color.OrangeRed);
-                                    }
                                 }
                                 else
                                 {
