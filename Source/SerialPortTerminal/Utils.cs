@@ -113,6 +113,33 @@ namespace Utils
             }
         }
 
+        public bool Is_InvisibleCharacter(char c)
+        {
+            if((c < 0x20) || (c > 0x7F))
+                return true;
+
+            return false;
+        }
+
+        public string ShowInvisiableCharacters(string s)
+        {
+            StringBuilder sb = new StringBuilder(s.Length);
+
+            foreach (char c in s)
+            {
+                if (Is_InvisibleCharacter(c))
+                {
+                    sb.Append('<');
+                    sb.AppendFormat("{0:X2}", (int)c);
+                    sb.Append('>');
+                }
+                else
+                    sb.Append(c);
+            }
+
+            return sb.ToString();
+        }
+
         public int Char2Integer(char[] pChr, int offset, int len)
         {
             int i;

@@ -46,6 +46,7 @@
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabForward = new System.Windows.Forms.TabPage();
+            this.ckb_TS = new System.Windows.Forms.CheckBox();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.rtb_CmdData = new System.Windows.Forms.RichTextBox();
@@ -65,8 +66,6 @@
             this.cb_Port = new System.Windows.Forms.ComboBox();
             this.label4 = new System.Windows.Forms.Label();
             this.tabDfu = new System.Windows.Forms.TabPage();
-            this.nud_FrameDelay = new System.Windows.Forms.NumericUpDown();
-            this.label8 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.cb_DfuBaud = new System.Windows.Forms.ComboBox();
             this.cb_DfuPort = new System.Windows.Forms.ComboBox();
@@ -92,14 +91,12 @@
             this.lb_OpenLog = new System.Windows.Forms.Label();
             this.lb_Notic = new System.Windows.Forms.Label();
             this.timer2 = new System.Windows.Forms.Timer(this.components);
-            this.ckb_TS = new System.Windows.Forms.CheckBox();
             this.tabControl1.SuspendLayout();
             this.tabForward.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_Interval)).BeginInit();
             this.tabDfu.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nud_FrameDelay)).BeginInit();
             this.tabTools.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pic_OpenLog)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picConnected)).BeginInit();
@@ -110,19 +107,15 @@
             // serial_Port1
             // 
             this.serial_Port1.DtrEnable = true;
-            this.serial_Port1.ReadTimeout = 10;
             this.serial_Port1.RtsEnable = true;
             this.serial_Port1.WriteBufferSize = 4096;
-            this.serial_Port1.WriteTimeout = 10;
             this.serial_Port1.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(this.serialPort1_DataReceived);
             // 
             // serial_Port2
             // 
             this.serial_Port2.DtrEnable = true;
-            this.serial_Port2.ReadTimeout = 10;
             this.serial_Port2.RtsEnable = true;
             this.serial_Port2.WriteBufferSize = 4096;
-            this.serial_Port2.WriteTimeout = 10;
             this.serial_Port2.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(this.serialPort2_DataReceived);
             // 
             // imageList1
@@ -312,6 +305,16 @@
             this.tabForward.TabIndex = 0;
             this.tabForward.Text = "Forward";
             this.tabForward.UseVisualStyleBackColor = true;
+            // 
+            // ckb_TS
+            // 
+            this.ckb_TS.AutoSize = true;
+            this.ckb_TS.Location = new System.Drawing.Point(9, 67);
+            this.ckb_TS.Name = "ckb_TS";
+            this.ckb_TS.Size = new System.Drawing.Size(49, 17);
+            this.ckb_TS.TabIndex = 39;
+            this.ckb_TS.Text = "Time";
+            this.ckb_TS.UseVisualStyleBackColor = true;
             // 
             // pictureBox2
             // 
@@ -547,8 +550,6 @@
             // tabDfu
             // 
             this.tabDfu.BackColor = System.Drawing.SystemColors.Window;
-            this.tabDfu.Controls.Add(this.nud_FrameDelay);
-            this.tabDfu.Controls.Add(this.label8);
             this.tabDfu.Controls.Add(this.label6);
             this.tabDfu.Controls.Add(this.cb_DfuBaud);
             this.tabDfu.Controls.Add(this.cb_DfuPort);
@@ -565,33 +566,6 @@
             this.tabDfu.Size = new System.Drawing.Size(384, 217);
             this.tabDfu.TabIndex = 1;
             this.tabDfu.Text = "DFU";
-            // 
-            // nud_FrameDelay
-            // 
-            this.nud_FrameDelay.Location = new System.Drawing.Point(175, 41);
-            this.nud_FrameDelay.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.nud_FrameDelay.Name = "nud_FrameDelay";
-            this.nud_FrameDelay.Size = new System.Drawing.Size(81, 20);
-            this.nud_FrameDelay.TabIndex = 19;
-            this.nud_FrameDelay.Value = new decimal(new int[] {
-            10,
-            0,
-            0,
-            0});
-            // 
-            // label8
-            // 
-            this.label8.AutoSize = true;
-            this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label8.Location = new System.Drawing.Point(128, 41);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(41, 15);
-            this.label8.TabIndex = 23;
-            this.label8.Text = "Delay:";
             // 
             // label6
             // 
@@ -664,7 +638,7 @@
             this.bt_Browse.ImageList = this.imageList1;
             this.bt_Browse.Location = new System.Drawing.Point(41, 38);
             this.bt_Browse.Name = "bt_Browse";
-            this.bt_Browse.Size = new System.Drawing.Size(81, 23);
+            this.bt_Browse.Size = new System.Drawing.Size(215, 23);
             this.bt_Browse.TabIndex = 17;
             this.bt_Browse.Text = "Browse";
             this.bt_Browse.UseVisualStyleBackColor = true;
@@ -883,16 +857,6 @@
             this.timer2.Interval = 2000;
             this.timer2.Tick += new System.EventHandler(this.timer2_Tick);
             // 
-            // ckb_TS
-            // 
-            this.ckb_TS.AutoSize = true;
-            this.ckb_TS.Location = new System.Drawing.Point(9, 67);
-            this.ckb_TS.Name = "ckb_TS";
-            this.ckb_TS.Size = new System.Drawing.Size(49, 17);
-            this.ckb_TS.TabIndex = 39;
-            this.ckb_TS.Text = "Time";
-            this.ckb_TS.UseVisualStyleBackColor = true;
-            // 
             // FormSPT
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -924,7 +888,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.nud_Interval)).EndInit();
             this.tabDfu.ResumeLayout(false);
             this.tabDfu.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nud_FrameDelay)).EndInit();
             this.tabTools.ResumeLayout(false);
             this.tabTools.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pic_OpenLog)).EndInit();
@@ -966,8 +929,6 @@
         private System.Windows.Forms.ComboBox cb_DfuBaud;
         private System.Windows.Forms.ComboBox cb_DfuPort;
         private System.Windows.Forms.Label label7;
-        private System.Windows.Forms.NumericUpDown nud_FrameDelay;
-        private System.Windows.Forms.Label label8;
         private System.Windows.Forms.PictureBox picDisconnected;
         private System.Windows.Forms.PictureBox picHomePage;
         private System.Windows.Forms.PictureBox picConnected;
