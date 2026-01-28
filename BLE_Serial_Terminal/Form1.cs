@@ -1,20 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;        //Asbuffer
-using System.Security.Policy;
+using System.Runtime.InteropServices.WindowsRuntime;        // AsBuffer
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
+using Windows.Storage.Streams;
 
 namespace BLE_Serial_Terminal
 {
@@ -22,105 +17,113 @@ namespace BLE_Serial_Terminal
     {
         private BluetoothLEAdvertisementWatcher watcher;
         private bool deviceConnected = false;
+        private bool isReconnecting = false;
+        private readonly object reconnectLock = new object();
         public Form1()
         {
-            //Console.WriteLine("Form1");
             InitializeComponent();
-            //Properties.Settings.Default.Reload();
             Load += Form1_Load;
-            ScanBle();                 //起動と同時にBleデバイスとの接続を試みる。
+            ScanBle(); // start scanning on launch
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            //ApplicationExitイベントハンドラを追加
             Application.ApplicationExit += new EventHandler(Application_ApplicationExit);
 
-            // 送信時の改行
+            // set window title with version
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            this.Text = "BLE Serial Terminal v" + version.Major + "." + version.Minor + "." + version.Build;
+            // Restore settings
+
+            // Line endings for sending
             this.cmbBoxLBSend.Items.Clear();
             this.cmbBoxLBSend.Items.Add("CR");
             this.cmbBoxLBSend.Items.Add("LF");
             this.cmbBoxLBSend.Items.Add("CR+LF");
             this.cmbBoxLBSend.Items.Add("NONE");
-            this.cmbBoxLBSend.SelectedIndex = Properties.Settings.Default.linebreaks;
+            this.cmbBoxLBSend.SelectedIndex = Math.Max(0, Math.Min(Properties.Settings.Default.linebreaks, this.cmbBoxLBSend.Items.Count - 1));
 
-            //ローカルエコー
+            // Local echo
             this.cBoxLocalEcho.Checked = Properties.Settings.Default.localecho;
 
-            //タイムスタンプ
+            // Timestamp
             this.cBoxTimeStamp.Checked = Properties.Settings.Default.timestamp;
 
-            //デバイス候補コンボボックス
+            // Device combo
             this.cmbBoxDevice.Items.Clear();
             this.cmbBoxDevice.SelectedIndex = -1;
             NumItems = 0;
 
-            //入力textbox
+            // input textbox / send button
             this.textToBeSent.Enabled = false;
-
-            //sendボタン
             this.btnSend.Enabled = false;
 
-            //costum button setting
+            // custom buttons
             generateCustumButton();
-
-
         }
 
-        //スキャン他　起動時に呼び出し
         private async void ScanBle()
         {
-            watcher = new BluetoothLEAdvertisementWatcher();
-            watcher.Received += Watcher_Received;
-            watcher.ScanningMode = BluetoothLEScanningMode.Active;
-            watcher.Start();
-            this.btnScan.Enabled = false;
-            //this.Cursor = Cursors.WaitCursor;
-            //Console.WriteLine("ScanBle");
-            //5秒間スキャンする
-            await Task.Delay(5000);
-            //this.Cursor = Cursors.Default;
-            watcher.Stop();
-            if (!this.deviceConnected)
+            try
             {
-                this.btnScan.Enabled = true;
+                watcher = new BluetoothLEAdvertisementWatcher();
+                watcher.Received += Watcher_Received;
+                watcher.ScanningMode = BluetoothLEScanningMode.Active;
+                watcher.Start();
+                this.btnScan.Enabled = false;
+
+                // scan for 5 seconds (non-blocking)
+                await Task.Delay(5000);
+
+                watcher.Stop();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("ScanBle error: " + ex);
+            }
+            finally
+            {
+                if (!this.deviceConnected) this.btnScan.Enabled = true;
             }
         }
 
         private int NumItems;
         public void Watcher_Received(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementReceivedEventArgs args)
         {
-            //登録する
-            //BLEAddress = args.BluetoothAddress;
-            string adr = args.BluetoothAddress.ToString("X12");
-            Console.WriteLine("Watcher_Received 2" + adr);
-            if (adr.Length != 12) return;
-            string devaddress = adr.Substring(0, 2)+":"+ adr.Substring(2, 2) + ":" + adr.Substring(4, 2) + ":"
-                              + adr.Substring(6, 2) + ":" + adr.Substring(8, 2) + ":" + adr.Substring(10, 2);
-            string devname = args.Advertisement.LocalName;
-            if (devname.Length == 0) return;
-            Console.WriteLine("Watcher_Received 2" + devname + " :  " + devaddress);
-            foreach (string item in this.cmbBoxDevice.Items)
+            try
             {
-                if (item.Contains(devaddress) && item.Contains(devname))
-                {
-                    return;
-                }
-            }
-            string tempItem = devname + " :  " + devaddress;
+                string adr = args.BluetoothAddress.ToString("X12");
+                if (adr.Length != 12) return;
 
-            this.Invoke(new MethodInvoker(delegate
+                string devaddress = adr.Substring(0, 2) + ":" + adr.Substring(2, 2) + ":" + adr.Substring(4, 2) + ":" +
+                                    adr.Substring(6, 2) + ":" + adr.Substring(8, 2) + ":" + adr.Substring(10, 2);
+
+                string devname = args.Advertisement?.LocalName;
+                if (string.IsNullOrEmpty(devname)) return;
+
+                string tempItem = devname + " :  " + devaddress;
+
+                this.Invoke(new MethodInvoker(delegate
+                {
+                    // avoid duplicates
+                    foreach (string item in this.cmbBoxDevice.Items)
+                    {
+                        if (item.Contains(devaddress) && item.Contains(devname)) return;
+                    }
+
+                    cmbBoxDevice.Items.Add(tempItem);
+                    if (++NumItems == 1) this.cmbBoxDevice.SelectedIndex = 0;
+                }));
+            }
+            catch (Exception ex)
             {
-                cmbBoxDevice.Items.Add(tempItem);
-                if (++NumItems == 1) this.cmbBoxDevice.SelectedIndex = 0;
-            }));
+                Debug.WriteLine("Watcher_Received error: " + ex);
+            }
         }
 
         private BluetoothLEDevice device;
 
-        //受信関係はTX，送信関係はRXになる。
-        //Serverを中心に考えるため，このアプリはClientなので，意味が逆になる
-        //元の意味はTX:Transmitter，RX:Receiver
+        // RX/TX from device perspective (this app is GATT client)
         private GattCharacteristic cTX;
         private GattCharacteristic cRX;
 
@@ -128,55 +131,85 @@ namespace BLE_Serial_Terminal
 
         async Task connectSelectedDevice()
         {
+            // connect and subscribe to notifications
             try
             {
-                //デバイスに接続する
-                Console.WriteLine("Watcher_Received 2 Connect...");
+                // dispose previous device if any
+                try
+                {
+                    if (device != null)
+                    {
+                        try { if (cTX != null) cTX.ValueChanged -= characteristicBleDevice; } catch { }
+                        try { device.ConnectionStatusChanged -= Device_ConnectionStatusChanged; } catch { }
+                        try { device.Dispose(); } catch { }
+                        device = null;
+                        cTX = null;
+                        cRX = null;
+                        deviceConnected = false;
+                    }
+                }
+                catch { /* ignore */ }
+
                 device = await BluetoothLEDevice.FromBluetoothAddressAsync(address);
+                if (device == null)
+                {
+                    Debug.WriteLine("Failed to get device for address.");
+                    return;
+                }
 
-                //UUIDからサービスを取得する
-                Console.Write("Service: ");
-                var services = await device.GetGattServicesForUuidAsync(new Guid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E"));
-                Console.WriteLine(services.Status);
+                // subscribe to connection status changes so we can detect disconnects
+                try
+                {
+                    device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+                }
+                catch { /* non-fatal */ }
 
-                //UUIDからキャラクタリスティックを取得する
-                Console.Write("CharacteristicsTX: ");
-                var characteristicsTX = await services.Services[0].GetCharacteristicsForUuidAsync(new Guid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E"));
-                Console.WriteLine(characteristicsTX.Status);
-                Console.WriteLine(characteristicsTX.ToString());
+                var servicesResult = await device.GetGattServicesForUuidAsync(new Guid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E"));
+                if (servicesResult.Status != GattCommunicationStatus.Success || servicesResult.Services.Count == 0)
+                {
+                    Debug.WriteLine("Service not found or error: " + servicesResult.Status);
+                    return;
+                }
 
-                cTX = characteristicsTX.Characteristics[0];
-                Console.WriteLine(cTX.ToString());
+                var service = servicesResult.Services[0];
 
-                //UUIDからキャラクタリスティックを取得する
-                Console.Write("CharacteristicsRX: ");
-                var characteristicsRX = await services.Services[0].GetCharacteristicsForUuidAsync(new Guid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E"));
-                Console.WriteLine(characteristicsRX.Status);
-                Console.WriteLine(characteristicsRX.ToString());
+                var txResult = await service.GetCharacteristicsForUuidAsync(new Guid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E"));
+                if (txResult.Status != GattCommunicationStatus.Success || txResult.Characteristics.Count == 0)
+                {
+                    Debug.WriteLine("TX characteristic not found or error: " + txResult.Status);
+                    return;
+                }
+                cTX = txResult.Characteristics[0];
 
-                cRX = characteristicsRX.Characteristics[0];
-                Console.WriteLine(cRX.ToString());
+                var rxResult = await service.GetCharacteristicsForUuidAsync(new Guid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E"));
+                if (rxResult.Status != GattCommunicationStatus.Success || rxResult.Characteristics.Count == 0)
+                {
+                    Debug.WriteLine("RX characteristic not found or error: " + rxResult.Status);
+                    return;
+                }
+                cRX = rxResult.Characteristics[0];
 
-                //通知を受け取るコールバックを設定
+                // subscribe to notifications (TX characteristic notifies us)
                 cTX.ValueChanged += characteristicBleDevice;
 
-                //通知購読登録
-                GattCommunicationStatus status = await cTX.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
-                Console.WriteLine("status: " + status);
+                var status = await cTX.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
                 if (status == GattCommunicationStatus.Success)
                 {
                     this.deviceConnected = true;
-                    Console.WriteLine("Server has been informed of clients interest.");
+                    Debug.WriteLine("Subscribed to notifications.");
+                    // stop any reconnect loop if running
+                    lock (reconnectLock) { isReconnecting = false; }
                 }
                 else
                 {
-                    Console.WriteLine("** error ** Server has not been informed of clients interest.");
+                    Debug.WriteLine("Failed to subscribe: " + status);
+                    // cleanup subscription handler in case of failure
+                    try { cTX.ValueChanged -= characteristicBleDevice; } catch { }
                 }
-                // こここまでが成功するとConnectが成立
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine(e);
+                Debug.WriteLine("connectSelectedDevice error: " + ex);
             }
         }
 
@@ -184,38 +217,181 @@ namespace BLE_Serial_Terminal
         {
             try
             {
-                //Console.WriteLine("device.ConnectionStatus = " + device.ConnectionStatus);
-                if (device!=null && device.ConnectionStatus == BluetoothConnectionStatus.Connected)
+                // stop any reconnect attempts
+                lock (reconnectLock) { isReconnecting = false; }
+
+                if (cTX != null)
                 {
-                    cTX.Service.Dispose();
+                    try { cTX.ValueChanged -= characteristicBleDevice; } catch { }
+                }
+
+                try
+                {
+                    if (device != null)
+                    {
+                        try { device.ConnectionStatusChanged -= Device_ConnectionStatusChanged; } catch { }
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    // best-effort dispose services & device
+                    try { cTX?.Service?.Dispose(); } catch { }
+                }
+                catch { }
+                try
+                {
+                    try { cRX?.Service?.Dispose(); } catch { }
+                }
+                catch { }
+                try
+                {
                     cTX = null;
-                    device.Dispose();
+                    cRX = null;
+                    try { device?.Dispose(); } catch { }
                     device = null;
-                    this.deviceConnected = false;
-                    this.btnScan.Enabled = true;
+                }
+                catch { }
+
+                this.deviceConnected = false;
+                this.btnScan.Enabled = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("disconnectDevice error: " + ex);
+            }
+        }
+        // Add these methods to implement connection-status handling and auto-reconnect
+
+        private void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)
+        {
+            try
+            {
+                if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
+                {
+                    // Notify UI and mark disconnected
+                    this.Invoke(new MethodInvoker(delegate
+                    {
+                        addtextbox(">device disconnected\r\n");
+                        this.deviceConnected = false;
+                        this.btnConnect.Text = "Connect";
+                        this.textToBeSent.Enabled = false;
+                        this.btnSend.Enabled = false;
+                        this.btnScan.Enabled = true;
+                    }));
+
+                    // Start auto-reconnect attempts
+                    StartAutoReconnectLoop();
+                }
+                else if (sender.ConnectionStatus == BluetoothConnectionStatus.Connected)
+                {
+                    this.Invoke(new MethodInvoker(delegate
+                    {
+                        addtextbox(">device connected\r\n");
+                        this.deviceConnected = true;
+                        this.btnConnect.Text = "Disconnect";
+                        this.btnScan.Enabled = false;
+                        this.textToBeSent.Enabled = true;
+                        this.btnSend.Enabled = true;
+                    }));
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine(e);
+                Debug.WriteLine("Device_ConnectionStatusChanged error: " + ex);
             }
         }
 
-        //Notifyによる受信時の処理
-        void characteristicBleDevice(GattCharacteristic sender, GattValueChangedEventArgs args)
+        private void StartAutoReconnectLoop()
         {
-            Console.Write("received: ");
-            var streamNotify = args.CharacteristicValue.AsStream();
-            //PrintFromStream(streamNotify);
-            byte[] byte_text = StreamToBytes(streamNotify);
-            string string_text = Encoding.Default.GetString(byte_text);
-            //string_text = string_text.TrimEnd('\r', '\n');
-            Console.WriteLine(string_text);
-            this.Invoke(new MethodInvoker(delegate
+            lock (reconnectLock)
             {
-                //addtextbox(string_text + "\r\n");
-                addtextbox(string_text);
-            }));
+                if (isReconnecting) return;
+                isReconnecting = true;
+            }
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    while (true)
+                    {
+                        lock (reconnectLock)
+                        {
+                            if (!isReconnecting) break;
+                        }
+
+                        if (deviceConnected) break;
+
+                        // show attempt message on UI and mark Connect button as "Disconnect"
+                        try
+                        {
+                            this.Invoke(new MethodInvoker(delegate
+                            {
+                                addtextbox(">attempting to reconnect...\r\n");
+                                this.btnConnect.Text = "Disconnect";
+                                this.btnConnect.Enabled = true;
+                            }));
+                        }
+                        catch { }
+
+                        // try to connect (connectSelectedDevice uses the existing 'address')
+                        try
+                        {
+                            await connectSelectedDevice();
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine("Reconnect attempt error: " + ex);
+                        }
+
+                        // stop loop if connected or if user cancelled
+                        lock (reconnectLock)
+                        {
+                            if (!isReconnecting || deviceConnected) break;
+                        }
+
+                        // wait before next attempt
+                        await Task.Delay(3000);
+                    }
+                }
+                finally
+                {
+                    lock (reconnectLock) { isReconnecting = false; }
+                }
+            });
+        }
+        // Notification handler (safe read via DataReader)
+        async void characteristicBleDevice(GattCharacteristic sender, GattValueChangedEventArgs args)
+        {
+            try
+            {
+                var buffer = args.CharacteristicValue;
+                if (buffer == null) return;
+
+                using (var reader = DataReader.FromBuffer(buffer))
+                {
+                    var length = reader.UnconsumedBufferLength;
+                    byte[] bytes = new byte[length];
+                    if (length > 0)
+                    {
+                        reader.ReadBytes(bytes);
+                    }
+
+                    // decode payload (use UTF8; change to ASCII if your device uses ASCII)
+                    string payload = Encoding.UTF8.GetString(bytes);
+
+                    this.Invoke(new MethodInvoker(delegate
+                    {
+                        addtextbox(payload);
+                    }));
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("characteristicBleDevice error: " + ex);
+            }
         }
 
         private void btnScan_clicked(object sender, EventArgs e)
@@ -223,25 +399,46 @@ namespace BLE_Serial_Terminal
             ScanBle();
         }
 
-        private void btnConnect_clicked(object sender, EventArgs e)
+        private async void btnConnect_clicked(object sender, EventArgs e)
         {
             if (this.btnConnect.Text == "Connect")
             {
+                if (cmbBoxDevice.SelectedItem == null)
+                {
+                    MessageBox.Show("Select a device first.");
+                    return;
+                }
+
                 this.btnConnect.Enabled = false;
+
                 string itemstr = (string)cmbBoxDevice.SelectedItem;
+                if (string.IsNullOrWhiteSpace(itemstr) || itemstr.Length < 17)
+                {
+                    MessageBox.Show("Invalid device selection.");
+                    this.btnConnect.Enabled = true;
+                    return;
+                }
+
                 string adr1 = itemstr.Substring(itemstr.Length - 17);
-                //Console.WriteLine(adr1);
                 string adr2 = adr1.Replace(":", "");
-                //Console.WriteLine(adr2);
-                address = Convert.ToUInt64(adr2, 16);
-                string devicename = itemstr.Substring(0, itemstr.IndexOf(" :  ",0));
-                //devicename = devicename.Replace(" ", "");
-                //Console.WriteLine("btnConnect_clicked pass");
+                if (!UInt64.TryParse(adr2, System.Globalization.NumberStyles.HexNumber, null, out address))
+                {
+                    MessageBox.Show("Invalid device address.");
+                    this.btnConnect.Enabled = true;
+                    return;
+                }
+
+                string devicename = itemstr;
+                int index = itemstr.IndexOf(" :  ");
+                if (index >= 0) devicename = itemstr.Substring(0, index);
+
                 addtextbox(">connecting " + devicename + " ..\r\n");
-                Task.Run(connectSelectedDevice).Wait();
+
+                await connectSelectedDevice();
+
                 if (this.deviceConnected)
                 {
-                    this.btnConnect.Text = "Disonnect";
+                    this.btnConnect.Text = "Disconnect";
                     addtextbox(">connected\r\n");
                     this.btnScan.Enabled = false;
                     this.textToBeSent.Enabled = true;
@@ -251,9 +448,10 @@ namespace BLE_Serial_Terminal
                 {
                     addtextbox(">** not connected **\r\n");
                 }
+
                 this.btnConnect.Enabled = true;
             }
-            else //this.btnConnect.Text == "Disonnect"
+            else // Disconnect
             {
                 this.btnConnect.Text = "Connect";
                 disconnectDevice();
@@ -271,32 +469,39 @@ namespace BLE_Serial_Terminal
         private async void sendCustumbuttonstr(string str)
         {
             string[] linebreaks = { "\r", "\n", "\r\n", "" };
-            if (str == "") return;
+            if (string.IsNullOrEmpty(str)) return;
+
             if (this.cBoxLocalEcho.Checked)
             {
                 addtextbox("$$" + str + "\r\n");
             }
-            str += linebreaks[this.cmbBoxLBSend.SelectedIndex];
-            Console.WriteLine(str);
+
+            int idx = this.cmbBoxLBSend.SelectedIndex;
+            if (idx < 0 || idx >= linebreaks.Length) idx = 0;
+            str += linebreaks[idx];
+
             byte[] byte_str = System.Text.Encoding.ASCII.GetBytes(str);
             try
             {
-                await cRX.WriteValueAsync(byte_str.AsBuffer());
-            }
-            catch (Exception e1)
-            {
-                Console.WriteLine(e1);
-            }
-            if (this.cBoxClearSending.Checked) this.textToBeSent.Clear();
-        }
+                if (cRX == null)
+                {
+                    Debug.WriteLine("No RX characteristic available.");
+                    return;
+                }
 
-        private byte[] StreamToBytes(Stream stream)
-        {
-            byte[] bytes = new byte[stream.Length];
-            stream.Read(bytes, 0, bytes.Length);
-            //   
-            stream.Seek(0, SeekOrigin.Begin);
-            return bytes;
+                var writeBuffer = byte_str.AsBuffer();
+                var status = await cRX.WriteValueAsync(writeBuffer);
+                if (status != GattCommunicationStatus.Success)
+                {
+                    Debug.WriteLine("Write failed: " + status);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("sendCustumbuttonstr error: " + ex);
+            }
+
+            if (this.cBoxClearSending.Checked) this.textToBeSent.Clear();
         }
 
         void addtextbox(string text1)
@@ -337,38 +542,47 @@ namespace BLE_Serial_Terminal
             }
         }
 
-       //終了時の処理
-        //ApplicationExitイベントハンドラ
+        // ApplicationExit handler
         private void Application_ApplicationExit(object sender, EventArgs e)
         {
-            Properties.Settings.Default.linebreaks = this.cmbBoxLBSend.SelectedIndex;
-            Properties.Settings.Default.localecho = this.cBoxLocalEcho.Checked;
-            Properties.Settings.Default.timestamp = this.cBoxTimeStamp.Checked;
-
-            Properties.Settings.Default.commandstring = this.custumbuttons[0].Text;
-            for (int i = 1; i < 10; i++)
+            try
             {
-                Properties.Settings.Default.commandstring += '\t' + this.custumbuttons[i].Text;
+                Properties.Settings.Default.linebreaks = this.cmbBoxLBSend.SelectedIndex;
+                Properties.Settings.Default.localecho = this.cBoxLocalEcho.Checked;
+                Properties.Settings.Default.timestamp = this.cBoxTimeStamp.Checked;
+
+                // Save custom buttons safely using join and ensure arrays are correct length
+                for (int i = 0; i < 10; i++)
+                {
+                    string cmd = (i < custumbuttons.Length && custumbuttons[i] != null) ? custumbuttons[i].Text : "";
+                    Properties.Settings.Default.commandstring = (i == 0) ? cmd : Properties.Settings.Default.commandstring + '\t' + cmd;
+                }
+
+                // stringtobesent and justinsert arrays may vary in length; ensure we store 10 values
+                for (int i = 0; i < 10; i++)
+                {
+                    string s = (i < stringtobesent.Length) ? stringtobesent[i] ?? "" : "";
+                    Properties.Settings.Default.stringforsend = (i == 0) ? s : Properties.Settings.Default.stringforsend + '\t' + s;
+                }
+                Properties.Settings.Default.stringforsend += "\tdummy";
+
+                for (int i = 0; i < 10; i++)
+                {
+                    string s = (i < justinsert.Length) ? justinsert[i] ?? "yes" : "yes";
+                    Properties.Settings.Default.justinsert = (i == 0) ? s : Properties.Settings.Default.justinsert + '\t' + s;
+                }
+
+                Properties.Settings.Default.Save();
             }
-            Properties.Settings.Default.stringforsend = this.stringtobesent[0];
-            for (int i = 1; i < 10; i++)
+            catch (Exception ex)
             {
-                Properties.Settings.Default.stringforsend += '\t' + this.stringtobesent[i];
+                Debug.WriteLine("Application_ApplicationExit error: " + ex);
             }
-            Properties.Settings.Default.stringforsend += "\tdummy";
-            Properties.Settings.Default.justinsert = this.justinsert[0];
-            for (int i = 1; i < 10; i++)
+            finally
             {
-                Properties.Settings.Default.justinsert += '\t' + this.justinsert[i];
+                Application.ApplicationExit -= new EventHandler(Application_ApplicationExit);
+                disconnectDevice();
             }
-
-            Properties.Settings.Default.Save();
-            //Console.WriteLine("default properties saved");
-
-            //ApplicationExitイベントハンドラを削除
-            Application.ApplicationExit -= new EventHandler(Application_ApplicationExit);
-
-            disconnectDevice();
         }
 
         private Button[] custumbuttons;
@@ -380,67 +594,57 @@ namespace BLE_Serial_Terminal
         private void generateCustumButton()
         {
             this.custumbuttons = new Button[10];
-            string[] buttontext = new string[10]; //これは更新されない
-            this.stringtobesent = new string[10+1]; //dummy文字列の分
+            string[] buttontext = new string[10];
+            this.stringtobesent = new string[10 + 1]; // includes dummy
             this.justinsert = new string[10];
 
-            Boolean canrestore = false;
-            if (Properties.Settings.Default.commandstring != "none")
+            // restore settings if present (defensive parsing)
+            if (!string.IsNullOrEmpty(Properties.Settings.Default.commandstring) && Properties.Settings.Default.commandstring != "none")
             {
-                canrestore = true;
-                buttontext = Properties.Settings.Default.commandstring.Split('\t');
+                var parts = Properties.Settings.Default.commandstring.Split('\t');
+                for (int i = 0; i < Math.Min(parts.Length, 10); i++) buttontext[i] = parts[i];
             }
-            if (Properties.Settings.Default.stringforsend != "none")
+
+            if (!string.IsNullOrEmpty(Properties.Settings.Default.stringforsend) && Properties.Settings.Default.stringforsend != "none")
             {
-                this.stringtobesent = Properties.Settings.Default.stringforsend.Split('\t');
-            }
-            else
-            {
-                for (int i0 = 0; i0 < custumbuttons.Length; i0++)
-                {
-                    this.stringtobesent[i0] = "";
-                }
-            }
-            if (Properties.Settings.Default.justinsert != "none")
-            {
-                justinsert = Properties.Settings.Default.justinsert.Split('\t');
+                var parts = Properties.Settings.Default.stringforsend.Split('\t');
+                for (int i = 0; i < Math.Min(parts.Length, this.stringtobesent.Length); i++) this.stringtobesent[i] = parts[i];
             }
             else
             {
-                for (int i0 = 0; i0 < custumbuttons.Length; i0++)
-                {
-                    justinsert[i0] = "yes";
-                }
+                for (int i0 = 0; i0 < custumbuttons.Length; i0++) this.stringtobesent[i0] = "";
             }
+
+            if (!string.IsNullOrEmpty(Properties.Settings.Default.justinsert) && Properties.Settings.Default.justinsert != "none")
+            {
+                var parts = Properties.Settings.Default.justinsert.Split('\t');
+                for (int i = 0; i < Math.Min(parts.Length, 10); i++) this.justinsert[i] = parts[i];
+            }
+            else
+            {
+                for (int i0 = 0; i0 < custumbuttons.Length; i0++) this.justinsert[i0] = "yes";
+            }
+
             for (int i0 = 0; i0 < custumbuttons.Length; i0++)
             {
                 int i = i0 % 10;
                 int j = i0 / 10;
-                //ボタンコントロールのインスタンス作成
-                this.custumbuttons[i0] = new Button();
 
-                //プロパティ設定
-                this.custumbuttons[i0].Name = "custumbtn" + (i0 + 1).ToString();
-                if (canrestore == true)
+                this.custumbuttons[i0] = new Button
                 {
-                    this.custumbuttons[i0].Text = buttontext[i0];
-                }
-                else
-                {
-                    this.custumbuttons[i0].Text = Notsetyet;
-                }
-                this.custumbuttons[i0].Top = this.textToBeSent.Bottom + 20 + j * 45;
-                this.custumbuttons[i0].Height = 20;
-                this.custumbuttons[i0].Width = 62;
-                this.custumbuttons[i0].Left = this.textToBeSent.Left + 67 * i + (i / 5) * 13 - 3;
-                this.custumbuttons[i0].Tag = i0;
+                    Name = "custumbtn" + (i0 + 1).ToString(),
+                    Text = string.IsNullOrEmpty(buttontext[i0]) ? Notsetyet : buttontext[i0],
+                    Top = this.textToBeSent.Bottom + 20 + j * 45,
+                    Height = 20,
+                    Width = 62,
+                    Left = this.textToBeSent.Left + 67 * i + (i / 5) * 13 - 3,
+                    Tag = i0
+                };
 
-                //コントロールをフォームに追加
                 this.Controls.Add(this.custumbuttons[i0]);
                 this.custumbuttons[i0].Click += new System.EventHandler(custumbtnclick);
                 this.custumbuttons[i0].MouseDown += new MouseEventHandler(Buttons_MouseDown);
             }
-            //Console.WriteLine("generateCustumButton() num elements = " + this.custumbuttons.Length + ", " + this.stringtobesent.Length + ", " + this.justinsert.Length);
         }
 
         private void custumbtnclick(object sender, System.EventArgs e)
@@ -449,14 +653,11 @@ namespace BLE_Serial_Terminal
             int no = (int)(btn.Tag);
             if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift || rightbutton)
             {
-                //Console.WriteLine("Shift + " + btn.Name);
-                //Console.WriteLine("custumbtnclick no = " + no);
-                //Console.WriteLine("num elements = " + this.custumbuttons.Length + ", " + this.stringtobesent.Length + ", " + this.justinsert.Length);
                 List<object> sendList = new List<object>
                 {
                     this.custumbuttons[no].Text,
-                    this.stringtobesent[no],
-                    this.justinsert[no]
+                    (no < stringtobesent.Length) ? this.stringtobesent[no] : "",
+                    (no < justinsert.Length) ? this.justinsert[no] : "yes"
                 };
                 List<object> resultObjs = Form2.ShowForm2(sendList);
                 if ((string)resultObjs[0] != "")
@@ -472,7 +673,6 @@ namespace BLE_Serial_Terminal
             }
             else if (btn.Text != Notsetyet && btn.Text != Notsetyet_old && !rightbutton)
             {
-                //MessageBox.Show(btn.Text);
                 if (this.justinsert[no] == "yes")
                 {
                     textToBeSent.Text = this.stringtobesent[no];
@@ -488,7 +688,6 @@ namespace BLE_Serial_Terminal
         private bool rightbutton;
         private void Buttons_MouseDown(object sender, MouseEventArgs e)
         {
-            //MessageBox.Show("right button");
             rightbutton = false;
             if (e.Button == MouseButtons.Right)
             {
@@ -509,15 +708,16 @@ namespace BLE_Serial_Terminal
 
             if (saveFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                //MessageBox.Show(saveFileDialog1.FileName);
-                String mystring = "";
+                StringBuilder mystring = new StringBuilder();
                 for (int i = 0; i < custumbuttons.Length; i++)
                 {
-                    mystring += "" + i + "," + this.custumbuttons[i].Text + "," + this.stringtobesent[i] + "," + this.justinsert[i] + "\n";
+                    string text = (custumbuttons[i] != null) ? custumbuttons[i].Text : "";
+                    string ssend = (i < stringtobesent.Length) ? stringtobesent[i] : "";
+                    string js = (i < justinsert.Length) ? justinsert[i] : "";
+                    mystring.AppendLine($"{i},{text},{ssend},{js}");
                 }
-                File.WriteAllText(saveFileDialog1.FileName, mystring);
+                File.WriteAllText(saveFileDialog1.FileName, mystring.ToString());
             }
-
         }
 
         private void importSettings(object sender, EventArgs e)
@@ -533,26 +733,17 @@ namespace BLE_Serial_Terminal
             if (loadFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 string[] txtArray = File.ReadAllLines(loadFileDialog1.FileName);
-                int index;
-                string[] textb;
                 foreach (var line in txtArray)
                 {
-                    //Console.WriteLine("importSettings [" + line + "]");
-                    textb = line.Split(',');
-                    try
-                    {
-                        //Console.WriteLine("importSettings num = " + textb.Length);
-                        index = Int32.Parse(textb[0]);
-                        this.custumbuttons[index].Text = textb[1];
-                        this.stringtobesent[index] = textb[2];
-                        string debtmp = textb[3];
-                        this.justinsert[index] = debtmp;
-                    }
-                    catch (FormatException)
-                    {
-                        MessageBox.Show(textb[0]);
-                    }
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    var textb = line.Split(',');
+                    if (textb.Length < 4) continue;
+                    if (!int.TryParse(textb[0], out int index)) continue;
+                    if (index < 0 || index >= custumbuttons.Length) continue;
 
+                    this.custumbuttons[index].Text = textb[1];
+                    this.stringtobesent[index] = textb[2];
+                    this.justinsert[index] = textb[3];
                 }
             }
         }
@@ -561,19 +752,13 @@ namespace BLE_Serial_Terminal
         {
             try
             {
-                // Start the default browser and navigate to the specified URL
-                Process.Start(@"https://github.com/healthywalk/BLE-Serial-Terminal");
+                var url = "https://github.com/healthywalk/BLE-Serial-Terminal";
+                var psi = new ProcessStartInfo(url) { UseShellExecute = true };
+                Process.Start(psi);
             }
-            catch (System.ComponentModel.Win32Exception noBrowser)
+            catch (Exception ex)
             {
-                // Handle cases where no browser is associated with the URL or protocol
-                // For example, if the user doesn't have a default browser set
-                System.Console.WriteLine($"Error: No browser found to open URL: {noBrowser.Message}");
-            }
-            catch (System.Exception ex)
-            {
-                // Handle other potential exceptions
-                System.Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+                Debug.WriteLine("Open link error: " + ex);
             }
         }
     }
