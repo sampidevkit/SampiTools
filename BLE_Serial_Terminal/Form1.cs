@@ -396,6 +396,8 @@ namespace BLE_Serial_Terminal
 
         private void btnScan_clicked(object sender, EventArgs e)
         {
+            // Clear previous devices
+            this.cmbBoxDevice.Items.Clear();
             ScanBle();
         }
 
